@@ -114,12 +114,24 @@
       user ? proceedAsUser(user) : proceedAsGuest();
     });
 
-    // Mobile Safari back-forward cache: page is restored from snapshot,
-    // JS resumes mid-state with loading overlay visible but no new auth event.
+    // Back-forward cache restore (Chrome + Safari): page resumes from snapshot
+    // with loading overlay visible but no new auth event fired.
     window.addEventListener('pageshow', (e) => {
       if (e.persisted && !$('loading-overlay').classList.contains('hidden')) {
         const u = window.fbAuth.currentUser;
         u ? proceedAsUser(u) : proceedAsGuest();
+      }
+    });
+
+    // Chrome mobile backgrounded tab: JS is throttled, Firebase token refresh
+    // stalls. When user returns to the tab, try currentUser immediately.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' &&
+          !$('loading-overlay').classList.contains('hidden')) {
+        const u = window.fbAuth.currentUser;
+        if (u) proceedAsUser(u);
+        // If currentUser is null here Firebase is still initializing — the
+        // stall timer will handle it if it truly hangs.
       }
     });
   }
