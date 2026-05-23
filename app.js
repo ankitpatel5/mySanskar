@@ -20,7 +20,25 @@
     shuffle: 'drift.shuffle',
     playCounts: 'drift.playCounts',
     libraryView: 'drift.libraryView',
+    theme: 'drift.theme',
   };
+
+  // ============== THEME ==============
+  const MOON_SVG = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>`;
+  const SUN_SVG  = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
+
+  function currentTheme() {
+    return document.documentElement.getAttribute('data-theme') || 'dark';
+  }
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem(LS.theme, theme);
+    const btn = $('theme-btn');
+    if (btn) btn.innerHTML = theme === 'dark' ? SUN_SVG : MOON_SVG;
+  }
+  function toggleTheme() {
+    applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
+  }
 
   const cfg = window.DRIFT_CONFIG || {};
   let API_KEY = localStorage.getItem(LS.apiKey) || cfg.apiKey || '';
@@ -1280,22 +1298,9 @@
       t.addEventListener('click', () => switchTab(t.dataset.tab));
     });
 
-    // Refresh
-    $('refresh-btn').addEventListener('click', async () => {
-      document.body.classList.add('refreshing');
-      try {
-        const fresh = await buildLibrary();
-        applyLibrary(fresh);
-        try { localStorage.setItem(LS.library, JSON.stringify({ albums: fresh.albums, updatedAt: fresh.updatedAt })); } catch {}
-        renderLibrary();
-        $('library-sub').textContent = `${state.library.albums.length} albums · ${state.flatTracks.length} songs`;
-        toast('Library refreshed');
-      } catch (e) {
-        toast('Refresh failed');
-      } finally {
-        setTimeout(() => document.body.classList.remove('refreshing'), 400);
-      }
-    });
+    // Theme toggle
+    applyTheme(currentTheme()); // set correct icon on boot
+    $('theme-btn').addEventListener('click', toggleTheme);
 
     // User menu
     $('user-btn').addEventListener('click', () => {
@@ -1314,19 +1319,25 @@
     $('user-menu-cancel').addEventListener('click', () => closeModal('user-menu'));
     document.querySelector('#user-menu .modal-backdrop').addEventListener('click', () => closeModal('user-menu'));
 
-    // Settings (reset connection)
-    $('settings-btn').addEventListener('click', () => {
-      openConfirm(
-        'Reset Drive connection?',
-        'Clears the saved API key, folder ID, and cached library. Your playlists are kept.',
-        () => {
-          localStorage.removeItem(LS.apiKey);
-          localStorage.removeItem(LS.folderId);
-          localStorage.removeItem(LS.library);
-          window.location.reload();
-        },
-        { confirmLabel: 'Reset', danger: false }
-      );
+    // Settings modal
+    $('settings-btn').addEventListener('click', () => showModal('settings-modal'));
+    $('settings-cancel').addEventListener('click', () => closeModal('settings-modal'));
+    document.querySelector('#settings-modal .modal-backdrop').addEventListener('click', () => closeModal('settings-modal'));
+    $('settings-refresh').addEventListener('click', async () => {
+      closeModal('settings-modal');
+      document.body.classList.add('refreshing');
+      try {
+        const fresh = await buildLibrary();
+        applyLibrary(fresh);
+        try { localStorage.setItem(LS.library, JSON.stringify({ albums: fresh.albums, updatedAt: fresh.updatedAt })); } catch {}
+        renderLibrary();
+        $('library-sub').textContent = `${state.library.albums.length} albums · ${state.flatTracks.length} songs`;
+        toast('Library refreshed');
+      } catch (e) {
+        toast('Refresh failed');
+      } finally {
+        setTimeout(() => document.body.classList.remove('refreshing'), 400);
+      }
     });
 
     // Search

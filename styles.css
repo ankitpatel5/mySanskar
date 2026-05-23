@@ -2,7 +2,8 @@
    Drift — dark, mobile-first music player
    ============================================================ */
 
-:root {
+:root,
+[data-theme="dark"] {
   --bg-0: #0a0a0b;
   --bg-1: #121214;
   --bg-2: #1a1a1d;
@@ -21,6 +22,13 @@
   --accent-glow: rgba(29, 185, 84, 0.4);
   --danger: #ff5b5b;
 
+  /* Component-specific surfaces */
+  --mini-player-bg: rgba(18, 18, 20, 0.97);
+  --tabbar-bg: rgba(10, 10, 11, 0.92);
+  --play-btn-color: #0a0a0a;
+  --hover-overlay: rgba(255, 255, 255, 0.04);
+  --active-overlay: rgba(255, 255, 255, 0.08);
+
   --font-display: 'Fraunces', Georgia, serif;
   --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
@@ -34,6 +42,32 @@
   --topbar-h: 56px;
   --safe-bot: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
+}
+
+[data-theme="light"] {
+  --bg-0: #f2f2f4;
+  --bg-1: #ffffff;
+  --bg-2: #e8e8ea;
+  --bg-3: #d8d8da;
+  --bg-elev: #ffffff;
+  --line: rgba(0, 0, 0, 0.07);
+  --line-2: rgba(0, 0, 0, 0.12);
+
+  --fg-0: #1a1a1c;
+  --fg-1: #3d3d40;
+  --fg-2: #6e6e73;
+  --fg-3: #aeaeb2;
+
+  --accent: #17a349;
+  --accent-soft: rgba(23, 163, 73, 0.12);
+  --accent-glow: rgba(23, 163, 73, 0.25);
+  --danger: #d93025;
+
+  --mini-player-bg: rgba(242, 242, 244, 0.97);
+  --tabbar-bg: rgba(242, 242, 244, 0.94);
+  --play-btn-color: #ffffff;
+  --hover-overlay: rgba(0, 0, 0, 0.04);
+  --active-overlay: rgba(0, 0, 0, 0.08);
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -392,6 +426,7 @@ input { font-family: inherit; color: inherit; }
   gap: 10px;
   transition: transform .15s ease;
 }
+.folder-card:hover { background: var(--hover-overlay); }
 .folder-card:active { transform: scale(0.97); }
 .folder-art {
   aspect-ratio: 1;
@@ -588,8 +623,8 @@ input { font-family: inherit; color: inherit; }
   transition: background .15s;
   cursor: pointer;
 }
-.track-row:hover { background: rgba(255, 255, 255, 0.04); }
-.track-row:active { background: rgba(255, 255, 255, 0.08); }
+.track-row:hover { background: var(--hover-overlay); }
+.track-row:active { background: var(--active-overlay); }
 .track-row.playing .track-title { color: var(--accent); }
 .track-num {
   font-size: 13px;
@@ -686,7 +721,7 @@ input { font-family: inherit; color: inherit; }
   cursor: pointer;
   transition: background .15s;
 }
-.playlist-card:hover { background: rgba(255, 255, 255, 0.04); }
+.playlist-card:hover { background: var(--hover-overlay); }
 .playlist-card-art {
   width: 56px;
   height: 56px;
@@ -726,7 +761,7 @@ input { font-family: inherit; color: inherit; }
   right: 0;
   height: calc(var(--tabbar-h) + var(--safe-bot));
   padding-bottom: var(--safe-bot);
-  background: rgba(10, 10, 11, 0.92);
+  background: var(--tabbar-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid var(--line);
@@ -759,7 +794,7 @@ input { font-family: inherit; color: inherit; }
   left: 0;
   right: 0;
   height: var(--mini-h);
-  background: rgba(18, 18, 20, 0.97);
+  background: var(--mini-player-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid var(--line-2);
@@ -1018,7 +1053,7 @@ input { font-family: inherit; color: inherit; }
 .sheet-ctrl:active { transform: scale(0.92); }
 .sheet-ctrl.play {
   background: var(--fg-0);
-  color: #0a0a0a;
+  color: var(--play-btn-color);
   width: 64px;
   height: 64px;
 }
@@ -1353,7 +1388,7 @@ input { font-family: inherit; color: inherit; }
 }
 
 /* ============== REFRESH ANIMATION ============== */
-.refreshing #refresh-btn svg {
+.refreshing #settings-refresh svg {
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -1374,7 +1409,7 @@ input { font-family: inherit; color: inherit; }
   background: none;
   transition: background .15s;
 }
-.folders-list.list-view .folder-card:hover { background: rgba(255,255,255,0.04); }
+.folders-list.list-view .folder-card:hover { background: var(--hover-overlay); }
 .folders-list.list-view .folder-art {
   width: 52px;
   height: 52px;
@@ -1385,6 +1420,49 @@ input { font-family: inherit; color: inherit; }
 .folders-list.list-view .folder-initial { font-size: 24px; }
 .folders-list.list-view .folder-name { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .folders-list.list-view .folder-meta { font-size: 12px; color: var(--fg-2); }
+
+/* ============== LIGHT THEME OVERRIDES ============== */
+[data-theme="light"] body { background: var(--bg-0); }
+
+[data-theme="light"] .player-sheet {
+  background:
+    radial-gradient(70% 50% at 50% 0%, rgba(23, 163, 73, 0.15), transparent 70%),
+    var(--bg-1);
+}
+
+[data-theme="light"] .setup-screen {
+  background:
+    radial-gradient(60% 50% at 50% 0%, rgba(23, 163, 73, 0.1), transparent 70%),
+    var(--bg-0);
+}
+
+[data-theme="light"] .sheet-art::after,
+[data-theme="light"] .folder-art::after,
+[data-theme="light"] .album-cover::after {
+  background:
+    radial-gradient(120% 100% at 0% 0%, rgba(255,255,255,0.2), transparent 50%),
+    radial-gradient(120% 100% at 100% 100%, rgba(0,0,0,0.15), transparent 50%);
+}
+
+[data-theme="light"] .topbar {
+  background: linear-gradient(to bottom, var(--bg-0) 60%, transparent);
+}
+
+[data-theme="light"] .extra-btn {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--fg-0);
+}
+[data-theme="light"] .extra-btn:hover { background: rgba(0, 0, 0, 0.1); }
+
+[data-theme="light"] .skip15-btn {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--fg-1);
+}
+[data-theme="light"] .skip15-btn:hover { background: rgba(0, 0, 0, 0.11); }
+
+[data-theme="light"] .sheet-close {
+  background: rgba(0, 0, 0, 0.08);
+}
 
 /* ============== DESKTOP TWEAKS ============== */
 @media (min-width: 600px) {
