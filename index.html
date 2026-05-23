@@ -12,20 +12,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2248%22 fill=%22%231db954%22/><path d=%22M50 74 C46 63 44 53 44 45 C44 38 47 33 50 33 C53 33 56 38 56 45 C56 53 54 63 50 74Z%22 fill=%22white%22 opacity=%220.95%22/><path d=%22M50 74 C43 66 36 58 33 49 C30 42 33 36 38 35 C43 34 49 41 50 52 C51 63 50 74 50 74Z%22 fill=%22white%22 opacity=%220.75%22/><path d=%22M50 74 C57 66 64 58 67 49 C70 42 67 36 62 35 C57 34 51 41 50 52 C49 63 50 74 50 74Z%22 fill=%22white%22 opacity=%220.75%22/><path d=%22M36 27 Q50 18 64 27%22 stroke=%22white%22 stroke-width=%223%22 fill=%22none%22 stroke-linecap=%22round%22 opacity=%220.9%22/><path d=%22M28 19 Q50 7 72 19%22 stroke=%22white%22 stroke-width=%222.5%22 fill=%22none%22 stroke-linecap=%22round%22 opacity=%220.55%22/></svg>" />
+  <link rel="icon" href="baal.png" type="image/png" />
 </head>
 <body>
   <div id="app">
     <section id="signin-screen" class="screen setup-screen hidden">
       <div class="setup-card">
-        <div class="setup-mark">
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
-            <path d="M50 74 C46 63 44 53 44 45 C44 38 47 33 50 33 C53 33 56 38 56 45 C56 53 54 63 50 74Z" fill="white" opacity="0.95"/>
-            <path d="M50 74 C43 66 36 58 33 49 C30 42 33 36 38 35 C43 34 49 41 50 52 C51 63 50 74 50 74Z" fill="white" opacity="0.78"/>
-            <path d="M50 74 C57 66 64 58 67 49 C70 42 67 36 62 35 C57 34 51 41 50 52 C49 63 50 74 50 74Z" fill="white" opacity="0.78"/>
-            <path d="M36 27 Q50 18 64 27" stroke="white" stroke-width="3.5" fill="none" stroke-linecap="round" opacity="0.9"/>
-            <path d="M28 19 Q50 7 72 19" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55"/>
-          </svg>
+        <div class="setup-mark setup-mark--img">
+          <img src="baal.png" alt="Baal Shravan" class="setup-mark-img" />
         </div>
         <h1 class="setup-title">Baal Shravan</h1>
         <p class="setup-sub">Sign in to sync your playlists across all your devices.</p>
@@ -43,14 +37,8 @@
 
     <section id="setup-screen" class="screen setup-screen hidden">
       <div class="setup-card">
-        <div class="setup-mark">
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
-            <path d="M50 74 C46 63 44 53 44 45 C44 38 47 33 50 33 C53 33 56 38 56 45 C56 53 54 63 50 74Z" fill="white" opacity="0.95"/>
-            <path d="M50 74 C43 66 36 58 33 49 C30 42 33 36 38 35 C43 34 49 41 50 52 C51 63 50 74 50 74Z" fill="white" opacity="0.78"/>
-            <path d="M50 74 C57 66 64 58 67 49 C70 42 67 36 62 35 C57 34 51 41 50 52 C49 63 50 74 50 74Z" fill="white" opacity="0.78"/>
-            <path d="M36 27 Q50 18 64 27" stroke="white" stroke-width="3.5" fill="none" stroke-linecap="round" opacity="0.9"/>
-            <path d="M28 19 Q50 7 72 19" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55"/>
-          </svg>
+        <div class="setup-mark setup-mark--img">
+          <img src="baal.png" alt="Baal Shravan" class="setup-mark-img" />
         </div>
         <h1 class="setup-title">Baal Shravan</h1>
         <p class="setup-sub">One-time setup. Your API key is stored locally on this device only.</p>
@@ -67,13 +55,7 @@
       <header class="topbar">
         <div class="brand">
           <span class="brand-logo">
-            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="22" height="22">
-              <path d="M50 74 C46 63 44 53 44 45 C44 38 47 33 50 33 C53 33 56 38 56 45 C56 53 54 63 50 74Z" fill="var(--accent)" opacity="0.95"/>
-              <path d="M50 74 C43 66 36 58 33 49 C30 42 33 36 38 35 C43 34 49 41 50 52 C51 63 50 74 50 74Z" fill="var(--accent)" opacity="0.7"/>
-              <path d="M50 74 C57 66 64 58 67 49 C70 42 67 36 62 35 C57 34 51 41 50 52 C49 63 50 74 50 74Z" fill="var(--accent)" opacity="0.7"/>
-              <path d="M36 27 Q50 18 64 27" stroke="var(--accent)" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.9"/>
-              <path d="M28 19 Q50 7 72 19" stroke="var(--accent)" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>
-            </svg>
+            <img src="baal.png" alt="Baal Shravan" class="brand-logo-img" />
           </span>
           <span class="brand-name">Baal Shravan</span>
         </div>
