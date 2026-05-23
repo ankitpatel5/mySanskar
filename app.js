@@ -55,45 +55,71 @@
   const audio = $('audio');
 
   // ============== INIT ==============
-  function init() {
-    // Show loading while Firebase resolves auth state (and handles redirect return)
-    showLoading('Loading…');
-    window.fbAuth.onAuthStateChanged((user) => {
-      if (user) {
-        state.user = user;
-        loadPersistedState();
-        updateUserUI();
-        if (!API_KEY || !ROOT_FOLDER_ID) {
-          hideLoading();
-          showSetup();
-          return;
-        }
-        showMain();
-        setupEventListeners();
-        setupAudio();
-        bootstrapLibrary();
-        loadFirestorePlaylists();
-        checkShareParam();
-      } else {
-        hideLoading();
-        $('signin-screen').classList.remove('hidden');
-        $('main-screen').classList.add('hidden');
-        $('setup-screen').classList.add('hidden');
-        // Wire sign-in button (only once)
-        const btn = $('google-signin-btn');
-        if (btn && !btn.dataset.wired) {
-          btn.dataset.wired = '1';
-          btn.addEventListener('click', () => {
-            btn.disabled = true;
-            btn.textContent = 'Signing in…';
-            window.fbAuth.signInWithPopup(window.fbGoogle)
-              .catch((e) => {
-                console.error('sign-in error:', e.code, e.message);
-                btn.disabled = false;
-                btn.textContent = 'Try again';
-              });
+  let _appBooted = false; // guard: only run full setup once
+
+  function proceedAsUser(user) {
+    if (_appBooted) { hideLoading(); return; } // already running
+    _appBooted = true;
+    state.user = user;
+    loadPersistedState();
+    updateUserUI();
+    if (!API_KEY || !ROOT_FOLDER_ID) {
+      hideLoading();
+      showSetup();
+      return;
+    }
+    showMain();
+    setupEventListeners();
+    setupAudio();
+    bootstrapLibrary();
+    loadFirestorePlaylists();
+    checkShareParam();
+  }
+
+  function proceedAsGuest() {
+    hideLoading();
+    $('signin-screen').classList.remove('hidden');
+    $('main-screen').classList.add('hidden');
+    $('setup-screen').classList.add('hidden');
+    // Wire sign-in button (only once)
+    const btn = $('google-signin-btn');
+    if (btn && !btn.dataset.wired) {
+      btn.dataset.wired = '1';
+      btn.addEventListener('click', () => {
+        btn.disabled = true;
+        btn.textContent = 'Signing in…';
+        window.fbAuth.signInWithPopup(window.fbGoogle)
+          .catch((e) => {
+            console.error('sign-in error:', e.code, e.message);
+            btn.disabled = false;
+            btn.textContent = 'Try again';
           });
-        }
+      });
+    }
+  }
+
+  function init() {
+    showLoading('Loading…');
+
+    // Fallback: if Firebase stalls (slow network, mobile background restore),
+    // check currentUser directly after 7s rather than hanging forever.
+    const stallTimer = setTimeout(() => {
+      if ($('loading-overlay').classList.contains('hidden')) return;
+      const u = window.fbAuth.currentUser;
+      u ? proceedAsUser(u) : proceedAsGuest();
+    }, 7000);
+
+    window.fbAuth.onAuthStateChanged((user) => {
+      clearTimeout(stallTimer);
+      user ? proceedAsUser(user) : proceedAsGuest();
+    });
+
+    // Mobile Safari back-forward cache: page is restored from snapshot,
+    // JS resumes mid-state with loading overlay visible but no new auth event.
+    window.addEventListener('pageshow', (e) => {
+      if (e.persisted && !$('loading-overlay').classList.contains('hidden')) {
+        const u = window.fbAuth.currentUser;
+        u ? proceedAsUser(u) : proceedAsGuest();
       }
     });
   }
