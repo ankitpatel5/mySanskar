@@ -82,6 +82,14 @@ input { font-family: inherit; color: inherit; }
   padding: 32px 24px;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.setup-card .setup-label,
+.setup-card .setup-input,
+.setup-card .setup-help {
+  align-self: stretch;
+  text-align: left;
 }
 .setup-mark {
   width: 64px;
@@ -100,6 +108,7 @@ input { font-family: inherit; color: inherit; }
   border-radius: 0;
   width: 110px;
   height: 110px;
+  align-self: center;
 }
 .setup-mark-img {
   width: 110px;
