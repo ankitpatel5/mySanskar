@@ -1221,6 +1221,45 @@ input { font-family: inherit; color: inherit; }
 .prompt-actions .modal-item.primary { background: var(--accent); color: #0a0a0a; }
 .prompt-actions .modal-item.primary:hover { background: #1ed761; }
 
+/* ============== IMPORT SHARED PLAYLIST ============== */
+.import-sheet {
+  padding: 24px 20px calc(var(--safe-bot) + 20px);
+  text-align: center;
+}
+.import-art {
+  width: 88px;
+  height: 88px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--c-a, #2a4030), var(--c-b, #1a1a1d));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 auto 18px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+}
+.import-meta { margin-bottom: 24px; }
+.import-kind {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.import-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 26px;
+  letter-spacing: -0.01em;
+  margin: 0 0 6px;
+}
+.import-sub {
+  font-size: 13px;
+  color: var(--fg-2);
+  margin: 0;
+}
+
 /* ============== TOAST ============== */
 .toast {
   position: fixed;

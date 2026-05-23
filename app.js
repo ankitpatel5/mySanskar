@@ -43,6 +43,7 @@
     activePlaylist: null,
     pendingTrackId: null,
     pendingContext: null,
+    pendingShareDoc: null,
     currentTab: 'library',
     playCounts: {},
     libraryView: 'list',
@@ -72,6 +73,7 @@
         setupAudio();
         bootstrapLibrary();
         loadFirestorePlaylists();
+        checkShareParam();
       } else {
         hideLoading();
         $('signin-screen').classList.remove('hidden');
@@ -163,6 +165,85 @@
   function deletePlaylistFromFirestore(id) {
     if (!state.user) return;
     playlistsRef().doc(id).delete().catch((e) => console.warn('Firestore delete failed', e));
+  }
+
+  // ---- Shared playlists (public collection) ----
+  function sharedPlaylistsRef() {
+    return window.fbDb.collection('sharedPlaylists');
+  }
+
+  async function sharePlaylist(playlistId) {
+    const p = state.playlists.find((pl) => pl.id === playlistId);
+    if (!p) return;
+    toast('Creating share link…');
+    const shareId = uid();
+    const shareDoc = {
+      id: shareId,
+      ownerId: state.user.uid,
+      ownerName: state.user.displayName || state.user.email || 'Someone',
+      ownerPhoto: state.user.photoURL || '',
+      playlistName: p.name,
+      trackIds: p.trackIds.slice(),
+      createdAt: Date.now(),
+    };
+    try {
+      await sharedPlaylistsRef().doc(shareId).set(shareDoc);
+      const url = `${location.origin}${location.pathname}?share=${shareId}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        toast('Share link copied to clipboard!');
+      } catch {
+        // Clipboard API unavailable — surface the URL
+        window.prompt('Copy this share link:', url);
+      }
+    } catch (e) {
+      console.error('Share failed', e);
+      toast('Could not create share link');
+    }
+  }
+
+  async function checkShareParam() {
+    const shareId = new URLSearchParams(location.search).get('share');
+    if (!shareId) return;
+    // Clean the URL immediately so a refresh doesn't re-trigger the modal
+    history.replaceState({}, '', location.pathname);
+    try {
+      const doc = await sharedPlaylistsRef().doc(shareId).get();
+      if (!doc.exists) { toast('Share link not found'); return; }
+      showImportModal(doc.data());
+    } catch (e) {
+      console.warn('Could not load shared playlist', e);
+    }
+  }
+
+  function showImportModal(shareDoc) {
+    state.pendingShareDoc = shareDoc;
+    const count = Array.isArray(shareDoc.trackIds) ? shareDoc.trackIds.length : 0;
+    $('import-title').textContent = shareDoc.playlistName || 'Untitled';
+    $('import-sub').textContent =
+      `${count} song${count === 1 ? '' : 's'} · shared by ${shareDoc.ownerName || 'someone'}`;
+    applyArt($('import-cover'), shareDoc.playlistName);
+    showModal('import-modal');
+  }
+
+  function importSharedPlaylist() {
+    const doc = state.pendingShareDoc;
+    if (!doc) return;
+    state.pendingShareDoc = null;
+    const p = {
+      id: uid(),
+      name: doc.playlistName || 'Untitled',
+      trackIds: Array.isArray(doc.trackIds) ? doc.trackIds : [],
+      createdAt: Date.now(),
+    };
+    state.playlists.unshift(p);
+    persist('playlists');
+    syncPlaylist(p);
+    closeModal('import-modal');
+    switchTab('playlists');
+    renderPlaylists();
+    openPlaylist(p.id);
+    toast(`"${p.name}" added to your library`);
   }
 
   // ============== USER UI ==============
@@ -1253,6 +1334,15 @@
         { confirmLabel: 'Delete', danger: true }
       );
     });
+    $('playlist-share').addEventListener('click', () => {
+      if (state.activePlaylist) sharePlaylist(state.activePlaylist.id);
+    });
+
+    // Import shared playlist
+    $('import-confirm').addEventListener('click', importSharedPlaylist);
+    const closeImport = () => { state.pendingShareDoc = null; closeModal('import-modal'); };
+    $('import-cancel').addEventListener('click', closeImport);
+    document.querySelector('#import-modal .modal-backdrop').addEventListener('click', closeImport);
 
     // New playlist
     $('new-playlist-btn').addEventListener('click', () => {
