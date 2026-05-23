@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>Baal Shravan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2248%22 fill=%22%231db954%22/><path d=%22M50 74 C46 63 44 53 44 45 C44 38 47 33 50 33 C53 33 56 38 56 45 C56 53 54 63 50 74Z%22 fill=%22white%22 opacity=%220.95%22/><path d=%22M50 74 C43 66 36 58 33 49 C30 42 33 36 38 35 C43 34 49 41 50 52 C51 63 50 74 50 74Z%22 fill=%22white%22 opacity=%220.75%22/><path d=%22M50 74 C57 66 64 58 67 49 C70 42 67 36 62 35 C57 34 51 41 50 52 C49 63 50 74 50 74Z%22 fill=%22white%22 opacity=%220.75%22/><path d=%22M36 27 Q50 18 64 27%22 stroke=%22white%22 stroke-width=%223%22 fill=%22none%22 stroke-linecap=%22round%22 opacity=%220.9%22/><path d=%22M28 19 Q50 7 72 19%22 stroke=%22white%22 stroke-width=%222.5%22 fill=%22none%22 stroke-linecap=%22round%22 opacity=%220.55%22/></svg>" />
+</head>
+<body>
+  <div id="app">
+    <section id="signin-screen" class="screen setup-screen hidden">
+      <div class="setup-card">
+        <div class="setup-mark">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
+            <path d="M50 74 C46 63 44 53 44 45 C44 38 47 33 50 33 C53 33 56 38 56 45 C56 53 54 63 50 74Z" fill="white" opacity="0.95"/>
+            <path d="M50 74 C43 66 36 58 33 49 C30 42 33 36 38 35 C43 34 49 41 50 52 C51 63 50 74 50 74Z" fill="white" opacity="0.78"/>
+            <path d="M50 74 C57 66 64 58 67 49 C70 42 67 36 62 35 C57 34 51 41 50 52 C49 63 50 74 50 74Z" fill="white" opacity="0.78"/>
+            <path d="M36 27 Q50 18 64 27" stroke="white" stroke-width="3.5" fill="none" stroke-linecap="round" opacity="0.9"/>
+            <path d="M28 19 Q50 7 72 19" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55"/>
+          </svg>
+        </div>
+        <h1 class="setup-title">Baal Shravan</h1>
+        <p class="setup-sub">Sign in to sync your playlists across all your devices.</p>
+        <button id="google-signin-btn" class="google-signin-btn">
+          <svg viewBox="0 0 24 24" width="20" height="20">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+          </svg>
+          Continue with Google
+        </button>
+      </div>
+    </section>
+
+    <section id="setup-screen" class="screen setup-screen hidden">
+      <div class="setup-card">
+        <div class="setup-mark">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
+            <path d="M50 74 C46 63 44 53 44 45 C44 38 47 33 50 33 C53 33 56 38 56 45 C56 53 54 63 50 74Z" fill="white" opacity="0.95"/>
+            <path d="M50 74 C43 66 36 58 33 49 C30 42 33 36 38 35 C43 34 49 41 50 52 C51 63 50 74 50 74Z" fill="white" opacity="0.78"/>
+            <path d="M50 74 C57 66 64 58 67 49 C70 42 67 36 62 35 C57 34 51 41 50 52 C49 63 50 74 50 74Z" fill="white" opacity="0.78"/>
+            <path d="M36 27 Q50 18 64 27" stroke="white" stroke-width="3.5" fill="none" stroke-linecap="round" opacity="0.9"/>
+            <path d="M28 19 Q50 7 72 19" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55"/>
+          </svg>
+        </div>
+        <h1 class="setup-title">Baal Shravan</h1>
+        <p class="setup-sub">One-time setup. Your API key is stored locally on this device only.</p>
+        <label class="setup-label" for="apikey-input">Google Drive API Key</label>
+        <input id="apikey-input" class="setup-input" type="text" placeholder="AIzaSy..." autocomplete="off" spellcheck="false" />
+        <label class="setup-label" for="folderid-input">Folder ID or URL</label>
+        <input id="folderid-input" class="setup-input" type="text" placeholder="1ob4gWC7yU4sWBnksReqVNRZk_N732BR-" autocomplete="off" spellcheck="false" />
+        <button id="setup-save" class="setup-btn">Continue</button>
+        <a class="setup-help" href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">How to get an API key →</a>
+      </div>
+    </section>
+
+    <main id="main-screen" class="screen main-screen hidden">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-logo">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="22" height="22">
+              <path d="M50 74 C46 63 44 53 44 45 C44 38 47 33 50 33 C53 33 56 38 56 45 C56 53 54 63 50 74Z" fill="var(--accent)" opacity="0.95"/>
+              <path d="M50 74 C43 66 36 58 33 49 C30 42 33 36 38 35 C43 34 49 41 50 52 C51 63 50 74 50 74Z" fill="var(--accent)" opacity="0.7"/>
+              <path d="M50 74 C57 66 64 58 67 49 C70 42 67 36 62 35 C57 34 51 41 50 52 C49 63 50 74 50 74Z" fill="var(--accent)" opacity="0.7"/>
+              <path d="M36 27 Q50 18 64 27" stroke="var(--accent)" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.9"/>
+              <path d="M28 19 Q50 7 72 19" stroke="var(--accent)" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>
+            </svg>
+          </span>
+          <span class="brand-name">Baal Shravan</span>
+        </div>
+        <div class="topbar-right">
+          <button id="user-btn" class="user-avatar-btn" aria-label="Account" title="Account">
+            <div id="user-avatar-el" class="user-avatar-el"></div>
+          </button>
+          <button id="refresh-btn" class="icon-btn" aria-label="Refresh library" title="Refresh">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
+          </button>
+          <button id="settings-btn" class="icon-btn" aria-label="Settings" title="Settings">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <div id="content" class="content">
+        <section id="view-library" class="view">
+          <div class="view-header">
+            <div>
+              <h2 class="view-title">Library</h2>
+              <p class="view-sub" id="library-sub">Loading…</p>
+            </div>
+            <div class="view-header-controls">
+              <button id="view-toggle-btn" class="icon-btn" aria-label="Toggle view" title="Toggle list / grid">
+                <!-- icon injected by JS -->
+              </button>
+            </div>
+          </div>
+          <div id="search-wrap" class="search-wrap">
+            <svg class="search-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="search-input" type="text" placeholder="Search songs or albums" />
+            <button id="search-clear" class="search-clear hidden" aria-label="Clear">×</button>
+          </div>
+          <div id="folders-list" class="folders-list"></div>
+          <div id="search-results" class="search-results hidden"></div>
+        </section>
+
+        <section id="view-album" class="view hidden">
+          <button class="back-btn" id="album-back" aria-label="Back">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="album-hero album-hero--no-art">
+            <span class="album-kind">Album</span>
+            <h2 class="album-title" id="album-title">—</h2>
+            <p class="album-count" id="album-count">0 songs</p>
+            <div class="album-actions">
+              <button id="album-play" class="btn-primary">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg> Play
+              </button>
+              <button id="album-shuffle" class="btn-ghost">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg> Shuffle
+              </button>
+            </div>
+          </div>
+          <div id="album-tracks" class="track-list"></div>
+        </section>
+
+        <section id="view-playlists" class="view hidden">
+          <div class="view-header">
+            <h2 class="view-title">Playlists</h2>
+            <button id="new-playlist-btn" class="btn-pill">+ New</button>
+          </div>
+          <div id="playlists-list" class="playlists-list"></div>
+        </section>
+
+        <section id="view-playlist" class="view hidden">
+          <button class="back-btn" id="playlist-back" aria-label="Back">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="album-hero">
+            <div class="album-cover playlist-cover" id="playlist-cover">
+              <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15V6"/><path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/><path d="M12 12H3"/><path d="M16 6H3"/><path d="M12 18H3"/></svg>
+            </div>
+            <div class="album-meta">
+              <span class="album-kind">Playlist</span>
+              <h2 class="album-title" id="playlist-title">—</h2>
+              <p class="album-count" id="playlist-count">0 songs</p>
+              <div class="album-actions">
+                <button id="playlist-play" class="btn-primary">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg> Play
+                </button>
+                <button id="playlist-shuffle" class="btn-ghost">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg> Shuffle
+                </button>
+                <button id="playlist-rename" class="btn-ghost-icon" aria-label="Rename">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button id="playlist-delete" class="btn-ghost-icon danger" aria-label="Delete">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div id="playlist-tracks" class="track-list"></div>
+        </section>
+
+        <section id="view-queue" class="view hidden">
+          <div class="view-header">
+            <h2 class="view-title">Queue</h2>
+            <button id="queue-clear" class="btn-pill ghost">Clear</button>
+          </div>
+          <div class="queue-section">
+            <p class="queue-section-label">Now playing</p>
+            <div id="queue-current" class="track-list"></div>
+          </div>
+          <div class="queue-section">
+            <p class="queue-section-label">Up next</p>
+            <div id="queue-next" class="track-list"></div>
+          </div>
+        </section>
+      </div>
+
+      <div id="mini-player" class="mini-player hidden">
+        <div class="mini-row" id="mini-row">
+          <div class="mini-art" id="mini-art">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          </div>
+          <div class="mini-info">
+            <div class="mini-title" id="mini-title">No song playing</div>
+            <div class="mini-sub" id="mini-sub">—</div>
+          </div>
+          <div class="mini-controls">
+            <button id="mini-prev" class="mini-ctrl" aria-label="Previous">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"/><rect x="4" y="5" width="2" height="14"/></svg>
+            </button>
+            <button id="mini-play" class="mini-ctrl play" aria-label="Play / Pause">
+              <svg id="mini-play-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+            </button>
+            <button id="mini-next" class="mini-ctrl" aria-label="Next">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"/><rect x="18" y="5" width="2" height="14"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="mini-seek-row">
+          <span class="mini-time" id="mini-current-time">0:00</span>
+          <button class="mini-skip-btn" id="mini-back15" aria-label="Back 15 seconds">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/><text x="7" y="15" font-size="6" fill="currentColor" stroke="none" font-family="sans-serif" font-weight="700">15</text></svg>
+          </button>
+          <input id="mini-seek" class="mini-seek-input" type="range" min="0" max="1000" value="0" step="1" />
+          <button class="mini-skip-btn" id="mini-fwd15" aria-label="Forward 15 seconds">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-3.51"/><text x="7" y="15" font-size="6" fill="currentColor" stroke="none" font-family="sans-serif" font-weight="700">15</text></svg>
+          </button>
+          <span class="mini-time" id="mini-duration-time">0:00</span>
+        </div>
+      </div>
+
+      <div id="player-sheet" class="player-sheet hidden">
+        <div class="sheet-handle" id="sheet-handle"></div>
+        <button id="sheet-close" class="sheet-close" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="sheet-art" id="sheet-art"><span class="folder-initial">A</span></div>
+        <div class="sheet-info">
+          <h3 class="sheet-title" id="sheet-title">No song playing</h3>
+          <p class="sheet-sub" id="sheet-sub">—</p>
+        </div>
+        <div class="sheet-scrubber">
+          <input id="sheet-seek" class="seek" type="range" min="0" max="1000" value="0" step="1" />
+          <div class="sheet-times-row">
+            <span id="sheet-current-time">0:00</span>
+            <div class="sheet-skip-pair">
+              <button id="sheet-back15" class="skip15-btn" aria-label="Back 15 seconds">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+                −15s
+              </button>
+              <button id="sheet-fwd15" class="skip15-btn" aria-label="Forward 15 seconds">
+                +15s
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-3.51"/></svg>
+              </button>
+            </div>
+            <span id="sheet-duration">0:00</span>
+          </div>
+        </div>
+        <div class="sheet-volume">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
+          <input id="volume-slider" class="volume-slider" type="range" min="0" max="100" value="100" step="1" />
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+        </div>
+        <div class="sheet-controls">
+          <button id="sheet-shuffle" class="sheet-side" aria-label="Shuffle">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+          </button>
+          <button id="sheet-prev" class="sheet-ctrl" aria-label="Previous">
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"/><rect x="4" y="5" width="2" height="14"/></svg>
+          </button>
+          <button id="sheet-play" class="sheet-ctrl play" aria-label="Play / Pause">
+            <svg id="sheet-play-icon" viewBox="0 0 24 24" width="34" height="34" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+          </button>
+          <button id="sheet-next" class="sheet-ctrl" aria-label="Next">
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"/><rect x="18" y="5" width="2" height="14"/></svg>
+          </button>
+          <button id="sheet-loop" class="sheet-side" aria-label="Loop">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          </button>
+        </div>
+        <div class="sheet-extras">
+          <button id="sheet-queue" class="extra-btn">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/><polyline points="17 18 21 14 17 10"/></svg> Queue
+          </button>
+          <button id="sheet-add-to" class="extra-btn">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add to…
+          </button>
+        </div>
+      </div>
+
+      <nav class="tabbar">
+        <button class="tab active" data-tab="library">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          <span>Library</span>
+        </button>
+        <button class="tab" data-tab="playlists">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15V6"/><path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/><path d="M12 12H3"/><path d="M16 6H3"/><path d="M12 18H3"/></svg>
+          <span>Playlists</span>
+        </button>
+        <button class="tab" data-tab="queue">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/><polyline points="17 18 21 14 17 10"/></svg>
+          <span>Queue</span>
+        </button>
+      </nav>
+    </main>
+
+    <div id="user-menu" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-sheet">
+        <div class="sheet-handle"></div>
+        <div class="user-menu-head">
+          <div class="user-menu-avatar" id="user-menu-avatar"></div>
+          <div class="user-menu-info">
+            <div class="user-menu-name" id="user-menu-name">—</div>
+            <div class="user-menu-email" id="user-menu-email">—</div>
+          </div>
+        </div>
+        <button class="modal-item danger" id="signout-btn">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign out
+        </button>
+        <button class="modal-item cancel" id="user-menu-cancel">Cancel</button>
+      </div>
+    </div>
+
+    <div id="track-menu" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-sheet">
+        <div class="sheet-handle"></div>
+        <div class="modal-track-head">
+          <div class="modal-track-title" id="modal-track-title">—</div>
+          <div class="modal-track-sub" id="modal-track-sub">—</div>
+        </div>
+        <button class="modal-item" data-action="play-now">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg> Play now
+        </button>
+        <button class="modal-item" data-action="play-next">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 17 12 22 7"/><path d="M2 4v6a4 4 0 0 0 4 4h11"/></svg> Play next
+        </button>
+        <button class="modal-item" data-action="add-to-queue">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/><line x1="20" y1="14" x2="20" y2="20"/><line x1="17" y1="17" x2="23" y2="17"/></svg> Add to queue
+        </button>
+        <button class="modal-item" data-action="add-to-playlist">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15V6"/><path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/><path d="M12 12H3"/><path d="M16 6H3"/><path d="M12 18H3"/></svg> Add to playlist…
+        </button>
+        <button class="modal-item danger hidden" data-action="remove-from-playlist">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Remove from playlist
+        </button>
+        <button class="modal-item danger hidden" data-action="remove-from-queue">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Remove from queue
+        </button>
+        <button class="modal-item cancel" data-action="cancel">Cancel</button>
+      </div>
+    </div>
+
+    <div id="picker-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-sheet">
+        <div class="sheet-handle"></div>
+        <h3 class="picker-title">Add to playlist</h3>
+        <div id="picker-list" class="picker-list"></div>
+        <button id="picker-new" class="modal-item primary">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New playlist
+        </button>
+        <button class="modal-item cancel" data-action="cancel-picker">Cancel</button>
+      </div>
+    </div>
+
+    <div id="prompt-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-sheet prompt-sheet">
+        <h3 class="prompt-title" id="prompt-title">New playlist</h3>
+        <input id="prompt-input" class="prompt-input" type="text" placeholder="Name" />
+        <div class="prompt-actions">
+          <button id="prompt-cancel" class="modal-item cancel">Cancel</button>
+          <button id="prompt-ok" class="modal-item primary">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="confirm-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-sheet prompt-sheet">
+        <h3 class="prompt-title" id="confirm-title">Are you sure?</h3>
+        <p class="prompt-sub" id="confirm-sub">This cannot be undone.</p>
+        <div class="prompt-actions">
+          <button id="confirm-cancel" class="modal-item cancel">Cancel</button>
+          <button id="confirm-ok" class="modal-item danger">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <div id="loading-overlay" class="loading-overlay hidden">
+      <div class="loader"><span></span><span></span><span></span></div>
+      <p id="loading-text">Loading your library…</p>
+    </div>
+
+    <audio id="audio" preload="auto"></audio>
+  </div>
+
+  <!-- Firebase SDKs (compat build — no bundler needed) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
