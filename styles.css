@@ -186,12 +186,19 @@ input { font-family: inherit; color: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  overflow: hidden;
 }
 .brand-logo-img {
   width: 32px;
   height: 32px;
-  object-fit: contain;
+  max-width: 32px;
+  max-height: 32px;
+  object-fit: cover;
   border-radius: 8px;
+  display: block;
 }
 .brand-name {
   font-family: var(--font-display);
