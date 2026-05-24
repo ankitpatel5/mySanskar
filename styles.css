@@ -2078,7 +2078,11 @@ input { font-family: inherit; color: inherit; }
 .story-cat-icon {
   font-size: 32px;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+.story-cat-icon svg { display: block; }
 
 .story-cat-name {
   font-family: var(--font-display);
