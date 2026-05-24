@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>mySanskar — System Design</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f4f0;
+    color: #1a1a1a;
+    padding: 40px 24px 60px;
+    min-height: 100vh;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    margin-bottom: 4px;
+    color: #111;
+  }
+  .subtitle {
+    text-align: center;
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 40px;
+  }
+
+  .diagram {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* ── Row helpers ── */
+  .row { display: flex; gap: 12px; align-items: stretch; margin-bottom: 0; }
+  .col { display: flex; flex-direction: column; gap: 12px; flex: 1; }
+
+  /* ── Arrow connectors ── */
+  .arrow-down {
+    display: flex;
+    justify-content: center;
+    padding: 6px 0;
+    color: #bbb;
+    font-size: 20px;
+    line-height: 1;
+  }
+  .arrow-row {
+    display: flex;
+    justify-content: space-around;
+    padding: 6px 0;
+  }
+  .arrow-row span { color: #bbb; font-size: 20px; }
+
+  /* ── Cards ── */
+  .card {
+    border-radius: 14px;
+    padding: 16px 18px;
+    border: 1.5px solid transparent;
+    position: relative;
+  }
+
+  .card-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    opacity: 0.55;
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .card-desc {
+    font-size: 12px;
+    line-height: 1.5;
+    opacity: 0.7;
+  }
+
+  .pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 8px;
+  }
+  .pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  /* ── Color themes ── */
+  .theme-user {
+    background: #1a1a2e;
+    border-color: #3a3a5e;
+    color: #fff;
+  }
+  .theme-user .card-label { color: #8888cc; opacity: 1; }
+  .theme-user .card-desc  { opacity: 0.75; color: #ccc; }
+  .theme-user .pill { background: rgba(255,255,255,0.12); color: #ddd; }
+
+  .theme-pwa {
+    background: #fff;
+    border-color: #e2e2e2;
+  }
+  .theme-pwa .pill { background: #f0f0f0; color: #444; }
+
+  .theme-static {
+    background: #fff8ed;
+    border-color: #f0d9a0;
+  }
+  .theme-static .card-label { color: #b07d20; opacity: 1; }
+  .theme-static .pill { background: #fdedc8; color: #8a5e10; }
+
+  .theme-firebase {
+    background: #fff4e6;
+    border-color: #ffc470;
+  }
+  .theme-firebase .card-label { color: #d06000; opacity: 1; }
+  .theme-firebase .pill { background: #ffe5b4; color: #9a4400; }
+
+  .theme-google {
+    background: #e8f4fd;
+    border-color: #a8d4f5;
+  }
+  .theme-google .card-label { color: #1565c0; opacity: 1; }
+  .theme-google .pill { background: #c5e3f7; color: #0d47a1; }
+
+  .theme-gemini {
+    background: #f0ebff;
+    border-color: #c8adf5;
+  }
+  .theme-gemini .card-label { color: #6200ea; opacity: 1; }
+  .theme-gemini .pill { background: #ddd0fa; color: #4a00b0; }
+
+  .theme-storage {
+    background: #edfff4;
+    border-color: #9ee8bc;
+  }
+  .theme-storage .card-label { color: #1b6b3a; opacity: 1; }
+  .theme-storage .pill { background: #c3f0d8; color: #155728; }
+
+  .theme-vercel {
+    background: #111;
+    border-color: #333;
+    color: #fff;
+  }
+  .theme-vercel .card-label { color: #888; opacity: 1; }
+  .theme-vercel .card-desc  { color: #aaa; opacity: 1; }
+  .theme-vercel .pill { background: rgba(255,255,255,0.1); color: #ccc; }
+
+  /* ── Section wrappers ── */
+  .section-wrap {
+    border: 2px dashed #ddd;
+    border-radius: 18px;
+    padding: 16px;
+    background: rgba(255,255,255,0.5);
+    position: relative;
+  }
+  .section-wrap .section-title {
+    position: absolute;
+    top: -11px;
+    left: 16px;
+    background: #f5f4f0;
+    padding: 0 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    color: #aaa;
+  }
+
+  /* ── Flow line ── */
+  .flow-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    font-size: 12px;
+    color: #999;
+    font-weight: 500;
+  }
+  .flow-line::before, .flow-line::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #ddd;
+  }
+
+  /* ── Legend ── */
+  .legend {
+    max-width: 900px;
+    margin: 28px auto 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: #666;
+  }
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  /* ── Data flow annotations ── */
+  .flow-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #888;
+    background: #efefef;
+    border-radius: 6px;
+    padding: 2px 7px;
+    margin-top: 6px;
+  }
+
+  @media (max-width: 600px) {
+    .row { flex-direction: column; }
+    body { padding: 24px 14px 40px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>🪔 mySanskar — System Design</h1>
+<p class="subtitle">How the app is built and how everything connects</p>
+
+<div class="diagram">
+
+  <!-- USER -->
+  <div class="card theme-user">
+    <div class="card-label">Who uses it</div>
+    <div class="card-title">User — iPhone, Android, or Desktop Browser</div>
+    <div class="card-desc">Installed as a PWA from the home screen, or opened directly in a browser. No app store required.</div>
+    <div class="pill-row">
+      <span class="pill">📱 iOS Home Screen</span>
+      <span class="pill">🤖 Android Chrome</span>
+      <span class="pill">💻 Desktop Browser</span>
+      <span class="pill">🔒 Google Sign-In</span>
+    </div>
+  </div>
+
+  <div class="arrow-down">↓</div>
+
+  <!-- PWA SHELL -->
+  <div class="section-wrap">
+    <span class="section-title">The App — Served from Vercel CDN</span>
+    <div class="row" style="margin-bottom:12px;">
+
+      <div class="card theme-pwa" style="flex:1.2">
+        <div class="card-label">UI Shell</div>
+        <div class="card-title">index.html + styles.css</div>
+        <div class="card-desc">Single-page app — one HTML file, no page reloads. All screens (Music, Stories, AI generator, Settings) live here as hidden sections swapped by JavaScript.</div>
+        <div class="pill-row">
+          <span class="pill">Home tab</span>
+          <span class="pill">Music tab</span>
+          <span class="pill">Stories tab</span>
+          <span class="pill">Settings</span>
+        </div>
+      </div>
+
+      <div class="card theme-pwa" style="flex:1.4">
+        <div class="card-label">App Logic</div>
+        <div class="card-title">app.js (~3,600 lines)</div>
+        <div class="card-desc">All the brains — one vanilla JavaScript file with no framework or build step. Handles auth, music playback, story rendering, AI generation, language switching, and all UI interactions.</div>
+        <div class="pill-row">
+          <span class="pill">Music player</span>
+          <span class="pill">Story reader</span>
+          <span class="pill">AI generator</span>
+          <span class="pill">TTS engine</span>
+          <span class="pill">Offline cache</span>
+        </div>
+      </div>
+
+      <div class="card theme-pwa" style="flex:0.9">
+        <div class="card-label">Offline Layer</div>
+        <div class="card-title">Service Worker</div>
+        <div class="card-desc">Caches the app shell so it loads instantly from the home screen, even offline. Bumping the version number forces all devices to refresh.</div>
+        <div class="pill-row">
+          <span class="pill">Cache-first</span>
+          <span class="pill">Index: network-first</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Static bundles -->
+    <div class="card theme-static">
+      <div class="card-label">Pre-built Static Data — No API calls needed at load time</div>
+      <div class="card-title">Bundled JavaScript Data Files</div>
+      <div class="card-desc">Generated once by scripts and shipped as static JS files. Loaded instantly from Vercel's CDN. No database reads needed to show story content.</div>
+      <div class="pill-row">
+        <span class="pill">📖 stories-data.js — 256 stories &amp; metadata</span>
+        <span class="pill">🔤 translations-data.js — Gujarati + Transliteration story bodies (153 stories, 1.5 MB)</span>
+        <span class="pill">🏷️ title-translations.js — All 256 story titles in Gujarati + Romanized</span>
+        <span class="pill">🔑 config.js — API keys (gitignored, Vercel-only)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">↓  requests flow out to external services  ↓</div>
+
+  <!-- External services row -->
+  <div class="row">
+
+    <!-- Firebase -->
+    <div class="col">
+      <div class="card theme-firebase">
+        <div class="card-label">Auth &amp; Database</div>
+        <div class="card-title">🔥 Firebase</div>
+        <div class="card-desc">Handles user identity and cloud data sync across devices.</div>
+        <div class="pill-row">
+          <span class="pill">Google Sign-In</span>
+          <span class="pill">Firestore DB</span>
+        </div>
+        <div style="margin-top:12px; font-size:11px; color:#b06000; line-height:1.6;">
+          <strong>Firestore collections:</strong><br/>
+          users/{uid}/playlists — saved music playlists<br/>
+          users/{uid}/aiStories — AI-generated stories<br/>
+          users/{uid}/storyProgress — which stories are done<br/>
+          blockedUsers — admin-managed block list<br/>
+          userProfiles — display names &amp; play counts
+        </div>
+      </div>
+    </div>
+
+    <!-- Google Drive -->
+    <div class="col">
+      <div class="card theme-google">
+        <div class="card-label">Music Source</div>
+        <div class="card-title">🎵 Google Drive API</div>
+        <div class="card-desc">The entire music library lives in a Google Drive folder. The app reads the folder structure to build albums, and streams audio files directly.</div>
+        <div class="pill-row">
+          <span class="pill">Drive v3 API</span>
+          <span class="pill">Folder = Album</span>
+          <span class="pill">File = Song</span>
+        </div>
+        <div style="margin-top:10px; font-size:11px; color:#1565c0; line-height:1.6;">
+          Library cached in localStorage after first load.<br/>
+          Streams audio directly — no upload to servers.
+        </div>
+      </div>
+
+      <div class="card theme-google">
+        <div class="card-label">Text-to-Speech</div>
+        <div class="card-title">🔊 Web Speech API</div>
+        <div class="card-desc">Browser-native TTS for reading stories aloud in English. Active only when English tab is selected — Gujarati and Transliteration are read-only.</div>
+        <div class="pill-row">
+          <span class="pill">English only</span>
+          <span class="pill">Built into browser</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gemini + localStorage -->
+    <div class="col">
+      <div class="card theme-gemini">
+        <div class="card-label">AI Story Generation</div>
+        <div class="card-title">✨ Gemini 2.5 Flash</div>
+        <div class="card-desc">Generates custom BAPS-themed children's stories on demand. The prompt includes the selected moral, character, length, and optional child profile from Settings.</div>
+        <div class="pill-row">
+          <span class="pill">Up to 100/day (Pro)</span>
+          <span class="pill">5/day (Free)</span>
+          <span class="pill">JSON response</span>
+        </div>
+        <div style="margin-top:10px; font-size:11px; color:#6200ea; line-height:1.6;">
+          Also used to translate stories on-demand<br/>
+          when a pre-built translation doesn't exist.
+        </div>
+      </div>
+
+      <div class="card theme-storage">
+        <div class="card-label">Local Storage (On-Device)</div>
+        <div class="card-title">💾 Browser localStorage</div>
+        <div class="card-desc">Stores user preferences instantly on-device. No server needed.</div>
+        <div class="pill-row">
+          <span class="pill">Theme (dark/light)</span>
+          <span class="pill">Default story language</span>
+          <span class="pill">Child profile (name, DOB, gender)</span>
+          <span class="pill">Music library cache</span>
+          <span class="pill">Queue &amp; playlists backup</span>
+          <span class="pill">Story list language (EN/ગુ)</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="arrow-down">↑  all served from  ↑</div>
+
+  <!-- Deployment -->
+  <div class="card theme-vercel">
+    <div class="card-label">Deployment &amp; Hosting</div>
+    <div class="card-title">▲ Vercel — baal-shravan.vercel.app</div>
+    <div class="card-desc">All static files (HTML, JS, CSS, images, data bundles) served from Vercel's global CDN. Zero backend — no server, no containers, no database to manage. config.js with API keys is deployed via .vercelignore (not in git).</div>
+    <div class="pill-row">
+      <span class="pill">Global CDN</span>
+      <span class="pill">HTTPS</span>
+      <span class="pill">Zero backend</span>
+      <span class="pill">GitHub: ankitpatel5/mySanskar</span>
+      <span class="pill">config.js — Vercel only, never in git</span>
+    </div>
+  </div>
+
+</div><!-- end .diagram -->
+
+<!-- Legend / key flows -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#1a1a2e"></div> Users</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#e8e8e8; border:1.5px solid #ccc"></div> App (PWA)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fff8ed; border:1.5px solid #f0d9a0"></div> Static data (CDN)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fff4e6; border:1.5px solid #ffc470"></div> Firebase (Auth + DB)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#e8f4fd; border:1.5px solid #a8d4f5"></div> Google APIs</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f0ebff; border:1.5px solid #c8adf5"></div> Gemini AI</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#edfff4; border:1.5px solid #9ee8bc"></div> Local storage</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#111"></div> Vercel hosting</div>
+</div>
+
+<!-- Key design decisions -->
+<div style="max-width:900px;margin:32px auto 0;background:#fff;border-radius:16px;padding:20px 24px;border:1.5px solid #e8e8e8;">
+  <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#aaa;margin-bottom:12px;">Key Design Decisions</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;">
+    <div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:3px;">No backend server</div>
+      <div style="font-size:12px;color:#666;line-height:1.5;">All logic runs in the browser. External APIs (Firebase, Drive, Gemini) are called directly from the client with restricted API keys.</div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:3px;">Stories pre-bundled</div>
+      <div style="font-size:12px;color:#666;line-height:1.5;">All 256 stories and their translations ship as static JS files. Zero load-time latency — no API call needed to browse or read stories.</div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:3px;">Music from Google Drive</div>
+      <div style="font-size:12px;color:#666;line-height:1.5;">Adding new kirtan is as simple as dropping an MP3 into a Drive folder. No CMS, no upload pipeline needed.</div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:3px;">Offline-capable PWA</div>
+      <div style="font-size:12px;color:#666;line-height:1.5;">The service worker caches the app shell. Stories and UI work offline. Music streams on-demand (requires connection).</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

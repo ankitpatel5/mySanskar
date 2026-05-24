@@ -63,12 +63,14 @@
     pendingTrackId: null,
     pendingContext: null,
     pendingShareDoc: null,
-    currentTab: 'library',
+    currentTab: 'home',
+    musicSubTab: 'library',
     playCounts: {},
     libraryView: 'list',
     user: null,
     currentStory: null,
     currentCatId: null,
+    storyListLang: localStorage.getItem('drift.storyListLang') || 'en',
   };
 
   // ============== DOM ==============
@@ -80,38 +82,19 @@
 
   async function proceedAsUser(user) {
     if (_appBooted) { hideLoading(); return; } // already running
-
-    // Check if this user has been blocked by admin before doing anything else
-    try {
-      const blockedDoc = await window.fbDb.collection('blockedUsers').doc(user.uid).get();
-      if (blockedDoc.exists) {
-        hideLoading();
-        await window.fbAuth.signOut();
-        $('signin-screen').classList.remove('hidden');
-        $('main-screen').classList.add('hidden');
-        $('setup-screen').classList.add('hidden');
-        const msg = $('blocked-msg');
-        if (msg) msg.classList.remove('hidden');
-        return;
-      }
-    } catch (e) {
-      // If check fails (e.g. network), fail open and let them in
-      console.warn('blocked-check failed — proceeding', e);
-    }
-
     _appBooted = true;
+
+    // Show UI immediately — don't block on any network call
     state.user = user;
     loadPersistedState();
     updateUserUI();
-    syncUserProfile(user);
-    setupBlockedListener(user);
     if (!API_KEY || !ROOT_FOLDER_ID) {
       hideLoading();
       showSetup();
       return;
     }
-    showMain();
-    updateAdminUI();
+    showMain(); // hides loading overlay, shows app
+
     setupEventListeners();
     loadVoices();
     setupAudio();
@@ -119,6 +102,26 @@
     loadFirestorePlaylists();
     syncCompletedStoriesFromFirestore();
     checkShareParam();
+
+    // Blocked-user check runs in background after UI is shown
+    // (5s timeout so a hung Firestore call can't leave user in limbo)
+    try {
+      const blockedDoc = await Promise.race([
+        window.fbDb.collection('blockedUsers').doc(user.uid).get(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
+      ]);
+      if (blockedDoc.exists) {
+        await window.fbAuth.signOut();
+        window.location.reload();
+        return;
+      }
+    } catch (e) {
+      console.warn('blocked-check failed — proceeding', e);
+    }
+
+    syncUserProfile(user);
+    setupBlockedListener(user);
+    updateAdminUI();
   }
 
   function proceedAsGuest() {
@@ -155,12 +158,28 @@
     showLoading('Loading…');
 
     // Fallback: if Firebase stalls (slow network, mobile background restore),
-    // check currentUser directly after 7s rather than hanging forever.
+    // check currentUser directly after 8s rather than hanging forever.
     const stallTimer = setTimeout(() => {
       if ($('loading-overlay').classList.contains('hidden')) return;
-      const u = window.fbAuth.currentUser;
-      u ? proceedAsUser(u) : proceedAsGuest();
-    }, 7000);
+      try {
+        const u = window.fbAuth && window.fbAuth.currentUser;
+        u ? proceedAsUser(u) : proceedAsGuest();
+      } catch (e) {
+        console.warn('stall timer fallback failed:', e);
+        proceedAsGuest(); // Last resort — show sign-in screen
+      }
+    }, 8000);
+
+    // Nuclear fallback: no matter what, clear the loading screen after 15s
+    setTimeout(() => {
+      if (!$('loading-overlay').classList.contains('hidden')) {
+        console.warn('nuclear loading timeout — forcing UI');
+        hideLoading();
+        if ($('main-screen').classList.contains('hidden')) {
+          proceedAsGuest();
+        }
+      }
+    }, 15000);
 
     window.fbAuth.onAuthStateChanged((user) => {
       clearTimeout(stallTimer);
@@ -382,6 +401,7 @@
     $('signin-screen').classList.add('hidden');
     $('setup-screen').classList.add('hidden');
     $('main-screen').classList.remove('hidden');
+    hideLoading(); // auth confirmed — stop blocking; library loads in background
   }
 
   function parseFolderId(input) {
@@ -530,25 +550,27 @@
     } catch {}
 
     if (!renderedFromCache) {
-      showLoading('Building your library…');
+      $('library-sub').textContent = 'Loading…';
     }
+
+    // Wrap buildLibrary in a 12-second timeout so slow/offline iOS doesn't hang forever
     try {
-      const fresh = await buildLibrary();
+      const fresh = await Promise.race([
+        buildLibrary(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Library load timed out')), 12000)),
+      ]);
       applyLibrary(fresh);
       try {
         localStorage.setItem(LS.library, JSON.stringify({ albums: fresh.albums, updatedAt: fresh.updatedAt }));
       } catch {}
       renderLibrary();
       $('library-sub').textContent = `${state.library.albums.length} albums · ${state.flatTracks.length} songs`;
-      hideLoading();
     } catch (e) {
-      hideLoading();
       console.error(e);
       if (!state.library) {
-        toast('Could not load library. Check API key & folder ID.');
+        toast('Could not load library. Check your connection.');
         $('library-sub').textContent = 'Library failed to load.';
       } else {
-        toast('Refresh failed — using cached library.');
         $('library-sub').textContent = `${state.library.albums.length} albums · ${state.flatTracks.length} songs`;
       }
     }
@@ -1144,14 +1166,43 @@
     document.querySelectorAll('#content .view').forEach((v) => v.classList.add('hidden'));
     $(viewId).classList.remove('hidden');
   }
-  function switchTab(tab) {
+  function switchMusicTab(subtab) {
+    state.musicSubTab = subtab;
+    document.querySelectorAll('.music-subnav-btn').forEach((b) =>
+      b.classList.toggle('active', b.dataset.subtab === subtab)
+    );
+    if (subtab === 'library') switchView('view-library');
+    else if (subtab === 'playlists') { switchView('view-playlists'); renderPlaylists(); }
+    else if (subtab === 'queue') { switchView('view-queue'); renderQueue(); }
+    $('content').scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  function switchTab(tab, musicSubtab) {
+    // Handle legacy calls like switchTab('library') / switchTab('queue') etc.
+    if (tab === 'library' || tab === 'playlists' || tab === 'queue') {
+      musicSubtab = tab;
+      tab = 'music';
+    }
+
     state.currentTab = tab;
     document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === tab));
-    if (tab === 'library') switchView('view-library');
-    else if (tab === 'playlists') { switchView('view-playlists'); renderPlaylists(); }
-    else if (tab === 'queue') { switchView('view-queue'); renderQueue(); }
-    else if (tab === 'stories') { stopTTS(); switchView('view-stories'); renderStoryCategories(); }
-    $('content').scrollTo({ top: 0, behavior: 'instant' });
+
+    const musicSubnav = $('music-subnav');
+
+    if (tab === 'home') {
+      if (musicSubnav) musicSubnav.classList.add('hidden');
+      switchView('view-home');
+      $('content').scrollTo({ top: 0, behavior: 'instant' });
+    } else if (tab === 'music') {
+      if (musicSubnav) musicSubnav.classList.remove('hidden');
+      switchMusicTab(musicSubtab || state.musicSubTab);
+    } else if (tab === 'stories') {
+      if (musicSubnav) musicSubnav.classList.add('hidden');
+      stopTTS();
+      switchView('view-stories');
+      renderStoryCategories();
+      $('content').scrollTo({ top: 0, behavior: 'instant' });
+    }
   }
 
   // ============== STORY TIME ==============
@@ -1215,6 +1266,12 @@
     const container = $('story-list');
     if (!container) return;
     container.innerHTML = '';
+
+    // Sync toggle UI
+    document.querySelectorAll('.story-list-lang-btn').forEach((b) =>
+      b.classList.toggle('active', b.dataset.lang === state.storyListLang)
+    );
+
     if (!stories.length) {
       container.innerHTML = `<div class="empty-state"><h3>No stories found</h3><p>Try a different search.</p></div>`;
       return;
@@ -1223,6 +1280,12 @@
       const row = document.createElement('div');
       row.className = 'story-row' + (isStoryCompleted(story.id) ? ' done' : '');
       const isVideo = story.type === 'youtube';
+
+      // Use Gujarati title if toggled
+      const titleTrans = window.STORY_TITLE_TRANSLATIONS && window.STORY_TITLE_TRANSLATIONS[story.id];
+      const displayTitle = (state.storyListLang === 'gu' && titleTrans)
+        ? titleTrans.gujarati
+        : story.title;
 
       let thumbHtml;
       if (isVideo) {
@@ -1242,7 +1305,7 @@
       row.innerHTML = `
         ${thumbHtml}
         <div class="story-row-info">
-          <div class="story-row-title">${story.title}</div>
+          <div class="story-row-title">${escapeHtml(displayTitle)}</div>
           ${isVideo ? `<div class="story-row-badge">Video</div>` : ''}
         </div>
         <svg class="story-row-arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -1311,11 +1374,15 @@
     // Language toggle — only for text (non-video) stories with paragraphs
     renderLangToggle(hasParagraphs && !isVideo);
 
-    if (ttsBar) ttsBar.classList.toggle('hidden', !hasParagraphs);
+    // TTS only available in English; hide for other languages
+    const defaultLang = getDefaultStoryLang();
+    if (ttsBar) ttsBar.classList.toggle('hidden', !hasParagraphs || defaultLang !== 'en');
     if (voiceSheet) voiceSheet.classList.add('hidden');
 
+    // Render title (English initially; updated again after lang switch below)
+    renderStoryReaderTitle();
+
     // Switch to the user's default language (no-op if 'en' since we already rendered English)
-    const defaultLang = getDefaultStoryLang();
     if (hasParagraphs && !isVideo && defaultLang !== 'en') {
       setStoryLang(defaultLang);
     }
@@ -1477,6 +1544,7 @@
     renderAISavedList();      // render from local cache instantly
     renderSavedCharacters();
     syncAIStoriesFromFirestore(); // then refresh from Firestore in background
+    initChildToggle();
     switchView('view-ai-stories');
     $('content').scrollTo({ top: 0, behavior: 'instant' });
   }
@@ -1558,7 +1626,6 @@
     state.storyLang = 'en'; // always start as English so setStoryLang() below isn't a no-op
     stopTTS();
 
-    $('story-reader-title').textContent = story.title;
     $('story-reader-img').classList.add('hidden');
 
     const body = $('story-reader-body');
@@ -1583,11 +1650,15 @@
 
     const ttsBar     = $('story-tts-bar');
     const voiceSheet = $('tts-voice-sheet');
-    if (ttsBar) ttsBar.classList.remove('hidden');
     if (voiceSheet) voiceSheet.classList.add('hidden');
 
-    // Switch to the user's default language
+    // Render title based on default lang
     const defaultLangAI = getDefaultStoryLang();
+    if (ttsBar) ttsBar.classList.toggle('hidden', defaultLangAI !== 'en');
+
+    renderStoryReaderTitle();
+
+    // Switch to the user's default language
     if (defaultLangAI !== 'en') {
       setStoryLang(defaultLangAI);
     }
@@ -1598,6 +1669,42 @@
     updateTTSUI();
     switchView('view-story-reader');
     $('content').scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  // Themes picked when "Random" is selected
+  const RANDOM_TOPICS = [
+    'devotion to God',
+    'seva — selfless service',
+    'honesty',
+    'courage',
+    'gratitude',
+    'forgiveness',
+    'helping others',
+    'patience',
+    'faith in Swaminarayan',
+    'humility',
+    'sharing',
+    'kindness to animals',
+    'perseverance',
+    'respect for elders',
+  ];
+
+  // Keshavi's supporting cast — mixed in for purnimagpatel57@gmail.com
+  const KESHAVI_DEFAULT_CHARACTER = 'Keshavi, a curious and sweet young girl';
+  const KESHAVI_SUPPORTING_CAST = [
+    'Baa (her loving Grandma)',
+    'Mom',
+    'Dad',
+    'friends at mandir',
+    'a friendly animal',
+    'Mota Pappa (uncle)',
+    'Mota Mummy (aunt)',
+    'Mahant Swami Maharaj, her Guru',
+  ];
+  const KESHAVI_EMAIL = 'purnimagpatel57@gmail.com';
+
+  function isKeshaviAccount() {
+    return !!(state.user && (state.user.email || '').toLowerCase() === KESHAVI_EMAIL);
   }
 
   async function generateAIStory() {
@@ -1619,10 +1726,19 @@
         if (errEl) errEl.classList.remove('hidden');
         return;
       }
+    } else if (topicEl && topicEl.dataset.value === 'random') {
+      topic = RANDOM_TOPICS[Math.floor(Math.random() * RANDOM_TOPICS.length)];
     } else {
       topic = topicEl ? topicEl.dataset.value : 'devotion to God';
     }
-    const character = ($('ai-character-input').value || '').trim();
+
+    let character = ($('ai-character-input').value || '').trim();
+
+    // Keshavi account: default character + supporting cast when field is empty
+    if (!character && isKeshaviAccount()) {
+      const supporting = KESHAVI_SUPPORTING_CAST[Math.floor(Math.random() * KESHAVI_SUPPORTING_CAST.length)];
+      character = `${KESHAVI_DEFAULT_CHARACTER}, joined by ${supporting}`;
+    }
     const lenEl    = document.querySelector('.ai-length-btn.active');
     const length   = lenEl ? lenEl.dataset.len : 'medium';
 
@@ -1830,6 +1946,103 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
     localStorage.setItem(LS.storyLangDefault, lang);
   }
 
+  // ── Child profile ──────────────────────────────────────────────
+  function getChildProfile() {
+    return {
+      name:   localStorage.getItem('drift.childName')   || '',
+      gender: localStorage.getItem('drift.childGender') || '',
+      dob:    localStorage.getItem('drift.childDob')    || '',
+    };
+  }
+  function saveChildProfile({ name, gender, dob }) {
+    localStorage.setItem('drift.childName',   name);
+    localStorage.setItem('drift.childGender', gender);
+    localStorage.setItem('drift.childDob',    dob);
+  }
+  function calcAgeFromDob(dob) {
+    if (!dob) return null;
+    const birth = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    return age >= 0 ? age : null;
+  }
+  function buildChildCharacterString(profile) {
+    const { name, gender, dob } = profile;
+    if (!name) return '';
+    const genderWord = gender === 'girl' ? 'girl' : gender === 'boy' ? 'boy' : 'child';
+    const age        = calcAgeFromDob(dob);
+    const agePart    = age !== null ? `, ${age} years old,` : '';
+    return `${name}${agePart} a sweet ${genderWord}`;
+  }
+
+  // ── Child toggle in story generator ───────────────────────────
+  let _childToggleActive = false;
+
+  function refreshChildToggle() {
+    const profile = getChildProfile();
+    const charStr = buildChildCharacterString(profile);
+    const row     = $('ai-child-toggle-row');
+    const btn     = $('ai-child-toggle-btn');
+    const label   = $('ai-child-toggle-label');
+    const input   = $('ai-character-input');
+    if (!row) return;
+
+    if (!charStr) {
+      // No profile — hide the toggle, reset state
+      row.classList.add('hidden');
+      _childToggleActive = false;
+      return;
+    }
+
+    row.classList.remove('hidden');
+    if (label) label.textContent = `Make a story with ${profile.name}`;
+
+    if (_childToggleActive) {
+      btn.classList.add('active');
+      btn.setAttribute('aria-pressed', 'true');
+      input.value = charStr;
+      input.disabled = true;
+      input.classList.add('input-disabled');
+    } else {
+      btn.classList.remove('active');
+      btn.setAttribute('aria-pressed', 'false');
+      input.disabled = false;
+      input.classList.remove('input-disabled');
+    }
+  }
+
+  function initChildToggle() {
+    const profile = getChildProfile();
+    const charStr = buildChildCharacterString(profile);
+    // Default to ON if a profile exists
+    _childToggleActive = !!charStr;
+    refreshChildToggle();
+
+    const btn   = $('ai-child-toggle-btn');
+    const input = $('ai-character-input');
+    if (!btn || !input) return;
+
+    // Toggle button clicked
+    btn.addEventListener('click', () => {
+      _childToggleActive = !_childToggleActive;
+      if (!_childToggleActive) input.value = '';
+      refreshChildToggle();
+    });
+
+    // User types → uncheck the toggle
+    input.addEventListener('input', () => {
+      if (_childToggleActive) {
+        _childToggleActive = false;
+        // Re-enable input without clearing what they just typed
+        const val = input.value;
+        refreshChildToggle();
+        input.value = val;
+      }
+    });
+  }
+
   // ── Completion tracking ────────────────────────────────────────
   function loadCompletedStories() {
     try { return new Set(JSON.parse(localStorage.getItem(COMPLETED_LS_KEY) || '[]')); } catch { return new Set(); }
@@ -1917,6 +2130,28 @@ ${numbered}`;
     return result;
   }
 
+  // ── Story reader title + subtitle ─────────────────────────────
+  function renderStoryReaderTitle() {
+    const story = state.currentStory;
+    if (!story) return;
+    const mainEl = $('story-reader-title');
+    const subEl  = $('story-reader-title-sub');
+    if (!mainEl) return;
+
+    const t = window.STORY_TITLE_TRANSLATIONS && window.STORY_TITLE_TRANSLATIONS[story.id];
+
+    if (state.storyLang === 'en') {
+      mainEl.textContent = story.title;
+      if (subEl) { subEl.textContent = t ? t.gujarati : ''; subEl.classList.toggle('hidden', !t); }
+    } else if (state.storyLang === 'gu') {
+      mainEl.textContent = t ? t.gujarati : story.title;
+      if (subEl) { subEl.textContent = t ? t.transliteration : ''; subEl.classList.toggle('hidden', !t); }
+    } else { // transliteration
+      mainEl.textContent = t ? t.transliteration : story.title;
+      if (subEl) { subEl.textContent = t ? t.gujarati : ''; subEl.classList.toggle('hidden', !t); }
+    }
+  }
+
   // ── Language switching ─────────────────────────────────────────
   function renderLangToggle(show) {
     const bar = $('story-lang-bar');
@@ -1935,6 +2170,13 @@ ${numbered}`;
     state.storyLang = lang;
     renderLangToggle(true);
     stopTTS();
+
+    // TTS only available in English
+    const ttsBar = $('story-tts-bar');
+    if (ttsBar) ttsBar.classList.toggle('hidden', lang !== 'en');
+
+    // Update title + subtitle
+    renderStoryReaderTitle();
 
     if (lang === 'en') {
       renderStoryParagraphs(story.paragraphs, story.id);
@@ -2892,10 +3134,18 @@ ${numbered}`;
 
   // ============== EVENTS ==============
   function setupEventListeners() {
-    // Tabs
+    // Main tabs
     document.querySelectorAll('.tab').forEach((t) => {
       t.addEventListener('click', () => switchTab(t.dataset.tab));
     });
+
+    // Music sub-tabs (Library / Playlists / Queue)
+    document.querySelectorAll('.music-subnav-btn').forEach((b) => {
+      b.addEventListener('click', () => switchMusicTab(b.dataset.subtab));
+    });
+
+    // Brand logo → home tab
+    $('brand-home-btn').addEventListener('click', () => switchTab('home'));
 
     // Theme toggle
     applyTheme(currentTheme()); // set correct icon on boot
@@ -2934,17 +3184,75 @@ ${numbered}`;
       document.querySelectorAll('.settings-lang-btn').forEach((b) => {
         b.classList.toggle('active', b.dataset.lang === curLang);
       });
+
+      // Populate child profile fields
+      const cp = getChildProfile();
+      $('child-name-input').value = cp.name;
+      $('child-dob-input').value  = cp.dob;
+      document.querySelectorAll('.child-gender-btn').forEach((b) =>
+        b.classList.toggle('active', b.dataset.gender === cp.gender)
+      );
+
       showModal('settings-modal');
+    });
+
+    // Child profile — save on input change
+    const saveChildDebounced = (() => {
+      let t;
+      return () => {
+        clearTimeout(t);
+        t = setTimeout(() => {
+          const gender = document.querySelector('.child-gender-btn.active')?.dataset.gender || '';
+          saveChildProfile({
+            name:   ($('child-name-input').value || '').trim(),
+            gender,
+            dob:    ($('child-dob-input').value  || '').trim(),
+          });
+          refreshChildToggle();
+        }, 400);
+      };
+    })();
+    $('child-name-input').addEventListener('input', saveChildDebounced);
+    $('child-dob-input').addEventListener('change', saveChildDebounced);
+    document.querySelectorAll('.child-gender-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.child-gender-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        saveChildDebounced();
+      });
     });
     $('settings-cancel').addEventListener('click', () => closeModal('settings-modal'));
     document.querySelector('#settings-modal .modal-backdrop').addEventListener('click', () => closeModal('settings-modal'));
 
+    // Story list language toggle (EN / ગુ)
+    document.querySelectorAll('.story-list-lang-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.storyListLang = btn.dataset.lang;
+        try { localStorage.setItem('drift.storyListLang', state.storyListLang); } catch {}
+        document.querySelectorAll('.story-list-lang-btn').forEach((b) =>
+          b.classList.toggle('active', b.dataset.lang === state.storyListLang)
+        );
+        renderStoryList(state.currentCatId, $('story-search-input')?.value || '');
+      });
+    });
+
     // Default story language picker inside settings
     document.querySelectorAll('.settings-lang-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
-        setDefaultStoryLang(btn.dataset.lang);
+        const lang = btn.dataset.lang;
+        setDefaultStoryLang(lang);
         document.querySelectorAll('.settings-lang-btn').forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
+
+        // Sync story list toggle: EN → 'en', Gujarati → 'gu', Transliteration → 'en' (no trans option in list)
+        const listLang = (lang === 'gu') ? 'gu' : 'en';
+        state.storyListLang = listLang;
+        try { localStorage.setItem('drift.storyListLang', listLang); } catch {}
+        document.querySelectorAll('.story-list-lang-btn').forEach((b) =>
+          b.classList.toggle('active', b.dataset.lang === listLang)
+        );
+        if (state.currentCatId) renderStoryList(state.currentCatId, $('story-search-input')?.value || '');
+
         toast(`Default story language set to ${btn.textContent.trim()}`);
       });
     });
