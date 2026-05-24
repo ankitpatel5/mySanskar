@@ -2407,10 +2407,17 @@ ${numbered}`;
     });
   }
 
+  // Incremented on every setStoryLang call so stale async completions can self-abort.
+  let _storyLangReqId = 0;
+
   async function setStoryLang(lang) {
     if (lang === state.storyLang) return;
     const story = state.currentStory;
     if (!story) return;
+
+    // Stamp this request; any in-flight request with an older id will discard its result.
+    const myReqId = ++_storyLangReqId;
+
     state.storyLang = lang;
     renderLangToggle(true);
     stopTTS();
@@ -2423,20 +2430,26 @@ ${numbered}`;
     renderStoryReaderTitle();
 
     if (lang === 'en') {
+      // Clear any in-flight "Translating…" spinners left by previous requests
+      const body = $('story-reader-body');
+      body.querySelectorAll('.story-lang-loading').forEach((el) => el.remove());
       renderStoryParagraphs(story.paragraphs, story.id);
       return;
     }
 
-    // Check cache first
+    // Check cache first (synchronous — no race possible)
     const cached = loadTransCache(story.id);
     if (cached) {
+      if (_storyLangReqId !== myReqId) return; // superseded before we even paint
       renderStoryParagraphs(lang === 'gu' ? cached.gujarati : cached.transliteration, story.id);
       return;
     }
 
-    // Fetch translation — show loading in body
+    // Fetch translation — show loading spinner in body
     const body = $('story-reader-body');
     body.querySelectorAll('.story-para').forEach((p) => p.remove());
+    // Remove any leftover spinners from previous in-flight requests
+    body.querySelectorAll('.story-lang-loading').forEach((el) => el.remove());
     const completeBtnWrap = body.querySelector('.story-mark-complete-wrap');
     const loader = document.createElement('div');
     loader.className = 'story-lang-loading';
@@ -2446,9 +2459,15 @@ ${numbered}`;
 
     try {
       const trans = await fetchTranslation(story.id, story.paragraphs);
+
+      // By the time we're back, the user may have switched tabs — bail out silently.
+      if (_storyLangReqId !== myReqId) { loader.remove(); return; }
+
       loader.remove();
       renderStoryParagraphs(lang === 'gu' ? trans.gujarati : trans.transliteration, story.id);
     } catch (e) {
+      if (_storyLangReqId !== myReqId) { loader.remove(); return; }
+
       loader.remove();
       const errEl = document.createElement('p');
       errEl.style.cssText = 'color:var(--danger);font-size:13px;text-align:center;padding:24px 0;';
@@ -2457,7 +2476,7 @@ ${numbered}`;
         : `Translation failed — ${e.message}`;
       if (completeBtnWrap) body.insertBefore(errEl, completeBtnWrap);
       else body.appendChild(errEl);
-      // Revert
+      // Revert to English
       state.storyLang = 'en';
       renderLangToggle(true);
     }
