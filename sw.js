@@ -5,7 +5,7 @@
 // VERSIONING: bump CACHE whenever you deploy new app files so that
 // home-screen users get the update on their next visit.
 
-const CACHE = 'baal-shravan-v5';
+const CACHE = 'baal-shravan-v6';
 
 // Static assets — cache-first (safe: only change when CACHE is bumped)
 const SHELL = [
@@ -16,20 +16,39 @@ const SHELL = [
   '/baal.png',
 ];
 
-// Install: pre-cache static assets (NOT index.html — see fetch handler)
+// Install: fetch every shell file fresh from the network (bypass HTTP cache)
+// so a CACHE bump always picks up the latest bytes, even within max-age windows.
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(SHELL))
+    caches.open(CACHE).then((c) =>
+      Promise.all(
+        SHELL.map((url) =>
+          fetch(url, { cache: 'no-store' }).then((res) => {
+            if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
+            return c.put(url, res);
+          })
+        )
+      )
+    )
   );
   self.skipWaiting();
 });
 
-// Activate: delete every old cache so stale files are gone immediately
+// Activate: delete every old cache so stale files are gone immediately,
+// then tell all open tabs to reload so they get the fresh shell at once.
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    )
+    caches.keys()
+      .then((keys) =>
+        Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
+      )
+      .then(() => {
+        // Reload every open tab so the new shell (CSS/JS) takes effect immediately
+        // without the user needing to close and reopen the app.
+        return self.clients.matchAll({ type: 'window' }).then((clients) => {
+          clients.forEach((client) => client.navigate(client.url));
+        });
+      })
   );
   self.clients.claim();
 });
