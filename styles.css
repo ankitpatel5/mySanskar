@@ -2023,6 +2023,49 @@ input { font-family: inherit; color: inherit; }
   background: #22c55e url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E") center/10px no-repeat;
 }
 
+/* ── Settings modal — language default picker ────────────────── */
+.settings-section {
+  padding: 18px 20px 10px;
+}
+.settings-section-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  margin-bottom: 10px;
+}
+.settings-lang-row {
+  display: flex;
+  background: var(--bg-3);
+  border-radius: 22px;
+  padding: 3px;
+  gap: 2px;
+}
+.settings-lang-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  border-radius: 19px;
+  padding: 9px 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg-3);
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+  white-space: nowrap;
+}
+.settings-lang-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+.settings-section-hint {
+  font-size: 12px;
+  color: var(--fg-4);
+  margin-top: 8px;
+  padding: 0 2px;
+}
+
 /* Per-story delete button in saved list */
 .ai-story-delete-btn {
   background: none;

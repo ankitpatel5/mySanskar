@@ -21,6 +21,7 @@
     playCounts: 'drift.playCounts',
     libraryView: 'drift.libraryView',
     theme: 'drift.theme',
+    storyLangDefault: 'drift.storyLangDefault',
   };
 
   // ============== THEME ==============
@@ -1257,7 +1258,7 @@
     const story = (data.stories[catId] || []).find((s) => s.id === storyId);
     if (!story) return;
     state.currentStory = story;
-    state.storyLang = 'en';
+    state.storyLang = getDefaultStoryLang();
     stopTTS();
 
     // Header
@@ -1296,6 +1297,7 @@
 
     const hasParagraphs = story.paragraphs && story.paragraphs.length > 0;
     if (hasParagraphs) {
+      // Always render English first so paragraphs exist in DOM
       story.paragraphs.forEach((p, i) => {
         const el = document.createElement('p');
         el.className = 'story-para';
@@ -1312,6 +1314,11 @@
     if (ttsBar) ttsBar.classList.toggle('hidden', !hasParagraphs);
     if (voiceSheet) voiceSheet.classList.add('hidden');
 
+    // If user has a non-English default, switch to it now (uses bundled translations)
+    if (hasParagraphs && !isVideo && state.storyLang !== 'en') {
+      setStoryLang(state.storyLang);
+    }
+
     updateTTSUI();
     switchView('view-story-reader');
     $('content').scrollTo({ top: 0, behavior: 'instant' });
@@ -1319,10 +1326,26 @@
 
   // ============== AI STORIES ==============
 
-  const AI_DAILY_LIMIT  = 5;
+  const AI_DAILY_LIMIT_FREE = 5;
+  const AI_DAILY_LIMIT_PRO  = 100;
   const AI_LS_KEY       = 'drift.aiUsage';
   const AI_SAVED_KEY    = 'drift.aiStories';
   const AI_CHARS_KEY    = 'drift.aiCharacters';
+
+  // Pro tier accounts — these get 100 stories/day
+  const PRO_EMAILS = new Set([
+    'ankitpatel5@gmail.com',
+    'isupiyush@gmail.com',
+    'dsutaria92@gmail.com',
+  ]);
+
+  function isProUser() {
+    return !!(state.user && PRO_EMAILS.has((state.user.email || '').toLowerCase()));
+  }
+
+  function aiDailyLimit() {
+    return isProUser() ? AI_DAILY_LIMIT_PRO : AI_DAILY_LIMIT_FREE;
+  }
 
   // ── Kid-friendly content filter ─────────────────────────────────
   const BLOCKED_TERMS = [
@@ -1460,12 +1483,22 @@
   function renderAIUsageRow() {
     const row   = $('ai-usage-row');
     if (!row) return;
+    const limit = aiDailyLimit();
+    const isPro = isProUser();
     const used  = getAIUsageToday();
-    const left  = Math.max(0, AI_DAILY_LIMIT - used);
-    const dots  = Array.from({ length: AI_DAILY_LIMIT }, (_, i) =>
-      `<div class="ai-usage-dot${i < used ? ' used' : ''}"></div>`
-    ).join('');
-    row.innerHTML = `<div class="ai-usage-dots">${dots}</div><span>${left} of ${AI_DAILY_LIMIT} free stories remaining today</span>`;
+    const left  = Math.max(0, limit - used);
+
+    // For pro users show a simple text counter; for free show dots
+    let content;
+    if (isPro) {
+      content = `<span style="color:var(--accent);font-weight:600;font-size:12px;letter-spacing:.4px;">✦ Pro Tier</span><span style="color:var(--fg-3);margin-left:8px;">${left} of ${limit} stories remaining today</span>`;
+    } else {
+      const dots = Array.from({ length: limit }, (_, i) =>
+        `<div class="ai-usage-dot${i < used ? ' used' : ''}"></div>`
+      ).join('');
+      content = `<div class="ai-usage-dots">${dots}</div><span>${left} of ${limit} free stories remaining today</span>`;
+    }
+    row.innerHTML = content;
 
     const btn = $('ai-generate-btn');
     if (btn) btn.disabled = left === 0;
@@ -1521,7 +1554,7 @@
 
   function openAIStoryReader(story, savedIdx) {
     state.currentStory = { ...story, type: 'text', photo: null };
-    state.storyLang = 'en';
+    state.storyLang = getDefaultStoryLang();
     stopTTS();
 
     $('story-reader-title').textContent = story.title;
@@ -1552,6 +1585,11 @@
     if (ttsBar) ttsBar.classList.remove('hidden');
     if (voiceSheet) voiceSheet.classList.add('hidden');
 
+    // If user has a non-English default, switch to it now
+    if (state.storyLang !== 'en') {
+      setStoryLang(state.storyLang);
+    }
+
     // Override back button to return to AI stories
     $('story-reader-back')._aiMode = true;
 
@@ -1563,7 +1601,7 @@
   async function generateAIStory() {
     const key = (window.DRIFT_CONFIG || {}).geminiKey || '';
     if (!key) { toast('Add your Gemini API key to config.js'); return; }
-    if (getAIUsageToday() >= AI_DAILY_LIMIT) { toast(`Daily limit reached — come back tomorrow!`); return; }
+    if (getAIUsageToday() >= aiDailyLimit()) { toast(`Daily limit reached — come back tomorrow!`); return; }
 
     const topicEl  = document.querySelector('.ai-chip.active');
     let topic;
@@ -1646,7 +1684,7 @@
       errEl.className = 'ai-error-msg';
       $('ai-generate-btn').after(errEl);
     } finally {
-      btn.disabled = getAIUsageToday() >= AI_DAILY_LIMIT;
+      btn.disabled = getAIUsageToday() >= aiDailyLimit();
       btn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Generate Story`;
     }
   }
@@ -1781,6 +1819,14 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
 
   const COMPLETED_LS_KEY   = 'drift.completedStories';
   const TRANS_LS_KEY_PREFIX = 'drift.trans.';
+
+  // ── Default story language ─────────────────────────────────────
+  function getDefaultStoryLang() {
+    return localStorage.getItem(LS.storyLangDefault) || 'en';
+  }
+  function setDefaultStoryLang(lang) {
+    localStorage.setItem(LS.storyLangDefault, lang);
+  }
 
   // ── Completion tracking ────────────────────────────────────────
   function loadCompletedStories() {
@@ -1972,10 +2018,51 @@ ${numbered}`;
 
   // ============== TEXT-TO-SPEECH ==============
 
-  const ttsState = { active: false, paused: false, idx: 0, voice: null };
+  const ttsState = { active: false, paused: false, idx: 0, voice: null, loading: false };
   let _ttsVoices = [];
+  let _gttsAudio  = null;                    // current Google TTS Audio element
+  const _gttsCache = new Map();              // 'text' -> blob URL (session memory)
 
-  // Load voices — they load async in most browsers
+  // ── Google Cloud TTS (Neural2 Gujarati) ───────────────────────────────────
+  async function fetchGTTSAudio(text) {
+    if (_gttsCache.has(text)) return _gttsCache.get(text);
+
+    const key = (window.DRIFT_CONFIG || {}).googleTTSKey || '';
+    if (!key) throw new Error('no-gtts-key');
+
+    const res = await fetch(
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${key}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          input: { text },
+          voice: {
+            languageCode: 'gu-IN',
+            name: 'gu-IN-Neural2-A',   // Female Neural2 — most natural
+          },
+          audioConfig: {
+            audioEncoding: 'MP3',
+            speakingRate: 0.9,         // slightly slower for clarity
+          },
+        }),
+      }
+    );
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+
+    // Decode base64 → Blob → object URL (avoids 5 MB data: URL overhead)
+    const b64 = data.audioContent;
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/mp3' }));
+
+    _gttsCache.set(text, url);
+    return url;
+  }
+
+  // ── Load voices — they load async in most browsers ────────────────────────
   function loadVoices() {
     if (!('speechSynthesis' in window)) return;
     const update = () => {
@@ -2011,6 +2098,20 @@ ${numbered}`;
     const sheet = $('tts-voice-sheet');
     const list  = $('tts-voice-list');
     if (!sheet || !list) return;
+
+    // If Gujarati + Google TTS key configured, show info instead of voice list
+    const gttsKey = (window.DRIFT_CONFIG || {}).googleTTSKey || '';
+    if (state.storyLang === 'gu' && gttsKey) {
+      list.innerHTML = `
+        <div style="padding:20px 16px;text-align:center;color:var(--fg-2);font-size:14px;line-height:1.6;">
+          <div style="font-size:22px;margin-bottom:8px;">🎙️</div>
+          <strong>Google Neural2 · gu-IN-Neural2-A</strong><br>
+          <span style="color:var(--fg-3);font-size:13px;">Natural Gujarati voice via Google Cloud TTS.<br>Voice picker only applies to English reading.</span>
+        </div>`;
+      sheet.classList.remove('hidden');
+      $('tts-voice-btn').classList.add('active');
+      return;
+    }
 
     if (_ttsVoices.length === 0) {
       toast('No voices found on this device');
@@ -2067,10 +2168,15 @@ ${numbered}`;
   }
 
   function startTTS() {
-    if (!('speechSynthesis' in window)) { toast('Text-to-speech not supported on this device'); return; }
     if (!state.currentStory) return;
+    // Google TTS doesn't need speechSynthesis; only check for Web Speech fallback
+    const gttsKey = (window.DRIFT_CONFIG || {}).googleTTSKey || '';
+    if (!gttsKey && !('speechSynthesis' in window)) {
+      toast('Text-to-speech not supported on this device'); return;
+    }
     ttsState.active = true;
     ttsState.paused = false;
+    ttsState.loading = false;
     ttsState.idx = 0;
     speakParagraph(0);
     updateTTSUI();
@@ -2078,39 +2184,57 @@ ${numbered}`;
 
   function pauseTTS() {
     if (!ttsState.active || ttsState.paused) return;
-    window.speechSynthesis.pause();
+    if (_gttsAudio) {
+      _gttsAudio.pause();
+    } else {
+      window.speechSynthesis.pause();
+    }
     ttsState.paused = true;
+    ttsState.loading = false;
     updateTTSUI();
   }
 
   function resumeTTS() {
     if (!ttsState.active || !ttsState.paused) return;
-    // Some browsers (Chrome Android) don't resume well — restart paragraph instead
-    window.speechSynthesis.resume();
-    // Fallback: if still paused after 200ms, restart the paragraph
-    setTimeout(() => {
-      if (ttsState.paused && ttsState.active) {
-        ttsState.paused = false;
-        window.speechSynthesis.cancel();
-        speakParagraph(ttsState.idx);
-      }
-    }, 200);
     ttsState.paused = false;
+    if (_gttsAudio) {
+      _gttsAudio.play().catch(() => speakParagraph(ttsState.idx));
+    } else {
+      // Some browsers (Chrome Android) don't resume well — restart paragraph instead
+      window.speechSynthesis.resume();
+      setTimeout(() => {
+        if (ttsState.paused && ttsState.active) {
+          ttsState.paused = false;
+          window.speechSynthesis.cancel();
+          speakParagraph(ttsState.idx);
+        }
+      }, 200);
+    }
     updateTTSUI();
   }
 
   function stopTTS() {
+    // Stop Google TTS audio element
+    if (_gttsAudio) {
+      _gttsAudio.pause();
+      _gttsAudio.onended = null;
+      _gttsAudio.onerror = null;
+      _gttsAudio.src = '';
+      _gttsAudio = null;
+    }
+    // Stop Web Speech
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
-    ttsState.active = false;
-    ttsState.paused = false;
-    ttsState.idx = 0;
+    ttsState.active  = false;
+    ttsState.paused  = false;
+    ttsState.loading = false;
+    ttsState.idx     = 0;
     document.querySelectorAll('.story-para.tts-active').forEach((el) => el.classList.remove('tts-active'));
     updateTTSUI();
   }
 
-  function speakParagraph(idx) {
+  async function speakParagraph(idx) {
     // Read text from DOM so we speak whatever language is currently displayed
     const paraEls = document.querySelectorAll('.story-para');
     if (!paraEls.length || idx >= paraEls.length) {
@@ -2119,7 +2243,7 @@ ${numbered}`;
     }
     ttsState.idx = idx;
 
-    // Highlight
+    // Highlight active paragraph
     paraEls.forEach((el) => {
       el.classList.toggle('tts-active', parseInt(el.dataset.idx, 10) === idx);
     });
@@ -2128,27 +2252,72 @@ ${numbered}`;
     const activeEl = document.querySelector(`.story-para[data-idx="${idx}"]`);
     if (activeEl) activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-    // Progress
+    // Progress bar
     const total = paraEls.length;
     const bar = $('tts-progress-bar');
     if (bar) bar.style.width = total > 1 ? `${(idx / (total - 1)) * 100}%` : '100%';
 
     const text = paraEls[idx].textContent || '';
+    const gttsKey = (window.DRIFT_CONFIG || {}).googleTTSKey || '';
+
+    // ── Google Cloud TTS path (Gujarati) ──────────────────────────────────
+    if (state.storyLang === 'gu' && gttsKey) {
+      ttsState.loading = true;
+      updateTTSUI();
+
+      try {
+        const audioUrl = await fetchGTTSAudio(text);
+
+        // Guard: user may have stopped/paused while we were fetching
+        if (!ttsState.active || ttsState.paused) {
+          ttsState.loading = false;
+          return;
+        }
+
+        // Stop any previously playing audio
+        if (_gttsAudio) {
+          _gttsAudio.pause();
+          _gttsAudio.onended = null;
+          _gttsAudio.onerror = null;
+        }
+
+        _gttsAudio = new Audio(audioUrl);
+        ttsState.loading = false;
+        updateTTSUI();
+
+        _gttsAudio.onended = () => {
+          if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1);
+        };
+        _gttsAudio.onerror = () => {
+          console.warn('Google TTS audio playback error');
+          if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1);
+        };
+        await _gttsAudio.play();
+
+        // Pre-fetch next paragraph in background to eliminate gap between paragraphs
+        if (idx + 1 < paraEls.length) {
+          const nextText = paraEls[idx + 1].textContent || '';
+          fetchGTTSAudio(nextText).catch(() => {});
+        }
+        return;
+
+      } catch (e) {
+        ttsState.loading = false;
+        console.warn('Google TTS failed, falling back to Web Speech:', e.message);
+        // Fall through to Web Speech below
+      }
+    }
+
+    // ── Web Speech fallback (English, Transliteration, or no Google key) ──
     const utter = new SpeechSynthesisUtterance(text);
     utter.rate = 0.92;
 
     if (state.storyLang === 'gu') {
-      // Try to use a Gujarati voice if available
+      // No Google TTS key — try OS Gujarati voice
       const allVoices = window.speechSynthesis.getVoices();
       const guVoice = allVoices.find((v) => v.lang.startsWith('gu'));
-      if (guVoice) {
-        utter.voice = guVoice;
-        utter.lang = 'gu-IN';
-      } else {
-        // Fallback: set lang hint even without a native voice
-        utter.lang = 'gu-IN';
-        if (ttsState.voice) utter.voice = ttsState.voice;
-      }
+      if (guVoice) { utter.voice = guVoice; utter.lang = 'gu-IN'; }
+      else { utter.lang = 'gu-IN'; if (ttsState.voice) utter.voice = ttsState.voice; }
     } else {
       utter.lang = 'en-US';
       if (ttsState.voice) utter.voice = ttsState.voice;
@@ -2170,20 +2339,38 @@ ${numbered}`;
     const label   = $('tts-label');
     if (!playBtn) return;
 
-    const isPlaying = ttsState.active && !ttsState.paused;
+    const isLoading = ttsState.active && ttsState.loading;
+    const isPlaying = ttsState.active && !ttsState.paused && !ttsState.loading;
     const isPaused  = ttsState.active && ttsState.paused;
+    const gttsKey   = (window.DRIFT_CONFIG || {}).googleTTSKey || '';
+    const usingGTTS = state.storyLang === 'gu' && !!gttsKey;
 
-    playBtn.innerHTML = isPlaying
-      ? `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`
-      : `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>`;
+    // Loading spinner replaces the play icon while fetching first paragraph
+    if (isLoading) {
+      playBtn.innerHTML = `<div class="ai-spinner" style="width:18px;height:18px;border-width:2px;"></div>`;
+    } else {
+      playBtn.innerHTML = isPlaying
+        ? `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`
+        : `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>`;
+    }
     playBtn.setAttribute('aria-label', isPlaying ? 'Pause reading' : isPaused ? 'Resume reading' : 'Read aloud');
     playBtn.classList.toggle('reading', ttsState.active);
 
     if (label) {
-      const voiceName = ttsState.voice
-        ? ttsState.voice.name.replace(/^.*\.\w+-\w+\./i, '').replace(/_/g, ' ')
-        : 'Read aloud';
-      label.textContent = isPlaying ? 'Reading…' : isPaused ? 'Paused' : voiceName;
+      if (isLoading) {
+        label.textContent = 'Loading…';
+      } else if (isPlaying) {
+        label.textContent = 'Reading…';
+      } else if (isPaused) {
+        label.textContent = 'Paused';
+      } else if (usingGTTS) {
+        label.textContent = 'Neural · Google';
+      } else {
+        const voiceName = ttsState.voice
+          ? ttsState.voice.name.replace(/^.*\.\w+-\w+\./i, '').replace(/_/g, ' ')
+          : 'Read aloud';
+        label.textContent = voiceName;
+      }
     }
 
     if (stopBtn) stopBtn.classList.toggle('hidden', !ttsState.active);
@@ -2739,9 +2926,26 @@ ${numbered}`;
     });
 
     // Settings modal
-    $('settings-btn').addEventListener('click', () => showModal('settings-modal'));
+    $('settings-btn').addEventListener('click', () => {
+      // Reflect current default lang selection before opening
+      const curLang = getDefaultStoryLang();
+      document.querySelectorAll('.settings-lang-btn').forEach((b) => {
+        b.classList.toggle('active', b.dataset.lang === curLang);
+      });
+      showModal('settings-modal');
+    });
     $('settings-cancel').addEventListener('click', () => closeModal('settings-modal'));
     document.querySelector('#settings-modal .modal-backdrop').addEventListener('click', () => closeModal('settings-modal'));
+
+    // Default story language picker inside settings
+    document.querySelectorAll('.settings-lang-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        setDefaultStoryLang(btn.dataset.lang);
+        document.querySelectorAll('.settings-lang-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        toast(`Default story language set to ${btn.textContent.trim()}`);
+      });
+    });
     $('settings-refresh').addEventListener('click', async () => {
       closeModal('settings-modal');
       document.body.classList.add('refreshing');
