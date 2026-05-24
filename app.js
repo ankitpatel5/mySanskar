@@ -1894,7 +1894,11 @@
           { confirmLabel: 'Delete', danger: true }
         );
       });
-      row.addEventListener('click', () => openAIStoryReader(story, idx));
+      row.addEventListener('click', () => {
+        // Re-read from localStorage so any imageUrl saved after this list rendered is included
+        const fresh = loadAISavedStories();
+        openAIStoryReader(fresh[idx] || story, idx);
+      });
       list.appendChild(row);
     });
   }
