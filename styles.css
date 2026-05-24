@@ -1905,8 +1905,7 @@ input { font-family: inherit; color: inherit; }
 
 .story-reader-img {
   width: 100%;
-  max-height: 240px;
-  object-fit: cover;
+  height: auto;
   border-radius: var(--r-lg);
   margin-bottom: 16px;
   display: block;
