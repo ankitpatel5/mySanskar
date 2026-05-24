@@ -970,7 +970,11 @@
     $('sheet-art').innerHTML = `<span class="folder-initial">${escapeHtml(initial)}</span>`;
     const [a] = paletteFor(track.albumName || '?');
     document.querySelector('.player-sheet')?.style.setProperty('--c-a', a);
-    $('mini-player').classList.remove('hidden');
+    // Only surface the mini-player on the music tab
+    if (state.currentTab === 'music') {
+      $('mini-player').classList.remove('hidden');
+      $('content').classList.add('mini-visible');
+    }
     if (resetTime) {
       $('sheet-current-time').textContent = '0:00';
       $('sheet-duration').textContent = '0:00';
@@ -1247,20 +1251,33 @@
     document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === tab));
 
     const musicSubnav = $('music-subnav');
+    const miniPlayer  = $('mini-player');
+    const content     = $('content');
 
     if (tab === 'home') {
       if (musicSubnav) musicSubnav.classList.add('hidden');
+      if (miniPlayer)  miniPlayer.classList.add('hidden');
+      content.classList.remove('mini-visible');
       switchView('view-home');
-      $('content').scrollTo({ top: 0, behavior: 'instant' });
+      content.scrollTo({ top: 0, behavior: 'instant' });
     } else if (tab === 'music') {
       if (musicSubnav) musicSubnav.classList.remove('hidden');
+      // Show mini-player only when a track is loaded
+      if (miniPlayer && state.currentTrackId) {
+        miniPlayer.classList.remove('hidden');
+        content.classList.add('mini-visible');
+      } else {
+        content.classList.remove('mini-visible');
+      }
       switchMusicTab(musicSubtab || state.musicSubTab);
     } else if (tab === 'stories') {
       if (musicSubnav) musicSubnav.classList.add('hidden');
+      if (miniPlayer)  miniPlayer.classList.add('hidden');
+      content.classList.remove('mini-visible');
       stopTTS();
       switchView('view-stories');
       renderStoryCategories();
-      $('content').scrollTo({ top: 0, behavior: 'instant' });
+      content.scrollTo({ top: 0, behavior: 'instant' });
     }
   }
 

@@ -370,6 +370,10 @@ input { font-family: inherit; color: inherit; }
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--tabbar-h) + var(--safe-bot) + 16px);
+}
+/* Extra bottom room when the mini-player is visible (music tab only) */
+.content.mini-visible {
   padding-bottom: calc(var(--tabbar-h) + var(--mini-h) + var(--safe-bot) + 16px);
 }
 .content::-webkit-scrollbar { width: 0; }
