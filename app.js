@@ -75,18 +75,40 @@
   // ============== INIT ==============
   let _appBooted = false; // guard: only run full setup once
 
-  function proceedAsUser(user) {
+  async function proceedAsUser(user) {
     if (_appBooted) { hideLoading(); return; } // already running
+
+    // Check if this user has been blocked by admin before doing anything else
+    try {
+      const blockedDoc = await window.fbDb.collection('blockedUsers').doc(user.uid).get();
+      if (blockedDoc.exists) {
+        hideLoading();
+        await window.fbAuth.signOut();
+        $('signin-screen').classList.remove('hidden');
+        $('main-screen').classList.add('hidden');
+        $('setup-screen').classList.add('hidden');
+        const msg = $('blocked-msg');
+        if (msg) msg.classList.remove('hidden');
+        return;
+      }
+    } catch (e) {
+      // If check fails (e.g. network), fail open and let them in
+      console.warn('blocked-check failed — proceeding', e);
+    }
+
     _appBooted = true;
     state.user = user;
     loadPersistedState();
     updateUserUI();
+    syncUserProfile(user);
+    setupBlockedListener(user);
     if (!API_KEY || !ROOT_FOLDER_ID) {
       hideLoading();
       showSetup();
       return;
     }
     showMain();
+    updateAdminUI();
     setupEventListeners();
     setupAudio();
     bootstrapLibrary();
@@ -99,6 +121,14 @@
     $('signin-screen').classList.remove('hidden');
     $('main-screen').classList.add('hidden');
     $('setup-screen').classList.add('hidden');
+    // Show blocked message if we were just kicked out by the admin
+    try {
+      if (sessionStorage.getItem('drift.blocked')) {
+        sessionStorage.removeItem('drift.blocked');
+        const msg = $('blocked-msg');
+        if (msg) msg.classList.remove('hidden');
+      }
+    } catch {}
     // Wire sign-in button (only once)
     const btn = $('google-signin-btn');
     if (btn && !btn.dataset.wired) {
@@ -694,6 +724,7 @@
     persist('lastTrack');
     state.playCounts[trackId] = (state.playCounts[trackId] || 0) + 1;
     persist('playCounts');
+    syncPlayCountToFirestore(trackId);
     audio.src = streamUrl(trackId);
     audio.play().catch((e) => { console.warn('play() rejected', e); });
     updateNowPlayingUI(t, true);
@@ -966,6 +997,8 @@
   }
   function updateLoopUI() {
     $('sheet-loop').classList.toggle('active', state.loop);
+    const ml = $('mini-loop');
+    if (ml) ml.classList.toggle('active', state.loop);
   }
   function toggleShuffle() {
     state.shuffle = !state.shuffle;
@@ -975,6 +1008,8 @@
   }
   function updateShuffleUI() {
     $('sheet-shuffle').classList.toggle('active', state.shuffle);
+    const ms = $('mini-shuffle');
+    if (ms) ms.classList.toggle('active', state.shuffle);
   }
 
   // ============== QUEUE ==============
@@ -1291,6 +1326,335 @@
     return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
+  // ============== ADMIN ==============
+  const ADMIN_EMAIL = 'ankitpatel5@gmail.com';
+
+  function isAdmin() {
+    return !!(state.user && state.user.email === ADMIN_EMAIL);
+  }
+
+  function updateAdminUI() {
+    const btn = $('admin-btn');
+    if (btn) btn.classList.toggle('hidden', !isAdmin());
+  }
+
+  function syncUserProfile(user) {
+    if (!user) return;
+    const ref = window.fbDb.collection('users').doc(user.uid);
+    ref.get().then((doc) => {
+      const data = {
+        displayName: user.displayName || '',
+        email: user.email || '',
+        photoURL: user.photoURL || '',
+        lastSeenAt: Date.now(),
+      };
+      if (!doc.exists) data.createdAt = Date.now();
+      return ref.set(data, { merge: true });
+    }).catch((e) => console.warn('syncUserProfile failed', e));
+  }
+
+  function forceBlockedSignout() {
+    try { sessionStorage.setItem('drift.blocked', '1'); } catch {}
+    window.fbAuth.signOut().then(() => window.location.reload());
+  }
+
+  async function checkBlockedStatus(uid) {
+    try {
+      const doc = await window.fbDb.collection('blockedUsers').doc(uid).get();
+      if (doc.exists) forceBlockedSignout();
+    } catch (e) {
+      console.warn('blocked check error', e);
+    }
+  }
+
+  function setupBlockedListener(user) {
+    // 1. Real-time listener — fires instantly while the tab is active
+    const unsub = window.fbDb.collection('blockedUsers').doc(user.uid)
+      .onSnapshot((doc) => {
+        if (doc.exists) { unsub(); forceBlockedSignout(); }
+      }, (e) => {
+        console.warn('blocked listener error', e);
+      });
+
+    // 2. Visibility-change fallback — catches tabs that were backgrounded
+    //    (mobile browsers suspend WebSocket connections when the tab is hidden)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && state.user) {
+        checkBlockedStatus(user.uid);
+      }
+    });
+  }
+
+  function syncPlayCountToFirestore(trackId) {
+    if (!state.user) return;
+    const track = state.trackById[trackId];
+    const trackName = track ? track.name : trackId;
+    const albumName = track ? track.albumName : '';
+    const inc = firebase.firestore.FieldValue.increment(1);
+    const payload = { count: inc, trackName, albumName, lastPlayedAt: Date.now() };
+
+    // Per-user play count
+    window.fbDb.collection('users').doc(state.user.uid)
+      .collection('playCounts').doc(trackId)
+      .set(payload, { merge: true })
+      .catch((e) => console.warn('syncPlayCount (user) failed', e));
+
+    // Global song play count
+    window.fbDb.collection('songs').doc(trackId)
+      .set(payload, { merge: true })
+      .catch((e) => console.warn('syncPlayCount (global) failed', e));
+  }
+
+  let _adminStatsLoaded = false;
+
+  function openAdminDashboard() {
+    const panel = $('admin-panel');
+    if (!panel || !isAdmin()) return;
+    panel.classList.remove('hidden');
+    loadAdminStats();
+    loadAdminData('users');
+  }
+
+  function closeAdminDashboard() {
+    const panel = $('admin-panel');
+    if (panel) panel.classList.add('hidden');
+  }
+
+  async function loadAdminStats() {
+    try {
+      const [usersSnap, songsSnap] = await Promise.all([
+        window.fbDb.collection('users').get(),
+        window.fbDb.collection('songs').get(),
+      ]);
+      $('stat-users').textContent = usersSnap.size;
+      const totalPlays = songsSnap.docs.reduce((sum, d) => sum + (d.data().count || 0), 0);
+      $('stat-plays').textContent = totalPlays.toLocaleString();
+      $('stat-songs').textContent = songsSnap.size;
+    } catch (e) {
+      console.warn('loadAdminStats failed', e);
+    }
+  }
+
+  let adminCurrentTab = 'users';
+
+  async function loadAdminData(tab) {
+    adminCurrentTab = tab || adminCurrentTab;
+    document.querySelectorAll('.admin-tab').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.atab === adminCurrentTab);
+    });
+    const content = $('admin-content');
+    content.innerHTML = '<div class="admin-loading">Loading…</div>';
+    if (adminCurrentTab === 'users') {
+      await loadAdminUsers();
+    } else {
+      await loadAdminSongs();
+    }
+  }
+
+  async function blockUser(uid, displayName, email) {
+    if (!isAdmin()) return;
+    try {
+      await window.fbDb.collection('blockedUsers').doc(uid).set({
+        displayName: displayName || '',
+        email: email || '',
+        blockedAt: Date.now(),
+        blockedBy: state.user.email,
+      });
+      toast(`Blocked ${displayName || email || uid}`);
+      loadAdminData('users');
+    } catch (e) {
+      console.error('blockUser failed', e);
+      toast('Failed to block user');
+    }
+  }
+
+  async function unblockUser(uid, displayName) {
+    if (!isAdmin()) return;
+    try {
+      await window.fbDb.collection('blockedUsers').doc(uid).delete();
+      toast(`Unblocked ${displayName || uid}`);
+      loadAdminData('users');
+    } catch (e) {
+      console.error('unblockUser failed', e);
+      toast('Failed to unblock user');
+    }
+  }
+
+  async function loadAdminUsers() {
+    try {
+      const [usersSnap, blockedSnap] = await Promise.all([
+        window.fbDb.collection('users').orderBy('lastSeenAt', 'desc').get(),
+        window.fbDb.collection('blockedUsers').get(),
+      ]);
+      const blockedSet = new Set(blockedSnap.docs.map((d) => d.id));
+      const users = usersSnap.docs.map((d) => ({
+        uid: d.id, ...d.data(), blocked: blockedSet.has(d.id),
+      }));
+      renderAdminUsers(users);
+    } catch (e) {
+      console.error('loadAdminUsers failed', e);
+      $('admin-content').innerHTML =
+        '<div class="admin-loading">Failed to load users. Check Firestore rules.</div>';
+    }
+  }
+
+  async function loadAdminSongs() {
+    try {
+      const snap = await window.fbDb.collection('songs')
+        .orderBy('count', 'desc').limit(100).get();
+      const songs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      renderAdminSongs(songs);
+    } catch (e) {
+      console.error('loadAdminSongs failed', e);
+      $('admin-content').innerHTML =
+        '<div class="admin-loading">Failed to load songs. Check Firestore rules.</div>';
+    }
+  }
+
+  function renderAdminUsers(users) {
+    const content = $('admin-content');
+    if (!users.length) {
+      content.innerHTML = '<div class="admin-loading">No users yet.</div>';
+      return;
+    }
+    content.innerHTML = '';
+    users.forEach((u) => {
+      const isMe = u.uid === state.user?.uid; // don't let admin block themselves
+      const row = document.createElement('div');
+      row.className = 'admin-user-row' + (u.blocked ? ' blocked' : '');
+      const initial = (u.displayName || u.email || '?').charAt(0).toUpperCase();
+      const lastSeen = u.lastSeenAt ? timeAgo(u.lastSeenAt) : 'Unknown';
+      const joined = u.createdAt ? timeAgo(u.createdAt) : '';
+      const blockedBadge = u.blocked
+        ? `<span class="admin-user-badge">Blocked</span>`
+        : '';
+      const blockBtnHtml = isMe ? '' : u.blocked
+        ? `<button class="admin-block-btn unblock" title="Unblock user">
+             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+           </button>`
+        : `<button class="admin-block-btn" title="Block user">
+             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+           </button>`;
+      row.innerHTML = `
+        <div class="admin-user-avatar">${
+          u.photoURL
+            ? `<img src="${escapeHtml(u.photoURL)}" alt="${escapeHtml(initial)}" />`
+            : escapeHtml(initial)
+        }</div>
+        <div class="admin-user-info">
+          <div class="admin-user-name">${escapeHtml(u.displayName || u.email || 'Unknown')} ${blockedBadge}</div>
+          <div class="admin-user-meta">${escapeHtml(u.email || '')}${joined ? ` · Joined ${joined}` : ''} · Last seen ${lastSeen}</div>
+        </div>
+        <div class="admin-user-actions">
+          ${blockBtnHtml}
+          <button class="admin-user-expand" data-uid="${escapeHtml(u.uid)}" title="View plays">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+        </div>
+      `;
+      // Block / unblock
+      const blockBtn = row.querySelector('.admin-block-btn');
+      if (blockBtn) {
+        blockBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const name = u.displayName || u.email || 'this user';
+          if (u.blocked) {
+            openConfirm(
+              `Unblock ${name}?`,
+              'They will be able to sign in again.',
+              () => unblockUser(u.uid, name),
+              { confirmLabel: 'Unblock', danger: false }
+            );
+          } else {
+            openConfirm(
+              `Block ${name}?`,
+              'They will be signed out immediately and unable to log back in.',
+              () => blockUser(u.uid, u.displayName, u.email),
+              { confirmLabel: 'Block', danger: true }
+            );
+          }
+        });
+      }
+      // Expand play history
+      row.querySelector('.admin-user-expand').addEventListener('click', (e) => {
+        const btn = e.currentTarget;
+        const existing = row.querySelector('.admin-user-songs');
+        if (existing) {
+          existing.remove();
+          btn.classList.remove('open');
+          return;
+        }
+        btn.classList.add('open');
+        loadUserSongs(btn.dataset.uid, row);
+      });
+      content.appendChild(row);
+    });
+  }
+
+  async function loadUserSongs(uid, parentRow) {
+    const placeholder = document.createElement('div');
+    placeholder.className = 'admin-user-songs';
+    placeholder.innerHTML = '<div class="admin-loading" style="padding:8px 16px 4px;">Loading…</div>';
+    parentRow.appendChild(placeholder);
+    try {
+      const snap = await window.fbDb.collection('users').doc(uid)
+        .collection('playCounts').orderBy('count', 'desc').limit(20).get();
+      const songs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      if (!songs.length) {
+        placeholder.innerHTML =
+          '<div class="admin-loading" style="padding:8px 16px 4px;">No plays recorded yet.</div>';
+        return;
+      }
+      placeholder.innerHTML = songs.map((s, i) => `
+        <div class="admin-ranked-row">
+          <span class="admin-rank">${i + 1}</span>
+          <div class="admin-song-info">
+            <div class="admin-song-name">${escapeHtml(s.trackName || s.id)}</div>
+            <div class="admin-song-meta">${escapeHtml(s.albumName || '')}</div>
+          </div>
+          <span class="admin-song-count">${(s.count || 0).toLocaleString()}×</span>
+        </div>
+      `).join('');
+    } catch (e) {
+      placeholder.innerHTML =
+        '<div class="admin-loading" style="padding:8px 16px 4px;">Failed to load.</div>';
+      console.warn('loadUserSongs failed', e);
+    }
+  }
+
+  function renderAdminSongs(songs) {
+    const content = $('admin-content');
+    if (!songs.length) {
+      content.innerHTML = '<div class="admin-loading">No songs played yet.</div>';
+      return;
+    }
+    content.innerHTML = songs.map((s, i) => `
+      <div class="admin-ranked-row">
+        <span class="admin-rank">${i + 1}</span>
+        <div class="admin-song-info">
+          <div class="admin-song-name">${escapeHtml(s.trackName || s.id)}</div>
+          <div class="admin-song-meta">${escapeHtml(s.albumName || '')}</div>
+        </div>
+        <span class="admin-song-count">${(s.count || 0).toLocaleString()}×</span>
+      </div>
+    `).join('');
+  }
+
+  function timeAgo(ts) {
+    const diff = Date.now() - ts;
+    const sec = Math.floor(diff / 1000);
+    if (sec < 60) return 'just now';
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `${min}m ago`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `${hr}h ago`;
+    const day = Math.floor(hr / 24);
+    if (day < 30) return `${day}d ago`;
+    const mo = Math.floor(day / 30);
+    if (mo < 12) return `${mo}mo ago`;
+    return `${Math.floor(mo / 12)}yr ago`;
+  }
+
   // ============== EVENTS ==============
   function setupEventListeners() {
     // Tabs
@@ -1318,6 +1682,15 @@
     });
     $('user-menu-cancel').addEventListener('click', () => closeModal('user-menu'));
     document.querySelector('#user-menu .modal-backdrop').addEventListener('click', () => closeModal('user-menu'));
+
+    // Admin dashboard
+    const adminBtn = $('admin-btn');
+    if (adminBtn) adminBtn.addEventListener('click', openAdminDashboard);
+    const adminClose = $('admin-close');
+    if (adminClose) adminClose.addEventListener('click', closeAdminDashboard);
+    document.querySelectorAll('.admin-tab').forEach((btn) => {
+      btn.addEventListener('click', () => loadAdminData(btn.dataset.atab));
+    });
 
     // Settings modal
     $('settings-btn').addEventListener('click', () => showModal('settings-modal'));
@@ -1409,11 +1782,8 @@
       toast('Queue cleared');
     });
 
-    // Mini player
-    $('mini-row').addEventListener('click', (e) => {
-      if (e.target.closest('.mini-controls')) return;
-      openPlayerSheet();
-    });
+    // Mini player — info row opens full sheet; controls don't
+    $('mini-row').addEventListener('click', openPlayerSheet);
     $('mini-play').addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); });
     $('mini-next').addEventListener('click', (e) => { e.stopPropagation(); next(); });
     $('mini-prev').addEventListener('click', (e) => { e.stopPropagation(); prev(); });
@@ -1467,6 +1837,10 @@
     // Skip ±15s (mini)
     $('mini-back15').addEventListener('click', (e) => { e.stopPropagation(); skip(-15); });
     $('mini-fwd15').addEventListener('click', (e) => { e.stopPropagation(); skip(15); });
+
+    // Shuffle / loop toggles (mini)
+    $('mini-shuffle').addEventListener('click', (e) => { e.stopPropagation(); toggleShuffle(); });
+    $('mini-loop').addEventListener('click', (e) => { e.stopPropagation(); toggleLoop(); });
 
     // Volume slider
     const volSlider = $('volume-slider');

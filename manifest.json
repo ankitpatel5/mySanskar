@@ -1,0 +1,28 @@
+{
+  "name": "Baal Shravan",
+  "short_name": "Baal Shravan",
+  "description": "BAPS devotional music player",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0a0a0b",
+  "background_color": "#0a0a0b",
+  "icons": [
+    {
+      "src": "baal.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "baal.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "baal.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

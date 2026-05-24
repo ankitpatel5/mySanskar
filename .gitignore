@@ -1,0 +1,17 @@
+# Vercel
+.vercel
+.env*
+
+# Local config — contains real API keys, never commit
+config.js
+
+# Logs & debug
+firebase-debug.log
+*.log
+
+# Build artifacts
+drift-music-player.zip
+*.zip
+
+# Claude session data
+.claude/
