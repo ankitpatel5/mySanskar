@@ -18,7 +18,7 @@ const CATEGORIES = [
     color: ['#1a2a3a', '#0d1620'], icon: '⭐' },
 ];
 
-const DELAY_MS = 300; // be polite — pause between requests
+const DELAY_MS   = 300;
 const CONCURRENCY = 4;
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -29,7 +29,6 @@ async function fetchHtml(url) {
   });
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
   const buf = await res.arrayBuffer();
-  // Some pages use latin1 encoding
   return new TextDecoder('latin1').decode(buf);
 }
 
@@ -40,7 +39,6 @@ function parseListingPage(html) {
   $('a[href]').each((_, el) => {
     const href = $(el).attr('href') || '';
     const title = $(el).text().trim();
-    // Only story pages: end in .htm, no slash, not navigation links
     if (
       href.endsWith('.htm') &&
       !href.includes('/') &&
@@ -48,7 +46,6 @@ function parseListingPage(html) {
       !href.includes('stories.htm') &&
       href !== 'index.htm'
     ) {
-      // Avoid duplicates
       if (!stories.find(s => s.href === href)) {
         stories.push({ title, href });
       }
@@ -57,32 +54,53 @@ function parseListingPage(html) {
   return stories;
 }
 
-// Parse individual story page → {photo, paragraphs, isFlash}
-function parseStoryPage(html, href) {
+// Parse individual story page → {type, photo, paragraphs, youtubeId}
+// type: 'text' | 'youtube' | 'skip'
+function parseStoryPage(html) {
   const $ = cheerio.load(html);
 
-  // Detect Flash/download-only stories (no real text content)
-  const hasDownload = $('img[src*="download"]').length > 0;
+  // ── YouTube detection ──────────────────────────────────────────────
+  const ytMatch = html.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/);
+  if (ytMatch) {
+    // Also grab any text paragraphs that accompany the video
+    const paragraphs = extractParagraphs($);
+    return { type: 'youtube', youtubeId: ytMatch[1], paragraphs, photo: null };
+  }
 
-  // Get story photo — look for photo/ directory image
+  // ── Flash / SWF detection ─────────────────────────────────────────
+  const hasSwf = html.includes('.swf') || html.includes('RufflePlayer');
+
+  // ── Story photo ───────────────────────────────────────────────────
   let photo = null;
   $('img').each((_, el) => {
     const src = $(el).attr('src') || '';
     if (src.startsWith('photo/') || src.includes('/photo/')) {
-      photo = src.startsWith('photo/')
-        ? `${BASE}/${src}`
-        : `${BASE}/${src}`;
+      photo = `${BASE}/${src.startsWith('photo/') ? src : src}`;
     }
   });
 
-  // Collect meaningful paragraphs (filter out nav/decoration)
+  // ── Text paragraphs ───────────────────────────────────────────────
+  const paragraphs = extractParagraphs($);
+
+  // Skip if Flash-only with no real text
+  if (hasSwf && paragraphs.length === 0) return { type: 'skip' };
+  // Skip if completely empty
+  if (paragraphs.length === 0) return { type: 'skip' };
+
+  return { type: 'text', photo, paragraphs };
+}
+
+// Extract meaningful paragraphs, filtering out navigation, ads, and JS code
+function extractParagraphs($) {
   const paragraphs = [];
   $('p, td > font, td').each((_, el) => {
     const text = $(el).text().trim()
       .replace(/\s+/g, ' ')
       .replace(/[\r\n]+/g, ' ');
+
     if (
       text.length > 60 &&
+      // Navigation / boilerplate
       !text.includes('Satsang Stories') &&
       !text.includes('Hindu Stories') &&
       !text.includes('Moral Stories') &&
@@ -91,18 +109,23 @@ function parseStoryPage(html, href) {
       !text.includes('email') &&
       !text.toLowerCase().includes('click here') &&
       !text.includes('©') &&
-      !text.includes('BAPS Swaminarayan Sanstha')
+      !text.includes('BAPS Swaminarayan Sanstha') &&
+      // Flash / JS code leaking into text nodes
+      !text.includes('RufflePlayer') &&
+      !text.includes('window.addEventListener') &&
+      !text.includes('window.RufflePlayer') &&
+      !text.includes('createPlayer') &&
+      !text.includes('player.load(') &&
+      !text.includes('.swf') &&
+      !text.includes('var ruffle') &&
+      !text.includes('const ruffle')
     ) {
-      // Avoid duplicate paragraphs
       if (!paragraphs.includes(text)) {
         paragraphs.push(text);
       }
     }
   });
-
-  const isFlash = hasDownload && paragraphs.length === 0;
-
-  return { photo, paragraphs, isFlash };
+  return paragraphs;
 }
 
 // Process stories in batches to limit concurrency
@@ -120,6 +143,7 @@ async function processBatch(items, fn, concurrency) {
 
 async function main() {
   const output = { categories: CATEGORIES, stories: {} };
+  const summary = { text: 0, youtube: 0, skipped: 0 };
 
   for (const cat of CATEGORIES) {
     console.log(`\n📖 Crawling ${cat.name}...`);
@@ -132,17 +156,21 @@ async function main() {
       try {
         const storyUrl = `${BASE}/${href}`;
         const html = await fetchHtml(storyUrl);
-        const { photo, paragraphs, isFlash } = parseStoryPage(html, href);
+        const parsed = parseStoryPage(html);
 
-        if (isFlash || paragraphs.length === 0) {
-          return null; // skip Flash / empty stories
+        if (parsed.type === 'skip') {
+          summary.skipped++;
+          return null;
         }
 
+        summary[parsed.type]++;
         return {
           id: href.replace('.htm', ''),
           title,
-          photo: photo || null,
-          paragraphs,
+          type: parsed.type,           // 'text' | 'youtube'
+          photo: parsed.photo || null,
+          youtubeId: parsed.youtubeId || null,
+          paragraphs: parsed.paragraphs || [],
           url: storyUrl,
         };
       } catch (e) {
@@ -152,7 +180,10 @@ async function main() {
     }, CONCURRENCY);
 
     const valid = stories.filter(Boolean);
-    console.log(`\n   ✓ ${valid.length} text stories (skipped ${listing.length - valid.length} Flash/empty)`);
+    const ytCount   = valid.filter(s => s.type === 'youtube').length;
+    const txtCount  = valid.filter(s => s.type === 'text').length;
+    const skipped   = listing.length - valid.length;
+    console.log(`\n   ✓ ${valid.length} stories (${txtCount} text, ${ytCount} video, ${skipped} skipped)`);
     output.stories[cat.id] = valid;
   }
 
@@ -160,7 +191,8 @@ async function main() {
   fs.writeFileSync(OUT, js, 'utf8');
 
   const total = Object.values(output.stories).reduce((s, arr) => s + arr.length, 0);
-  console.log(`\n✅ Done! ${total} stories written to stories-data.js (${(fs.statSync(OUT).size / 1024).toFixed(0)} KB)`);
+  const kb = (fs.statSync(OUT).size / 1024).toFixed(0);
+  console.log(`\n✅ Done! ${total} stories (${summary.text} text, ${summary.youtube} video, ${summary.skipped} skipped) → stories-data.js (${kb} KB)`);
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

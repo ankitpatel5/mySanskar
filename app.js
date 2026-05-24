@@ -1219,12 +1219,29 @@
     stories.forEach((story) => {
       const row = document.createElement('div');
       row.className = 'story-row';
-      const thumbHtml = story.photo
-        ? `<div class="story-row-thumb"><img src="${story.photo}" alt="" loading="lazy" onerror="this.parentNode.textContent='📖'"></div>`
-        : `<div class="story-row-thumb">📖</div>`;
+      const isVideo = story.type === 'youtube';
+
+      let thumbHtml;
+      if (isVideo) {
+        // YouTube thumbnail from their CDN
+        thumbHtml = `<div class="story-row-thumb story-row-thumb--video">
+          <img src="https://img.youtube.com/vi/${story.youtubeId}/mqdefault.jpg" alt="" loading="lazy" onerror="this.style.display='none'">
+          <div class="story-row-play-badge">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+          </div>
+        </div>`;
+      } else if (story.photo) {
+        thumbHtml = `<div class="story-row-thumb"><img src="${story.photo}" alt="" loading="lazy" onerror="this.parentNode.textContent='📖'"></div>`;
+      } else {
+        thumbHtml = `<div class="story-row-thumb">📖</div>`;
+      }
+
       row.innerHTML = `
         ${thumbHtml}
-        <div class="story-row-title">${story.title}</div>
+        <div class="story-row-info">
+          <div class="story-row-title">${story.title}</div>
+          ${isVideo ? `<div class="story-row-badge">Video</div>` : ''}
+        </div>
         <svg class="story-row-arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       `;
       row.addEventListener('click', () => openStory(catId, story.id));
@@ -1242,8 +1259,16 @@
 
     // Header
     $('story-reader-title').textContent = story.title;
+
+    const isVideo = story.type === 'youtube';
     const img = $('story-reader-img');
-    if (story.photo) {
+    const ttsBar = $('story-tts-bar');
+    const voiceSheet = $('tts-voice-sheet');
+
+    if (isVideo) {
+      // No photo header for video stories — YouTube player is the hero
+      img.classList.add('hidden');
+    } else if (story.photo) {
       img.src = story.photo;
       img.classList.remove('hidden');
       img.onerror = () => img.classList.add('hidden');
@@ -1251,16 +1276,38 @@
       img.classList.add('hidden');
     }
 
-    // Paragraphs
+    // Body
     const body = $('story-reader-body');
     body.innerHTML = '';
-    story.paragraphs.forEach((p, i) => {
-      const el = document.createElement('p');
-      el.className = 'story-para';
-      el.dataset.idx = i;
-      el.textContent = p;
-      body.appendChild(el);
-    });
+
+    if (isVideo) {
+      // YouTube embed
+      const wrap = document.createElement('div');
+      wrap.className = 'story-youtube-wrap';
+      wrap.innerHTML = `<iframe
+        src="https://www.youtube.com/embed/${story.youtubeId}?rel=0&modestbranding=1"
+        title="${story.title}"
+        frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen></iframe>`;
+      body.appendChild(wrap);
+    }
+
+    // Text paragraphs (may exist alongside video)
+    if (story.paragraphs && story.paragraphs.length > 0) {
+      story.paragraphs.forEach((p, i) => {
+        const el = document.createElement('p');
+        el.className = 'story-para';
+        el.dataset.idx = i;
+        el.textContent = p;
+        body.appendChild(el);
+      });
+    }
+
+    // Show/hide TTS bar — only useful when there are text paragraphs
+    const hasParagraphs = story.paragraphs && story.paragraphs.length > 0;
+    if (ttsBar) ttsBar.classList.toggle('hidden', !hasParagraphs);
+    if (voiceSheet) voiceSheet.classList.add('hidden');
 
     updateTTSUI();
     switchView('view-story-reader');
