@@ -24,9 +24,6 @@ Each story can be **read aloud** using built-in text-to-speech. A voice picker l
 ### 👤 User Accounts & Sync
 Sign in with Google to sync playlists across devices. Play history is tracked per user.
 
-### 🛡️ Admin Dashboard
-An admin panel (restricted to the app owner) shows user activity, total plays, and top songs. Users can be blocked/unblocked with immediate enforcement — blocked users are signed out in real-time.
-
 ---
 
 ## Features
