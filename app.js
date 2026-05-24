@@ -1830,9 +1830,18 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
   }
 
   async function fetchTranslation(storyId, paragraphs) {
+    // 1. Check in-memory localStorage cache (fastest — already fetched this session)
     const cached = loadTransCache(storyId);
     if (cached) return cached;
 
+    // 2. Check pre-bundled translations shipped with the app (no network needed)
+    const bundled = window.STORY_TRANSLATIONS && window.STORY_TRANSLATIONS[storyId];
+    if (bundled && Array.isArray(bundled.gujarati) && Array.isArray(bundled.transliteration)) {
+      saveTransCache(storyId, bundled); // warm the localStorage cache too
+      return bundled;
+    }
+
+    // 3. Fallback: fetch live from Gemini (for AI-generated stories which have no bundle entry)
     const key = (window.DRIFT_CONFIG || {}).geminiKey || '';
     if (!key) throw new Error('no-key');
 

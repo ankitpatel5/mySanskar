@@ -13,5 +13,13 @@ firebase-debug.log
 drift-music-player.zip
 *.zip
 
+# Node dependencies (only needed for generate-translations script)
+node_modules/
+package-lock.json
+package.json
+
+# Translation generation progress checkpoint
+.translation-progress.json
+
 # Claude session data
 .claude/
