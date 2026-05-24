@@ -66,6 +66,8 @@
     playCounts: {},
     libraryView: 'list',
     user: null,
+    currentStory: null,
+    currentCatId: null,
   };
 
   // ============== DOM ==============
@@ -1145,7 +1147,228 @@
     if (tab === 'library') switchView('view-library');
     else if (tab === 'playlists') { switchView('view-playlists'); renderPlaylists(); }
     else if (tab === 'queue') { switchView('view-queue'); renderQueue(); }
+    else if (tab === 'stories') { stopTTS(); switchView('view-stories'); renderStoryCategories(); }
     $('content').scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  // ============== STORY TIME ==============
+
+  function renderStoryCategories() {
+    const data = window.STORIES_DATA;
+    if (!data) return;
+    const container = $('story-cats');
+    if (!container) return;
+    container.innerHTML = '';
+
+    data.categories.forEach((cat) => {
+      const stories = data.stories[cat.id] || [];
+      const card = document.createElement('div');
+      card.className = 'story-cat-card';
+      card.style.background = `linear-gradient(135deg, ${cat.color[0]}, ${cat.color[1]})`;
+      card.innerHTML = `
+        <div class="story-cat-icon">${cat.icon}</div>
+        <div class="story-cat-name">${cat.name}</div>
+        <div class="story-cat-count">${stories.length} stories</div>
+      `;
+      card.addEventListener('click', () => openStoryCategory(cat.id));
+      container.appendChild(card);
+    });
+
+    // AI Generate placeholder
+    const aiCard = document.createElement('div');
+    aiCard.className = 'story-cat-card story-cat-ai';
+    aiCard.setAttribute('aria-disabled', 'true');
+    aiCard.innerHTML = `
+      <div class="story-cat-icon">✨</div>
+      <div class="story-cat-name">AI Stories</div>
+      <div class="story-cat-count">Coming soon</div>
+    `;
+    container.appendChild(aiCard);
+  }
+
+  function openStoryCategory(catId) {
+    const data = window.STORIES_DATA;
+    if (!data) return;
+    const cat = data.categories.find((c) => c.id === catId);
+    if (!cat) return;
+    state.currentCatId = catId;
+    $('story-list-title').textContent = cat.name;
+    $('story-search-input').value = '';
+    $('story-search-clear').classList.add('hidden');
+    renderStoryList(catId, '');
+    switchView('view-story-list');
+    $('content').scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  function renderStoryList(catId, filter) {
+    const data = window.STORIES_DATA;
+    if (!data) return;
+    let stories = data.stories[catId] || [];
+    if (filter) {
+      const q = filter.toLowerCase();
+      stories = stories.filter((s) => s.title.toLowerCase().includes(q));
+    }
+    const container = $('story-list');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!stories.length) {
+      container.innerHTML = `<div class="empty-state"><h3>No stories found</h3><p>Try a different search.</p></div>`;
+      return;
+    }
+    stories.forEach((story) => {
+      const row = document.createElement('div');
+      row.className = 'story-row';
+      const thumbHtml = story.photo
+        ? `<div class="story-row-thumb"><img src="${story.photo}" alt="" loading="lazy" onerror="this.parentNode.textContent='📖'"></div>`
+        : `<div class="story-row-thumb">📖</div>`;
+      row.innerHTML = `
+        ${thumbHtml}
+        <div class="story-row-title">${story.title}</div>
+        <svg class="story-row-arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      `;
+      row.addEventListener('click', () => openStory(catId, story.id));
+      container.appendChild(row);
+    });
+  }
+
+  function openStory(catId, storyId) {
+    const data = window.STORIES_DATA;
+    if (!data) return;
+    const story = (data.stories[catId] || []).find((s) => s.id === storyId);
+    if (!story) return;
+    state.currentStory = story;
+    stopTTS();
+
+    // Header
+    $('story-reader-title').textContent = story.title;
+    const img = $('story-reader-img');
+    if (story.photo) {
+      img.src = story.photo;
+      img.classList.remove('hidden');
+      img.onerror = () => img.classList.add('hidden');
+    } else {
+      img.classList.add('hidden');
+    }
+
+    // Paragraphs
+    const body = $('story-reader-body');
+    body.innerHTML = '';
+    story.paragraphs.forEach((p, i) => {
+      const el = document.createElement('p');
+      el.className = 'story-para';
+      el.dataset.idx = i;
+      el.textContent = p;
+      body.appendChild(el);
+    });
+
+    updateTTSUI();
+    switchView('view-story-reader');
+    $('content').scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  // ============== TEXT-TO-SPEECH ==============
+
+  const ttsState = { active: false, paused: false, idx: 0 };
+
+  function startTTS() {
+    if (!('speechSynthesis' in window)) { toast('Text-to-speech not supported on this device'); return; }
+    if (!state.currentStory) return;
+    ttsState.active = true;
+    ttsState.paused = false;
+    ttsState.idx = 0;
+    speakParagraph(0);
+    updateTTSUI();
+  }
+
+  function pauseTTS() {
+    if (!ttsState.active || ttsState.paused) return;
+    window.speechSynthesis.pause();
+    ttsState.paused = true;
+    updateTTSUI();
+  }
+
+  function resumeTTS() {
+    if (!ttsState.active || !ttsState.paused) return;
+    window.speechSynthesis.resume();
+    ttsState.paused = false;
+    updateTTSUI();
+  }
+
+  function stopTTS() {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    ttsState.active = false;
+    ttsState.paused = false;
+    ttsState.idx = 0;
+    document.querySelectorAll('.story-para.tts-active').forEach((el) => el.classList.remove('tts-active'));
+    updateTTSUI();
+  }
+
+  function speakParagraph(idx) {
+    const story = state.currentStory;
+    if (!story || idx >= story.paragraphs.length) {
+      stopTTS();
+      return;
+    }
+    ttsState.idx = idx;
+
+    // Highlight
+    document.querySelectorAll('.story-para').forEach((el) => {
+      el.classList.toggle('tts-active', parseInt(el.dataset.idx, 10) === idx);
+    });
+
+    // Scroll active paragraph into view
+    const activeEl = document.querySelector(`.story-para[data-idx="${idx}"]`);
+    if (activeEl) activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Progress
+    const total = story.paragraphs.length;
+    const bar = $('tts-progress-bar');
+    if (bar) bar.style.width = total > 1 ? `${(idx / (total - 1)) * 100}%` : '100%';
+
+    const utter = new SpeechSynthesisUtterance(story.paragraphs[idx]);
+    utter.rate = 0.92;
+    utter.lang = 'en-US';
+    utter.onend = () => {
+      if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1);
+    };
+    utter.onerror = (e) => {
+      if (e.error !== 'interrupted' && e.error !== 'canceled') console.warn('TTS error', e.error);
+    };
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utter);
+  }
+
+  function updateTTSUI() {
+    const playBtn = $('tts-play-btn');
+    const stopBtn = $('tts-stop-btn');
+    const label   = $('tts-label');
+    if (!playBtn) return;
+
+    const isPlaying = ttsState.active && !ttsState.paused;
+    const isPaused  = ttsState.active && ttsState.paused;
+
+    // Toggle play/pause icon
+    playBtn.innerHTML = isPlaying
+      ? `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`
+      : `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>`;
+    playBtn.setAttribute('aria-label', isPlaying ? 'Pause reading' : isPaused ? 'Resume reading' : 'Read aloud');
+    playBtn.classList.toggle('reading', ttsState.active);
+
+    if (label) {
+      label.textContent = isPlaying ? 'Reading…' : isPaused ? 'Paused' : 'Read aloud';
+    }
+
+    if (stopBtn) {
+      stopBtn.classList.toggle('hidden', !ttsState.active);
+    }
+
+    // Reset progress bar when idle
+    if (!ttsState.active) {
+      const bar = $('tts-progress-bar');
+      if (bar) bar.style.width = '0%';
+    }
   }
 
   // ============== SEARCH ==============
@@ -1781,6 +2004,35 @@
       clearQueue();
       toast('Queue cleared');
     });
+
+    // ── Story Time ──────────────────────────────────────
+    $('story-list-back').addEventListener('click', () => {
+      stopTTS();
+      switchTab('stories');
+    });
+    $('story-reader-back').addEventListener('click', () => {
+      stopTTS();
+      switchView('view-story-list');
+      $('content').scrollTo({ top: 0, behavior: 'instant' });
+    });
+    const storySearchInput = $('story-search-input');
+    storySearchInput.addEventListener('input', () => {
+      const v = storySearchInput.value;
+      $('story-search-clear').classList.toggle('hidden', !v);
+      renderStoryList(state.currentCatId, v);
+    });
+    $('story-search-clear').addEventListener('click', () => {
+      storySearchInput.value = '';
+      $('story-search-clear').classList.add('hidden');
+      renderStoryList(state.currentCatId, '');
+    });
+    $('tts-play-btn').addEventListener('click', () => {
+      if (!ttsState.active) startTTS();
+      else if (ttsState.paused) resumeTTS();
+      else pauseTTS();
+    });
+    $('tts-stop-btn').addEventListener('click', stopTTS);
+    // ────────────────────────────────────────────────────
 
     // Mini player — info row opens full sheet; controls don't
     $('mini-row').addEventListener('click', openPlayerSheet);
