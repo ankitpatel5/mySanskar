@@ -2524,6 +2524,22 @@ input { font-family: inherit; color: inherit; }
   border-radius: var(--r-lg);
   margin-bottom: 16px;
   display: block;
+  object-fit: cover;
+}
+
+/* Shimmer placeholder while Imagen generates */
+.story-reader-img.ai-img-loading {
+  display: block;
+  height: 260px;
+  background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3, #e8eaf0) 50%, var(--surface2) 75%);
+  background-size: 200% 100%;
+  animation: ai-img-shimmer 1.4s infinite;
+  border-radius: var(--r-lg);
+  margin-bottom: 16px;
+}
+@keyframes ai-img-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .story-reader-title {

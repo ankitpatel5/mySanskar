@@ -1514,6 +1514,97 @@
     });
   }
 
+  // ============== IMAGEN 3 ==============
+
+  const IMAGEN_QUOTA_KEY   = 'drift.imagenQuota';   // { exhaustedAt: ms } | null
+  const IMAGEN_QUOTA_RESET = 24 * 60 * 60 * 1000;   // 24 h in ms
+  const IMAGEN_MODEL       = 'imagen-3.0-generate-008';
+
+  function isImagenQuotaExhausted() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(IMAGEN_QUOTA_KEY) || 'null');
+      if (!stored) return false;
+      return (Date.now() - stored.exhaustedAt) < IMAGEN_QUOTA_RESET;
+    } catch { return false; }
+  }
+
+  function markImagenQuotaExhausted() {
+    try { localStorage.setItem(IMAGEN_QUOTA_KEY, JSON.stringify({ exhaustedAt: Date.now() })); } catch {}
+  }
+
+  function clearImagenQuota() {
+    try { localStorage.removeItem(IMAGEN_QUOTA_KEY); } catch {}
+  }
+
+  function buildImagenPrompt(topic, character) {
+    const subject = character
+      ? `a child character named ${character.split(',')[0].trim()}`
+      : 'a joyful Indian child';
+    return [
+      'Soft watercolor children\'s book illustration,',
+      `${subject} in a warm scene about "${topic}",`,
+      'gentle pastel colors, Indian cultural warmth, devotional atmosphere,',
+      'simple background, no text, appropriate for ages 0-5,',
+      'whimsical and heartwarming style.',
+    ].join(' ');
+  }
+
+  async function generateImagenImage(topic, character, storyId) {
+    const key = (window.DRIFT_CONFIG || {}).geminiKey || '';
+    if (!key || isImagenQuotaExhausted()) return null;
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGEN_MODEL}:predict?key=${key}`;
+    const body = {
+      instances: [{ prompt: buildImagenPrompt(topic, character) }],
+      parameters: { sampleCount: 1, aspectRatio: '1:1' },
+    };
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (res.status === 429 || res.status === 503) {
+        markImagenQuotaExhausted();
+        return null;
+      }
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        const code = (errJson?.error?.status || '').toUpperCase();
+        if (code === 'RESOURCE_EXHAUSTED' || code === 'QUOTA_EXCEEDED') {
+          markImagenQuotaExhausted();
+        }
+        return null;
+      }
+
+      const json = await res.json();
+      const b64 = json?.predictions?.[0]?.bytesBase64Encoded;
+      const mime = json?.predictions?.[0]?.mimeType || 'image/png';
+      if (!b64) return null;
+
+      const dataUrl = `data:${mime};base64,${b64}`;
+
+      // Patch image onto saved story so re-reading shows it
+      if (storyId !== undefined) {
+        try {
+          const saved = loadAISavedStories();
+          const idx = saved.findIndex(s => s.id === storyId);
+          if (idx !== -1) {
+            saved[idx].imageUrl = dataUrl;
+            localStorage.setItem(AI_SAVED_KEY, JSON.stringify(saved));
+          }
+        } catch {}
+      }
+
+      return dataUrl;
+    } catch {
+      return null;
+    }
+  }
+
   // ============== AI STORIES ==============
 
   const AI_DAILY_LIMIT_FREE = 5;
@@ -1748,7 +1839,17 @@
     state.storyLang = 'en'; // always start as English so setStoryLang() below isn't a no-op
     stopTTS();
 
-    $('story-reader-img').classList.add('hidden');
+    // Show saved image immediately if available, otherwise show shimmer placeholder
+    const imgEl = $('story-reader-img');
+    if (story.imageUrl) {
+      imgEl.src = story.imageUrl;
+      imgEl.classList.remove('hidden');
+      imgEl.classList.remove('ai-img-loading');
+    } else {
+      imgEl.src = '';
+      imgEl.classList.add('hidden');
+      imgEl.classList.remove('ai-img-loading');
+    }
 
     const body = $('story-reader-body');
     body.innerHTML = '';
@@ -1791,6 +1892,27 @@
     updateTTSUI();
     switchView('view-story-reader');
     $('content').scrollTo({ top: 0, behavior: 'instant' });
+
+    // Generate image in background if not already saved and quota is available
+    if (!story.imageUrl && !isImagenQuotaExhausted()) {
+      // Show shimmer while generating
+      imgEl.src = '';
+      imgEl.classList.remove('hidden');
+      imgEl.classList.add('ai-img-loading');
+
+      generateImagenImage(story.topic, story.character, story.id).then(dataUrl => {
+        // Only update if the user is still on the same story
+        if (state.currentStory && state.currentStory.generatedAt === story.generatedAt) {
+          if (dataUrl) {
+            imgEl.src = dataUrl;
+            imgEl.classList.remove('ai-img-loading');
+          } else {
+            imgEl.classList.add('hidden');
+            imgEl.classList.remove('ai-img-loading');
+          }
+        }
+      });
+    }
   }
 
   // Themes picked when "Random" is selected
