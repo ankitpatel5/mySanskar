@@ -1725,6 +1725,234 @@ input { font-family: inherit; color: inherit; }
   background: rgba(0, 0, 0, 0.08);
 }
 
+/* ============== AI STORIES ============== */
+
+.story-cat-ai {
+  background: linear-gradient(135deg, #1e1040, #0d0820) !important;
+  cursor: pointer !important;
+  opacity: 1 !important;
+}
+
+.story-cat-ai:active { transform: scale(0.96); opacity: 0.9; }
+
+/* No-key state */
+.ai-no-key {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  padding: 32px 20px;
+  background: var(--bg-2);
+  border-radius: var(--r-lg);
+  margin-bottom: 24px;
+  color: var(--fg-2);
+}
+
+.ai-no-key p { font-size: 14px; line-height: 1.5; margin: 0; }
+.ai-no-key code { background: var(--bg-3); padding: 2px 6px; border-radius: 4px; font-size: 13px; color: var(--fg-1); }
+
+.ai-key-link {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+/* Generator form */
+.ai-generator { display: flex; flex-direction: column; gap: 24px; }
+
+.ai-field { display: flex; flex-direction: column; gap: 10px; }
+
+.ai-field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg-2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ai-optional { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--fg-3); }
+
+/* Topic chips */
+.ai-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ai-chip {
+  background: var(--bg-2);
+  border: 1.5px solid var(--line-2);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg-1);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.ai-chip:active { transform: scale(0.95); }
+
+.ai-chip.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Text input */
+.ai-text-input {
+  background: var(--bg-2);
+  border: 1.5px solid var(--line-2);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  font-size: 15px;
+  color: var(--fg-0);
+  font-family: var(--font-ui);
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.ai-text-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.ai-text-input::placeholder { color: var(--fg-3); }
+
+/* Length buttons */
+.ai-length-btns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.ai-length-btn {
+  background: var(--bg-2);
+  border: 1.5px solid var(--line-2);
+  border-radius: var(--r-md);
+  padding: 12px 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.ai-length-btn.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.ai-len-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg-0);
+}
+
+.ai-len-sub {
+  font-size: 11px;
+  color: var(--fg-2);
+}
+
+.ai-length-btn.active .ai-len-name { color: var(--accent); }
+.ai-length-btn.active .ai-len-sub  { color: var(--accent); opacity: 0.7; }
+
+/* Usage row */
+.ai-usage-row {
+  font-size: 12px;
+  color: var(--fg-2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-usage-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.ai-usage-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bg-3);
+  border: 1.5px solid var(--line-2);
+}
+
+.ai-usage-dot.used { background: var(--accent); border-color: var(--accent); }
+
+/* Generate button */
+.ai-generate-btn {
+  background: var(--accent);
+  color: var(--play-btn-color);
+  border: none;
+  border-radius: var(--r-md);
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity 0.15s, transform 0.12s;
+  font-family: var(--font-ui);
+}
+
+.ai-generate-btn:active { transform: scale(0.98); }
+.ai-generate-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* Loading spinner inside button */
+.ai-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(0,0,0,0.2);
+  border-top-color: var(--play-btn-color);
+  border-radius: 50%;
+  animation: ai-spin 0.7s linear infinite;
+}
+
+@keyframes ai-spin { to { transform: rotate(360deg); } }
+
+/* Saved stories section */
+.ai-saved-section { margin-top: 32px; padding-bottom: 40px; }
+
+.ai-saved-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.ai-clear-btn {
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: var(--fg-3);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.ai-clear-btn:hover { color: var(--danger); }
+
+/* AI story badge in reader */
+.story-ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.12);
+  border-radius: 12px;
+  padding: 3px 8px;
+  margin-bottom: 12px;
+}
+
 /* ============== STORY TIME ============== */
 
 .story-tab-sub {

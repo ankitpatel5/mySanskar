@@ -1175,15 +1175,16 @@
       container.appendChild(card);
     });
 
-    // AI Generate placeholder
+    // AI Stories card
     const aiCard = document.createElement('div');
     aiCard.className = 'story-cat-card story-cat-ai';
-    aiCard.setAttribute('aria-disabled', 'true');
+    const aiSaved = loadAISavedStories();
     aiCard.innerHTML = `
       <div class="story-cat-icon">✨</div>
       <div class="story-cat-name">AI Stories</div>
-      <div class="story-cat-count">Coming soon</div>
+      <div class="story-cat-count">${aiSaved.length ? aiSaved.length + ' saved' : 'Generate new'}</div>
     `;
+    aiCard.addEventListener('click', openAIStories);
     container.appendChild(aiCard);
   }
 
@@ -1312,6 +1313,248 @@
     updateTTSUI();
     switchView('view-story-reader');
     $('content').scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  // ============== AI STORIES ==============
+
+  const AI_DAILY_LIMIT = 5;
+  const AI_LS_KEY      = 'drift.aiUsage';
+  const AI_SAVED_KEY   = 'drift.aiStories';
+
+  function getAIUsageToday() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(AI_LS_KEY) || '{}');
+      const today  = new Date().toISOString().slice(0, 10);
+      return stored.date === today ? (stored.count || 0) : 0;
+    } catch { return 0; }
+  }
+
+  function incrementAIUsage() {
+    const today = new Date().toISOString().slice(0, 10);
+    const count = getAIUsageToday() + 1;
+    try { localStorage.setItem(AI_LS_KEY, JSON.stringify({ date: today, count })); } catch {}
+  }
+
+  function loadAISavedStories() {
+    try { return JSON.parse(localStorage.getItem(AI_SAVED_KEY) || '[]'); } catch { return []; }
+  }
+
+  function saveAIStory(story) {
+    const saved = loadAISavedStories();
+    saved.unshift(story);
+    if (saved.length > 20) saved.splice(20);
+    try { localStorage.setItem(AI_SAVED_KEY, JSON.stringify(saved)); } catch {}
+  }
+
+  function deleteAIStory(idx) {
+    const saved = loadAISavedStories();
+    saved.splice(idx, 1);
+    try { localStorage.setItem(AI_SAVED_KEY, JSON.stringify(saved)); } catch {}
+  }
+
+  function openAIStories() {
+    const key = (window.DRIFT_CONFIG || {}).geminiKey || '';
+    $('ai-no-key').classList.toggle('hidden', !!key);
+    $('ai-generator').classList.toggle('hidden', !key);
+    renderAIUsageRow();
+    renderAISavedList();
+    switchView('view-ai-stories');
+    $('content').scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  function renderAIUsageRow() {
+    const row   = $('ai-usage-row');
+    if (!row) return;
+    const used  = getAIUsageToday();
+    const left  = Math.max(0, AI_DAILY_LIMIT - used);
+    const dots  = Array.from({ length: AI_DAILY_LIMIT }, (_, i) =>
+      `<div class="ai-usage-dot${i < used ? ' used' : ''}"></div>`
+    ).join('');
+    row.innerHTML = `<div class="ai-usage-dots">${dots}</div><span>${left} of ${AI_DAILY_LIMIT} free stories remaining today</span>`;
+
+    const btn = $('ai-generate-btn');
+    if (btn) btn.disabled = left === 0;
+  }
+
+  function renderAISavedList() {
+    const saved   = loadAISavedStories();
+    const section = $('ai-saved-section');
+    const list    = $('ai-saved-list');
+    if (!section || !list) return;
+
+    if (!saved.length) { section.classList.add('hidden'); return; }
+    section.classList.remove('hidden');
+    list.innerHTML = '';
+
+    saved.forEach((story, idx) => {
+      const row = document.createElement('div');
+      row.className = 'story-row';
+      row.innerHTML = `
+        <div class="story-row-thumb">✨</div>
+        <div class="story-row-info">
+          <div class="story-row-title">${story.title}</div>
+          <div class="story-row-badge" style="color:var(--fg-3);">${story.topic} · ${story.length}</div>
+        </div>
+        <svg class="story-row-arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      `;
+      row.addEventListener('click', () => openAIStoryReader(story, idx));
+      list.appendChild(row);
+    });
+  }
+
+  function openAIStoryReader(story, savedIdx) {
+    // Reuse the existing story reader but with AI story data
+    state.currentStory = { ...story, type: 'text', photo: null };
+    stopTTS();
+
+    $('story-reader-title').textContent = story.title;
+    $('story-reader-img').classList.add('hidden');
+
+    const body = $('story-reader-body');
+    body.innerHTML = '';
+
+    // AI badge
+    const badge = document.createElement('div');
+    badge.className = 'story-ai-badge';
+    badge.innerHTML = `✨ AI Generated · ${story.topic}`;
+    body.appendChild(badge);
+
+    story.paragraphs.forEach((p, i) => {
+      const el = document.createElement('p');
+      el.className = 'story-para';
+      el.dataset.idx = i;
+      el.textContent = p;
+      body.appendChild(el);
+    });
+
+    const ttsBar     = $('story-tts-bar');
+    const voiceSheet = $('tts-voice-sheet');
+    if (ttsBar) ttsBar.classList.remove('hidden');
+    if (voiceSheet) voiceSheet.classList.add('hidden');
+
+    // Override back button to return to AI stories
+    $('story-reader-back')._aiMode = true;
+
+    updateTTSUI();
+    switchView('view-story-reader');
+    $('content').scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  async function generateAIStory() {
+    const key = (window.DRIFT_CONFIG || {}).geminiKey || '';
+    if (!key) { toast('Add your Gemini API key to config.js'); return; }
+    if (getAIUsageToday() >= AI_DAILY_LIMIT) { toast(`Daily limit reached — come back tomorrow!`); return; }
+
+    const topicEl  = document.querySelector('.ai-chip.active');
+    const topic    = topicEl ? topicEl.dataset.value : 'devotion to God';
+    const character = ($('ai-character-input').value || '').trim();
+    const lenEl    = document.querySelector('.ai-length-btn.active');
+    const length   = lenEl ? lenEl.dataset.len : 'medium';
+
+    // Loading state
+    const btn = $('ai-generate-btn');
+    btn.disabled = true;
+    btn.innerHTML = `<div class="ai-spinner"></div> Writing your story…`;
+
+    try {
+      const prompt = buildStoryPrompt(topic, character, length);
+      const result = await callGemini(key, prompt);
+
+      if (!result.title || !Array.isArray(result.paragraphs) || !result.paragraphs.length) {
+        throw new Error('Unexpected response format');
+      }
+
+      const story = {
+        title: result.title,
+        paragraphs: result.paragraphs,
+        topic,
+        character: character || null,
+        length,
+        generatedAt: Date.now(),
+      };
+
+      incrementAIUsage();
+      saveAIStory(story);
+      renderAIUsageRow();
+      renderAISavedList();
+
+      // Open the story immediately
+      openAIStoryReader(story, 0);
+
+    } catch (e) {
+      console.error('AI story error:', e);
+      if (e.message === 'no-key') {
+        toast('Gemini API key missing in config.js');
+      } else if (e.message.includes('API_KEY_INVALID') || e.message.includes('400')) {
+        toast('Invalid Gemini API key — check config.js');
+      } else if (e.message.includes('429') || e.message.includes('RESOURCE_EXHAUSTED')) {
+        toast('Gemini rate limit hit — try again in a moment');
+      } else {
+        toast('Story generation failed — please try again');
+      }
+    } finally {
+      btn.disabled = getAIUsageToday() >= AI_DAILY_LIMIT;
+      btn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Generate Story`;
+    }
+  }
+
+  function buildStoryPrompt(topic, character, length) {
+    const lengthGuide = {
+      short:  '3 to 4 short paragraphs, about 120 words total',
+      medium: '5 to 7 paragraphs, about 300 words total',
+      long:   '8 to 12 paragraphs, about 500 words total',
+    }[length] || '5 to 7 paragraphs';
+
+    const characterLine = character
+      ? `The main character is: ${character}.`
+      : 'Choose a fitting main character — a curious child, a devoted saint, or a humble animal.';
+
+    return `You are a loving storyteller for BAPS Swaminarayan families. Create a warm, engaging story for young children (ages 2 to 8) that teaches the value of "${topic}".
+
+${characterLine}
+
+Guidelines:
+- Write ${lengthGuide}
+- Use simple, warm language a parent can read aloud to a baby or toddler
+- Weave in Swaminarayan values naturally: devotion, satsang, seva, following niyams
+- Reference Bhagwan Swaminarayan or Gunatit saints where it feels natural
+- End with a gentle, clear moral lesson
+- Keep it joyful, peaceful, and age-appropriate — no fear or violence
+- Culturally appropriate for an Indian-American Hindu family
+
+Return a JSON object with exactly this structure (no markdown, no extra text):
+{
+  "title": "A short evocative title (4 to 7 words)",
+  "paragraphs": ["paragraph 1 text", "paragraph 2 text", "..."]
+}`;
+  }
+
+  async function callGemini(key, prompt) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.9,
+          maxOutputTokens: 2048,
+        },
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data?.error?.message || `HTTP ${res.status}`);
+    }
+
+    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!raw) throw new Error('Empty response from Gemini');
+
+    // Strip any accidental markdown code fences
+    const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+    return JSON.parse(cleaned);
   }
 
   // ============== TEXT-TO-SPEECH ==============
@@ -2154,6 +2397,45 @@
       toast('Queue cleared');
     });
 
+    // ── AI Stories ──────────────────────────────────────
+    $('ai-stories-back').addEventListener('click', () => {
+      switchView('view-stories');
+      renderStoryCategories(); // refresh AI card count
+      $('content').scrollTo({ top: 0, behavior: 'instant' });
+    });
+
+    // Topic chips — single select
+    $('ai-topic-chips').addEventListener('click', (e) => {
+      const chip = e.target.closest('.ai-chip');
+      if (!chip) return;
+      document.querySelectorAll('.ai-chip').forEach((c) => c.classList.remove('active'));
+      chip.classList.add('active');
+    });
+
+    // Length buttons — single select
+    document.querySelectorAll('.ai-length-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.ai-length-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    $('ai-generate-btn').addEventListener('click', generateAIStory);
+
+    $('ai-clear-btn').addEventListener('click', () => {
+      openConfirm(
+        'Clear all AI stories?',
+        'Your generated stories will be permanently deleted.',
+        () => {
+          localStorage.removeItem(AI_SAVED_KEY);
+          renderAISavedList();
+          renderStoryCategories();
+          toast('Stories cleared');
+        },
+        { confirmLabel: 'Clear all', danger: true }
+      );
+    });
+
     // ── Story Time ──────────────────────────────────────
     $('story-list-back').addEventListener('click', () => {
       stopTTS();
@@ -2161,7 +2443,13 @@
     });
     $('story-reader-back').addEventListener('click', () => {
       stopTTS();
-      switchView('view-story-list');
+      // If opened from AI stories, go back there; otherwise go to story list
+      if ($('story-reader-back')._aiMode) {
+        $('story-reader-back')._aiMode = false;
+        switchView('view-ai-stories');
+      } else {
+        switchView('view-story-list');
+      }
       $('content').scrollTo({ top: 0, behavior: 'instant' });
     });
     const storySearchInput = $('story-search-input');

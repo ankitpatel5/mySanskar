@@ -10,4 +10,6 @@
 window.DRIFT_CONFIG = {
   apiKey: '',      // Google Drive API key
   folderId: '',    // Google Drive folder ID or URL
+  geminiKey: '',   // Google Gemini API key (for AI Stories)
+                   // Get one free at: https://aistudio.google.com/app/apikey
 };

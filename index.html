@@ -191,6 +191,85 @@
           <div class="story-cats" id="story-cats"></div>
         </section>
 
+        <!-- AI Stories: Generator -->
+        <section id="view-ai-stories" class="view hidden">
+          <button class="back-btn" id="ai-stories-back" aria-label="Back">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="view-header">
+            <div>
+              <h2 class="view-title">AI Stories ✨</h2>
+              <p class="view-sub">Generate a custom devotional story</p>
+            </div>
+          </div>
+
+          <!-- No API key state -->
+          <div id="ai-no-key" class="ai-no-key hidden">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <p>Add your free Gemini API key to <code>config.js</code> to enable AI stories.</p>
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" class="ai-key-link">Get a free key →</a>
+          </div>
+
+          <!-- Generator form -->
+          <div id="ai-generator" class="ai-generator">
+            <div class="ai-field">
+              <div class="ai-field-label">Moral or theme</div>
+              <div class="ai-chips" id="ai-topic-chips">
+                <button class="ai-chip active" data-value="devotion to God">Devotion</button>
+                <button class="ai-chip" data-value="seva — selfless service">Seva</button>
+                <button class="ai-chip" data-value="honesty">Honesty</button>
+                <button class="ai-chip" data-value="courage">Courage</button>
+                <button class="ai-chip" data-value="gratitude">Gratitude</button>
+                <button class="ai-chip" data-value="forgiveness">Forgiveness</button>
+                <button class="ai-chip" data-value="helping others">Kindness</button>
+                <button class="ai-chip" data-value="patience">Patience</button>
+                <button class="ai-chip" data-value="faith in Swaminarayan">Faith</button>
+              </div>
+            </div>
+
+            <div class="ai-field">
+              <div class="ai-field-label">Main character <span class="ai-optional">(optional)</span></div>
+              <input id="ai-character-input" class="ai-text-input" type="text"
+                placeholder="e.g. a young boy named Arjun, a curious squirrel…"
+                maxlength="80" autocomplete="off" />
+            </div>
+
+            <div class="ai-field">
+              <div class="ai-field-label">Length</div>
+              <div class="ai-length-btns">
+                <button class="ai-length-btn" data-len="short">
+                  <span class="ai-len-name">Short</span>
+                  <span class="ai-len-sub">~1 min</span>
+                </button>
+                <button class="ai-length-btn active" data-len="medium">
+                  <span class="ai-len-name">Medium</span>
+                  <span class="ai-len-sub">~3 min</span>
+                </button>
+                <button class="ai-length-btn" data-len="long">
+                  <span class="ai-len-name">Long</span>
+                  <span class="ai-len-sub">~5 min</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="ai-usage-row" id="ai-usage-row"></div>
+
+            <button id="ai-generate-btn" class="ai-generate-btn">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              Generate Story
+            </button>
+          </div>
+
+          <!-- Saved AI stories -->
+          <div id="ai-saved-section" class="ai-saved-section hidden">
+            <div class="ai-saved-header">
+              <span class="ai-field-label">Your stories</span>
+              <button id="ai-clear-btn" class="ai-clear-btn">Clear all</button>
+            </div>
+            <div id="ai-saved-list" class="story-list"></div>
+          </div>
+        </section>
+
         <!-- Story Time: Story list -->
         <section id="view-story-list" class="view hidden">
           <button class="back-btn" id="story-list-back" aria-label="Back">
