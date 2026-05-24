@@ -1514,11 +1514,11 @@
     });
   }
 
-  // ============== IMAGEN 3 ==============
+  // ============== IMAGEN ==============
 
   const IMAGEN_QUOTA_KEY   = 'drift.imagenQuota';   // { exhaustedAt: ms } | null
   const IMAGEN_QUOTA_RESET = 24 * 60 * 60 * 1000;   // 24 h in ms
-  const IMAGEN_MODEL       = 'imagen-3.0-generate-008';
+  const IMAGEN_MODEL       = 'imagen-4.0-generate-001';
 
   function isImagenQuotaExhausted() {
     try {
@@ -1566,16 +1566,21 @@
         body: JSON.stringify(body),
       });
 
-      if (res.status === 429 || res.status === 503) {
+      if (res.status === 429) {
         markImagenQuotaExhausted();
+        toast('Image quota reached for today — stories will still generate without illustrations.');
         return null;
       }
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
         const code = (errJson?.error?.status || '').toUpperCase();
+        const message = errJson?.error?.message || `HTTP ${res.status}`;
         if (code === 'RESOURCE_EXHAUSTED' || code === 'QUOTA_EXCEEDED') {
           markImagenQuotaExhausted();
+          toast('Image quota reached for today — stories will still generate without illustrations.');
+        } else {
+          console.error('[Imagen] API error:', code, message);
         }
         return null;
       }
@@ -1600,7 +1605,8 @@
       }
 
       return dataUrl;
-    } catch {
+    } catch (e) {
+      console.error('[Imagen] Unexpected error:', e);
       return null;
     }
   }
