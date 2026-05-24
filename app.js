@@ -1181,7 +1181,7 @@
     const aiSaved = loadAISavedStories();
     aiCard.innerHTML = `
       <div class="story-cat-icon">✨</div>
-      <div class="story-cat-name">AI Stories</div>
+      <div class="story-cat-name">Make Your Own</div>
       <div class="story-cat-count">${aiSaved.length ? aiSaved.length + ' saved' : 'Generate new'}</div>
     `;
     aiCard.addEventListener('click', openAIStories);
@@ -1488,8 +1488,30 @@
           <div class="story-row-title">${story.title}</div>
           <div class="story-row-badge" style="color:var(--fg-3);">${story.topic} · ${story.length}</div>
         </div>
-        <svg class="story-row-arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        <button class="ai-story-delete-btn" aria-label="Delete story" title="Delete">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+          </svg>
+        </button>
       `;
+      row.querySelector('.ai-story-delete-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        openConfirm(
+          'Delete this story?',
+          `"${story.title}" will be permanently removed.`,
+          async () => {
+            deleteAIStory(idx);
+            renderAISavedList();
+            renderStoryCategories();
+            // Also remove from Firestore
+            if (state.user && story.id) {
+              aiStoriesRef().doc(story.id).delete()
+                .catch((err) => console.warn('Firestore delete failed', err));
+            }
+          },
+          { confirmLabel: 'Delete', danger: true }
+        );
+      });
       row.addEventListener('click', () => openAIStoryReader(story, idx));
       list.appendChild(row);
     });

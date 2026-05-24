@@ -10,7 +10,7 @@ window.STORIES_DATA = {
         "#1a3a2a",
         "#0d1f16"
       ],
-      "icon": "🕉️"
+      "icon": "<svg viewBox=\"0 0 36 44\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" width=\"36\" height=\"44\"><path d=\"M10 42 C10 42 7 28 11 18 C13 12 16 8 18 7 C20 8 23 12 25 18 C29 28 26 42 26 42\" stroke=\"white\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/><circle cx=\"18\" cy=\"26\" r=\"6\" fill=\"#e63946\"/><circle cx=\"18\" cy=\"26\" r=\"3.5\" fill=\"#ff8fa3\"/></svg>"
     },
     {
       "id": "hindu",
