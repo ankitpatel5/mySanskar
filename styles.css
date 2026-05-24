@@ -38,7 +38,7 @@
   --r-xl: 28px;
 
   --tabbar-h: 72px;
-  --mini-h: 90px;
+  --mini-h: 112px;
   --topbar-h: 56px;
   --safe-bot: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
@@ -812,6 +812,12 @@ input { font-family: inherit; color: inherit; }
   padding: 8px 12px 2px;
   cursor: pointer;
 }
+.mini-skip-row {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 12px 4px;
+}
 .mini-seek-row {
   display: flex;
   align-items: center;
@@ -852,15 +858,18 @@ input { font-family: inherit; color: inherit; }
 .mini-skip-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: var(--fg-2);
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  gap: 5px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: var(--hover-overlay);
+  color: var(--fg-1);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   flex-shrink: 0;
   transition: color .15s, background .15s;
 }
-.mini-skip-btn:hover { color: var(--fg-0); background: var(--bg-3); }
+.mini-skip-btn:hover { color: var(--fg-0); background: var(--active-overlay); }
 
 .mini-art {
   width: 42px;
@@ -1009,6 +1018,11 @@ input { font-family: inherit; color: inherit; }
   border: none;
   cursor: pointer;
 }
+.sheet-skip-above {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
 .sheet-times-row {
   display: flex;
   justify-content: space-between;
@@ -1057,36 +1071,17 @@ input { font-family: inherit; color: inherit; }
   width: 64px;
   height: 64px;
 }
-.sheet-skip-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-.sheet-times-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-  margin-bottom: 4px;
-}
-.sheet-skip-pair {
-  display: flex;
-  gap: 4px;
-}
 .skip15-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 3px;
-  padding: 6px 11px;
+  gap: 6px;
+  padding: 10px 22px;
   border-radius: 999px;
   background: rgba(255,255,255,0.07);
   color: var(--fg-1);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   transition: background .15s, color .15s;
 }
 .skip15-btn:hover { background: rgba(255,255,255,0.13); color: var(--fg-0); }
@@ -1454,11 +1449,13 @@ input { font-family: inherit; color: inherit; }
 }
 [data-theme="light"] .extra-btn:hover { background: rgba(0, 0, 0, 0.1); }
 
-[data-theme="light"] .skip15-btn {
+[data-theme="light"] .skip15-btn,
+[data-theme="light"] .mini-skip-btn {
   background: rgba(0, 0, 0, 0.06);
   color: var(--fg-1);
 }
-[data-theme="light"] .skip15-btn:hover { background: rgba(0, 0, 0, 0.11); }
+[data-theme="light"] .skip15-btn:hover,
+[data-theme="light"] .mini-skip-btn:hover { background: rgba(0, 0, 0, 0.11); }
 
 [data-theme="light"] .sheet-close {
   background: rgba(0, 0, 0, 0.08);
