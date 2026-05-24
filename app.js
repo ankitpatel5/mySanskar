@@ -116,6 +116,7 @@
     setupAudio();
     bootstrapLibrary();
     loadFirestorePlaylists();
+    syncCompletedStoriesFromFirestore();
     checkShareParam();
   }
 
@@ -1219,7 +1220,7 @@
     }
     stories.forEach((story) => {
       const row = document.createElement('div');
-      row.className = 'story-row';
+      row.className = 'story-row' + (isStoryCompleted(story.id) ? ' done' : '');
       const isVideo = story.type === 'youtube';
 
       let thumbHtml;
@@ -1256,6 +1257,7 @@
     const story = (data.stories[catId] || []).find((s) => s.id === storyId);
     if (!story) return;
     state.currentStory = story;
+    state.storyLang = 'en';
     stopTTS();
 
     // Header
@@ -1267,7 +1269,6 @@
     const voiceSheet = $('tts-voice-sheet');
 
     if (isVideo) {
-      // No photo header for video stories — YouTube player is the hero
       img.classList.add('hidden');
     } else if (story.photo) {
       img.src = story.photo;
@@ -1282,7 +1283,6 @@
     body.innerHTML = '';
 
     if (isVideo) {
-      // YouTube embed
       const wrap = document.createElement('div');
       wrap.className = 'story-youtube-wrap';
       wrap.innerHTML = `<iframe
@@ -1294,8 +1294,8 @@
       body.appendChild(wrap);
     }
 
-    // Text paragraphs (may exist alongside video)
-    if (story.paragraphs && story.paragraphs.length > 0) {
+    const hasParagraphs = story.paragraphs && story.paragraphs.length > 0;
+    if (hasParagraphs) {
       story.paragraphs.forEach((p, i) => {
         const el = document.createElement('p');
         el.className = 'story-para';
@@ -1303,10 +1303,12 @@
         el.textContent = p;
         body.appendChild(el);
       });
+      renderMarkCompleteBtn(story.id);
     }
 
-    // Show/hide TTS bar — only useful when there are text paragraphs
-    const hasParagraphs = story.paragraphs && story.paragraphs.length > 0;
+    // Language toggle — only for text (non-video) stories with paragraphs
+    renderLangToggle(hasParagraphs && !isVideo);
+
     if (ttsBar) ttsBar.classList.toggle('hidden', !hasParagraphs);
     if (voiceSheet) voiceSheet.classList.add('hidden');
 
@@ -1481,7 +1483,7 @@
 
     saved.forEach((story, idx) => {
       const row = document.createElement('div');
-      row.className = 'story-row';
+      row.className = 'story-row' + (isStoryCompleted(story.id) ? ' done' : '');
       row.innerHTML = `
         <div class="story-row-thumb">✨</div>
         <div class="story-row-info">
@@ -1518,8 +1520,8 @@
   }
 
   function openAIStoryReader(story, savedIdx) {
-    // Reuse the existing story reader but with AI story data
     state.currentStory = { ...story, type: 'text', photo: null };
+    state.storyLang = 'en';
     stopTTS();
 
     $('story-reader-title').textContent = story.title;
@@ -1541,6 +1543,9 @@
       el.textContent = p;
       body.appendChild(el);
     });
+
+    renderMarkCompleteBtn(story.id);
+    renderLangToggle(true);
 
     const ttsBar     = $('story-tts-bar');
     const voiceSheet = $('tts-voice-sheet');
@@ -1772,6 +1777,190 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
     throw lastError;
   }
 
+  // ============== STORY PROGRESS & LANGUAGE ==============
+
+  const COMPLETED_LS_KEY   = 'drift.completedStories';
+  const TRANS_LS_KEY_PREFIX = 'drift.trans.';
+
+  // ── Completion tracking ────────────────────────────────────────
+  function loadCompletedStories() {
+    try { return new Set(JSON.parse(localStorage.getItem(COMPLETED_LS_KEY) || '[]')); } catch { return new Set(); }
+  }
+  function persistCompletedStories(set) {
+    try { localStorage.setItem(COMPLETED_LS_KEY, JSON.stringify([...set])); } catch {}
+  }
+  function isStoryCompleted(id) {
+    return loadCompletedStories().has(String(id));
+  }
+  function toggleStoryCompleted(id) {
+    const set = loadCompletedStories();
+    const sid = String(id);
+    const nowDone = !set.has(sid);
+    if (nowDone) set.add(sid); else set.delete(sid);
+    persistCompletedStories(set);
+    syncStoryProgressToFirestore(sid, nowDone);
+    return nowDone;
+  }
+
+  function storyProgressRef() {
+    return window.fbDb.collection(`users/${state.user.uid}/storyProgress`);
+  }
+  function syncStoryProgressToFirestore(id, completed) {
+    if (!state.user) return;
+    const ref = storyProgressRef().doc(String(id));
+    (completed ? ref.set({ completedAt: Date.now() }) : ref.delete())
+      .catch((e) => console.warn('storyProgress sync failed', e));
+  }
+  async function syncCompletedStoriesFromFirestore() {
+    if (!state.user) return;
+    try {
+      const snap = await storyProgressRef().get();
+      if (!snap.empty) {
+        persistCompletedStories(new Set(snap.docs.map((d) => d.id)));
+      }
+    } catch (e) { console.warn('storyProgress Firestore sync failed', e); }
+  }
+
+  // ── Translation cache ──────────────────────────────────────────
+  function loadTransCache(storyId) {
+    try { return JSON.parse(localStorage.getItem(TRANS_LS_KEY_PREFIX + storyId) || 'null'); } catch { return null; }
+  }
+  function saveTransCache(storyId, data) {
+    try { localStorage.setItem(TRANS_LS_KEY_PREFIX + storyId, JSON.stringify(data)); } catch {}
+  }
+
+  async function fetchTranslation(storyId, paragraphs) {
+    const cached = loadTransCache(storyId);
+    if (cached) return cached;
+
+    const key = (window.DRIFT_CONFIG || {}).geminiKey || '';
+    if (!key) throw new Error('no-key');
+
+    const numbered = paragraphs.map((p, i) => `${i + 1}. "${p}"`).join('\n');
+    const prompt = `You are a warm translator for a BAPS Swaminarayan children's app (ages 2–8).
+
+Translate the following story paragraphs into:
+1. Simple, flowing Gujarati script suitable for reading aloud to a baby or toddler (natural, not literal)
+2. Roman transliteration of that Gujarati — phonetic English letters so parents who speak but cannot read Gujarati script can read aloud naturally
+
+Return ONLY valid JSON — no markdown, no extra text:
+{
+  "gujarati": ["paragraph 1 in Gujarati script", "..."],
+  "transliteration": ["paragraph 1 phonetic English", "..."]
+}
+
+English paragraphs:
+${numbered}`;
+
+    const result = await callGemini(key, prompt);
+    if (!Array.isArray(result.gujarati) || !Array.isArray(result.transliteration)) {
+      throw new Error('Invalid translation response');
+    }
+    saveTransCache(storyId, result);
+    return result;
+  }
+
+  // ── Language switching ─────────────────────────────────────────
+  function renderLangToggle(show) {
+    const bar = $('story-lang-bar');
+    if (!bar) return;
+    if (!show) { bar.classList.add('hidden'); return; }
+    bar.classList.remove('hidden');
+    bar.querySelectorAll('.story-lang-btn').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.lang === state.storyLang);
+    });
+  }
+
+  async function setStoryLang(lang) {
+    if (lang === state.storyLang) return;
+    const story = state.currentStory;
+    if (!story) return;
+    state.storyLang = lang;
+    renderLangToggle(true);
+    stopTTS();
+
+    if (lang === 'en') {
+      renderStoryParagraphs(story.paragraphs, story.id);
+      return;
+    }
+
+    // Check cache first
+    const cached = loadTransCache(story.id);
+    if (cached) {
+      renderStoryParagraphs(lang === 'gu' ? cached.gujarati : cached.transliteration, story.id);
+      return;
+    }
+
+    // Fetch translation — show loading in body
+    const body = $('story-reader-body');
+    body.querySelectorAll('.story-para').forEach((p) => p.remove());
+    const completeBtnWrap = body.querySelector('.story-mark-complete-wrap');
+    const loader = document.createElement('div');
+    loader.className = 'story-lang-loading';
+    loader.innerHTML = `<div class="ai-spinner"></div><span>Translating…</span>`;
+    if (completeBtnWrap) body.insertBefore(loader, completeBtnWrap);
+    else body.appendChild(loader);
+
+    try {
+      const trans = await fetchTranslation(story.id, story.paragraphs);
+      loader.remove();
+      renderStoryParagraphs(lang === 'gu' ? trans.gujarati : trans.transliteration, story.id);
+    } catch (e) {
+      loader.remove();
+      const errEl = document.createElement('p');
+      errEl.style.cssText = 'color:var(--danger);font-size:13px;text-align:center;padding:24px 0;';
+      errEl.textContent = e.message === 'no-key'
+        ? 'Add your Gemini API key to enable translation'
+        : `Translation failed — ${e.message}`;
+      if (completeBtnWrap) body.insertBefore(errEl, completeBtnWrap);
+      else body.appendChild(errEl);
+      // Revert
+      state.storyLang = 'en';
+      renderLangToggle(true);
+    }
+  }
+
+  function renderStoryParagraphs(paragraphs, storyId) {
+    const body = $('story-reader-body');
+    if (!body || !paragraphs) return;
+    body.querySelectorAll('.story-para').forEach((p) => p.remove());
+    const completeBtnWrap = body.querySelector('.story-mark-complete-wrap');
+    paragraphs.forEach((p, i) => {
+      const el = document.createElement('p');
+      el.className = 'story-para';
+      el.dataset.idx = i;
+      el.textContent = p;
+      if (completeBtnWrap) body.insertBefore(el, completeBtnWrap);
+      else body.appendChild(el);
+    });
+  }
+
+  // ── Mark as read button ────────────────────────────────────────
+  function renderMarkCompleteBtn(storyId) {
+    const body = $('story-reader-body');
+    if (!body) return;
+    const existing = body.querySelector('.story-mark-complete-wrap');
+    if (existing) existing.remove();
+
+    const done = isStoryCompleted(storyId);
+    const wrap = document.createElement('div');
+    wrap.className = 'story-mark-complete-wrap';
+    const btn = document.createElement('button');
+    btn.className = 'story-mark-complete-btn' + (done ? ' completed' : '');
+    btn.innerHTML = done
+      ? `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Read`
+      : `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16 8 10 14 7 11"/></svg> Mark as read`;
+    btn.addEventListener('click', () => {
+      toggleStoryCompleted(storyId);
+      renderMarkCompleteBtn(storyId);
+      // Refresh story list completion badges if visible
+      if (state.currentCatId) renderStoryList(state.currentCatId, $('story-search-input')?.value || '');
+      renderAISavedList();
+    });
+    wrap.appendChild(btn);
+    body.appendChild(wrap);
+  }
+
   // ============== TEXT-TO-SPEECH ==============
 
   const ttsState = { active: false, paused: false, idx: 0, voice: null };
@@ -1913,15 +2102,16 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
   }
 
   function speakParagraph(idx) {
-    const story = state.currentStory;
-    if (!story || idx >= story.paragraphs.length) {
+    // Read text from DOM so we speak whatever language is currently displayed
+    const paraEls = document.querySelectorAll('.story-para');
+    if (!paraEls.length || idx >= paraEls.length) {
       stopTTS();
       return;
     }
     ttsState.idx = idx;
 
     // Highlight
-    document.querySelectorAll('.story-para').forEach((el) => {
+    paraEls.forEach((el) => {
       el.classList.toggle('tts-active', parseInt(el.dataset.idx, 10) === idx);
     });
 
@@ -1930,14 +2120,31 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
     if (activeEl) activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
     // Progress
-    const total = story.paragraphs.length;
+    const total = paraEls.length;
     const bar = $('tts-progress-bar');
     if (bar) bar.style.width = total > 1 ? `${(idx / (total - 1)) * 100}%` : '100%';
 
-    const utter = new SpeechSynthesisUtterance(story.paragraphs[idx]);
+    const text = paraEls[idx].textContent || '';
+    const utter = new SpeechSynthesisUtterance(text);
     utter.rate = 0.92;
-    utter.lang = 'en-US';
-    if (ttsState.voice) utter.voice = ttsState.voice;
+
+    if (state.storyLang === 'gu') {
+      // Try to use a Gujarati voice if available
+      const allVoices = window.speechSynthesis.getVoices();
+      const guVoice = allVoices.find((v) => v.lang.startsWith('gu'));
+      if (guVoice) {
+        utter.voice = guVoice;
+        utter.lang = 'gu-IN';
+      } else {
+        // Fallback: set lang hint even without a native voice
+        utter.lang = 'gu-IN';
+        if (ttsState.voice) utter.voice = ttsState.voice;
+      }
+    } else {
+      utter.lang = 'en-US';
+      if (ttsState.voice) utter.voice = ttsState.voice;
+    }
+
     utter.onend = () => {
       if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1);
     };
@@ -2720,6 +2927,16 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
       else openVoicePicker();
     });
     $('tts-voice-close').addEventListener('click', closeVoicePicker);
+
+    // Language toggle buttons
+    const langBar = $('story-lang-bar');
+    if (langBar) {
+      langBar.addEventListener('click', (e) => {
+        const btn = e.target.closest('.story-lang-btn');
+        if (!btn) return;
+        setStoryLang(btn.dataset.lang);
+      });
+    }
     // ────────────────────────────────────────────────────
 
     // Mini player — info row opens full sheet; controls don't
