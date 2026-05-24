@@ -1696,9 +1696,6 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
           temperature: 0.9,
           maxOutputTokens: 8192,
         },
-        // Disable thinking for gemini-2.5-flash — not needed for story gen,
-        // and thinking tokens count toward the output limit
-        thinkingConfig: { thinkingBudget: 0 },
       }),
     });
 
