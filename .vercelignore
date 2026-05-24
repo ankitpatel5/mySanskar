@@ -1,0 +1,18 @@
+# Vercel deployment ignore — same as .gitignore but config.js IS included
+# (config.js is gitignored to keep keys out of git history, but Vercel needs it)
+.vercel
+.env*
+
+firebase-debug.log
+*.log
+
+drift-music-player.zip
+*.zip
+
+node_modules/
+package-lock.json
+package.json
+
+.translation-progress.json
+
+.claude/
