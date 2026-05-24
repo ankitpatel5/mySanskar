@@ -1,6 +1,6 @@
-# Baal Shravan 🕉️
+# Sanskar 🕉️
 
-> *"Baal Shravan"* — Sanskrit for *a child listening* (to the divine).
+> *"Sanskar"* — Sanskrit for *a child listening* (to the divine).
 
 A devotional companion app for BAPS parents to play kirtan and tell spiritual stories to their newborns and young children. Built as a mobile-first progressive web app (PWA) — add it to your home screen and it works like a native app.
 

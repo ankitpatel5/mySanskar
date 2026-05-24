@@ -1,11 +1,11 @@
-// Baal Shravan — Service Worker
+// Sanskar — Service Worker
 // Caches the app shell so it loads instantly and works offline.
 // Audio streams from Google Drive are never cached (too large).
 //
 // VERSIONING: bump CACHE whenever you deploy new app files so that
 // home-screen users get the update on their next visit.
 
-const CACHE = 'baal-shravan-v6';
+const CACHE = 'sanskar-v1';
 
 // Static assets — cache-first (safe: only change when CACHE is bumped)
 const SHELL = [

@@ -1,7 +1,7 @@
 {
-  "name": "Baal Shravan",
-  "short_name": "Baal Shravan",
-  "description": "BAPS devotional music player",
+  "name": "Sanskar",
+  "short_name": "Sanskar",
+  "description": "BAPS devotional music player and story time for little ones",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",

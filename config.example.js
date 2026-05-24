@@ -1,4 +1,4 @@
-// Baal Shravan — local configuration template
+// Sanskar — local configuration template
 // =============================================
 // Copy this file to config.js and fill in your values.
 // config.js is gitignored and should NEVER be committed.

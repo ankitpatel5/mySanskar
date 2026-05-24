@@ -1,5 +1,5 @@
 /* ============================================================
-   Baal Shravan — Firebase initialization
+   Sanskar — Firebase initialization
    The API key below is safe to expose in client-side code.
    Security is enforced entirely by Firestore security rules.
    ============================================================ */
