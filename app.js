@@ -22,6 +22,8 @@
     libraryView: 'drift.libraryView',
     theme: 'drift.theme',
     storyLangDefault: 'drift.storyLangDefault',
+    activeTab: 'drift.activeTab',
+    activeMusicSubTab: 'drift.activeMusicSubTab',
   };
 
   // ============== THEME ==============
@@ -96,12 +98,21 @@
     showMain(); // hides loading overlay, shows app
 
     setupEventListeners();
+    // Restore the tab the user was on — must happen after setupEventListeners
+    // so tab buttons and sub-nav exist in the DOM.
+    switchTab(state.currentTab, state.musicSubTab);
     loadVoices();
     setupAudio();
     bootstrapLibrary();
     loadFirestorePlaylists();
     syncCompletedStoriesFromFirestore();
     checkShareParam();
+
+    // Skip auth-dependent setup when booting from the localStorage cache snapshot.
+    // The real Firebase User arrives via onAuthStateChanged shortly after and
+    // runs these with proper credentials (no duplicate listeners created).
+    const isRealFirebaseUser = typeof user.getIdToken === 'function';
+    if (!isRealFirebaseUser) return;
 
     // Blocked-user check runs in background after UI is shown
     // (5s timeout so a hung Firestore call can't leave user in limbo)
@@ -155,7 +166,24 @@
   }
 
   function init() {
-    showLoading('Loading…');
+    // Fast-boot: Firebase stores cached auth in localStorage. If the key exists
+    // the user was signed in recently — show the app immediately without waiting
+    // for onAuthStateChanged (which can take 2–5s on a cold reload).
+    const FB_CACHE_KEY = `firebase:authUser:${window.fbAuth.app.options.apiKey}:[DEFAULT]`;
+    let cachedFbUser = null;
+    try {
+      const raw = localStorage.getItem(FB_CACHE_KEY);
+      if (raw) cachedFbUser = JSON.parse(raw);
+    } catch {}
+
+    if (cachedFbUser && cachedFbUser.uid) {
+      // Boot immediately with the cached snapshot — real auth will follow shortly.
+      proceedAsUser({ uid: cachedFbUser.uid, email: cachedFbUser.email || '',
+                      displayName: cachedFbUser.displayName || '',
+                      photoURL: cachedFbUser.photoURL || '' });
+    } else {
+      showLoading('Loading…');
+    }
 
     // Fallback: if Firebase stalls (slow network, mobile background restore),
     // check currentUser directly after 8s rather than hanging forever.
@@ -183,7 +211,28 @@
 
     window.fbAuth.onAuthStateChanged((user) => {
       clearTimeout(stallTimer);
-      user ? proceedAsUser(user) : proceedAsGuest();
+      if (user) {
+        if (_appBooted) {
+          // App already showing from fast-boot cache — upgrade state.user to the
+          // real Firebase User object so Firestore, tokens, and profile sync work.
+          state.user = user;
+          updateUserUI();
+          updateAdminUI();
+          syncUserProfile(user);
+          setupBlockedListener(user);
+          loadFirestorePlaylists();
+          syncCompletedStoriesFromFirestore();
+        } else {
+          proceedAsUser(user);
+        }
+      } else {
+        if (_appBooted) {
+          // Cached token expired — sign out and reload to show sign-in screen.
+          window.fbAuth.signOut().then(() => window.location.reload());
+        } else {
+          proceedAsGuest();
+        }
+      }
     });
 
     // Back-forward cache restore (Chrome + Safari): page resumes from snapshot
@@ -225,6 +274,14 @@
       state.playCounts = (pc && typeof pc === 'object') ? pc : {};
     } catch { state.playCounts = {}; }
     state.libraryView = localStorage.getItem(LS.libraryView) || 'list';
+    const savedTab = localStorage.getItem(LS.activeTab);
+    if (savedTab === 'music' || savedTab === 'stories' || savedTab === 'home') {
+      state.currentTab = savedTab;
+    }
+    const savedSubTab = localStorage.getItem(LS.activeMusicSubTab);
+    if (savedSubTab === 'library' || savedSubTab === 'playlists' || savedSubTab === 'queue') {
+      state.musicSubTab = savedSubTab;
+    }
   }
 
   function persist(key) {
@@ -1168,6 +1225,7 @@
   }
   function switchMusicTab(subtab) {
     state.musicSubTab = subtab;
+    try { localStorage.setItem(LS.activeMusicSubTab, subtab); } catch {}
     document.querySelectorAll('.music-subnav-btn').forEach((b) =>
       b.classList.toggle('active', b.dataset.subtab === subtab)
     );
@@ -1185,6 +1243,7 @@
     }
 
     state.currentTab = tab;
+    try { localStorage.setItem(LS.activeTab, tab); } catch {}
     document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === tab));
 
     const musicSubnav = $('music-subnav');
