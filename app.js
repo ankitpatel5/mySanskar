@@ -1608,6 +1608,27 @@
     ].join(' ');
   }
 
+  // Shrink a data-URL to a JPEG at maxPx × maxPx and the given quality (0–1).
+  // Drops a typical Imagen PNG from ~1.5 MB to ~50–80 KB — safe for localStorage.
+  function compressImageDataUrl(dataUrl, maxPx = 480, quality = 0.82) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width  = maxPx;
+          canvas.height = maxPx;
+          canvas.getContext('2d').drawImage(img, 0, 0, maxPx, maxPx);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } catch {
+          resolve(dataUrl); // canvas blocked (e.g. CORS) — fall back to original
+        }
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  }
+
   async function generateImagenImage(topic, character, storyId) {
     const key = (window.DRIFT_CONFIG || {}).geminiKey || '';
     if (!key || isImagenQuotaExhausted()) return null;
@@ -1649,7 +1670,11 @@
       const mime = json?.predictions?.[0]?.mimeType || 'image/png';
       if (!b64) return null;
 
-      const dataUrl = `data:${mime};base64,${b64}`;
+      const rawDataUrl = `data:${mime};base64,${b64}`;
+
+      // Compress to a small JPEG before storing — Imagen returns ~1–2 MB PNG which
+      // blows the localStorage quota and causes the save to fail silently.
+      const dataUrl = await compressImageDataUrl(rawDataUrl, 480, 0.82);
 
       // Patch image onto saved story so re-reading shows it
       if (storyId !== undefined) {
@@ -1659,8 +1684,12 @@
           if (idx !== -1) {
             saved[idx].imageUrl = dataUrl;
             localStorage.setItem(AI_SAVED_KEY, JSON.stringify(saved));
+          } else {
+            console.warn('[Imagen] story id not found in saved list — image not persisted');
           }
-        } catch {}
+        } catch (e) {
+          console.error('[Imagen] localStorage save failed (quota?):', e);
+        }
       }
 
       return dataUrl;
