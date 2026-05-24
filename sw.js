@@ -5,7 +5,7 @@
 // VERSIONING: bump CACHE whenever you deploy new app files so that
 // home-screen users get the update on their next visit.
 
-const CACHE = 'sanskar-v4';
+const CACHE = 'sanskar-v5';
 
 // Static assets — cache-first (safe: only change when CACHE is bumped)
 const SHELL = [
@@ -15,6 +15,7 @@ const SHELL = [
   '/translations-data.js',
   '/title-translations.js',
   '/firebase-config.js',
+  '/conversation-starters.js',
   '/baal.png',
 ];
 

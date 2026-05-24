@@ -1228,6 +1228,22 @@
       container.appendChild(card);
     });
 
+    // Conversation Starters card
+    if (window.CONVERSATION_STARTERS) {
+      const convCard = document.createElement('div');
+      convCard.className = 'story-cat-card';
+      convCard.style.background = 'linear-gradient(135deg, #5B8FD6, #7B5EC8)';
+      const totalCount = Object.values(window.CONVERSATION_STARTERS)
+        .reduce((n, g) => n + g.categories.reduce((m, c) => m + c.items.length, 0), 0);
+      convCard.innerHTML = `
+        <div class="story-cat-icon">💬</div>
+        <div class="story-cat-name">Conversation Starters</div>
+        <div class="story-cat-count">${totalCount} prompts · 4 age groups</div>
+      `;
+      convCard.addEventListener('click', openConversationAges);
+      container.appendChild(convCard);
+    }
+
     // AI Stories card
     const aiCard = document.createElement('div');
     aiCard.className = 'story-cat-card story-cat-ai';
@@ -1390,6 +1406,112 @@
     updateTTSUI();
     switchView('view-story-reader');
     $('content').scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  // ============== CONVERSATION STARTERS ==============
+
+  const CONV_AGE_COLORS = {
+    newborn:  ['#6B8DD6', '#8E6AC8'],
+    baby:     ['#E8A87C', '#D4766E'],
+    toddler2: ['#5BBF8B', '#3A9E6E'],
+    toddler3: ['#F5C842', '#E8973A'],
+  };
+
+  function openConversationAges() {
+    const data = window.CONVERSATION_STARTERS;
+    if (!data) return;
+    const grid = $('conv-age-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    Object.entries(data).forEach(([key, group]) => {
+      const colors = CONV_AGE_COLORS[key] || ['#7A8FA6', '#5A6F86'];
+      const card = document.createElement('div');
+      card.className = 'conv-age-card';
+      card.style.background = `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
+      card.innerHTML = `
+        <div class="conv-age-emoji">${group.emoji}</div>
+        <div class="conv-age-label">${group.label}</div>
+        <div class="conv-age-range">${group.ageRange}</div>
+      `;
+      card.addEventListener('click', () => openConversationStarters(key));
+      grid.appendChild(card);
+    });
+    switchView('view-conv-ages');
+    $('content').scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  let _convActiveAge = null;
+  let _convActiveCat = 'all';
+
+  function openConversationStarters(ageKey) {
+    const data = window.CONVERSATION_STARTERS;
+    if (!data || !data[ageKey]) return;
+    _convActiveAge = ageKey;
+    _convActiveCat = 'all';
+    const group = data[ageKey];
+    $('conv-starters-title').textContent = `${group.emoji} ${group.label}`;
+    $('conv-starters-sub').textContent = group.ageRange;
+    const tipBar = $('conv-tip-bar');
+    if (tipBar) tipBar.textContent = group.tip;
+    renderConvCatPills(group);
+    renderConvStarters(group, 'all');
+    switchView('view-conv-starters');
+    $('content').scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  function renderConvCatPills(group) {
+    const scroll = $('conv-cat-scroll');
+    if (!scroll) return;
+    scroll.innerHTML = '';
+    const allBtn = document.createElement('button');
+    allBtn.className = 'conv-cat-pill active';
+    allBtn.textContent = '✨ All';
+    allBtn.addEventListener('click', () => {
+      _convActiveCat = 'all';
+      document.querySelectorAll('.conv-cat-pill').forEach(p => p.classList.remove('active'));
+      allBtn.classList.add('active');
+      renderConvStarters(group, 'all');
+      $('content').scrollTo({ top: 0, behavior: 'instant' });
+    });
+    scroll.appendChild(allBtn);
+    group.categories.forEach(cat => {
+      const btn = document.createElement('button');
+      btn.className = 'conv-cat-pill';
+      btn.textContent = `${cat.emoji} ${cat.title}`;
+      btn.dataset.catId = cat.id;
+      btn.addEventListener('click', () => {
+        _convActiveCat = cat.id;
+        document.querySelectorAll('.conv-cat-pill').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        renderConvStarters(group, cat.id);
+        $('content').scrollTo({ top: 0, behavior: 'instant' });
+      });
+      scroll.appendChild(btn);
+    });
+  }
+
+  function renderConvStarters(group, catFilter) {
+    const list = $('conv-starters-list');
+    if (!list) return;
+    list.innerHTML = '';
+    const cats = catFilter === 'all' ? group.categories : group.categories.filter(c => c.id === catFilter);
+    cats.forEach(cat => {
+      if (catFilter === 'all') {
+        const heading = document.createElement('div');
+        heading.className = 'conv-cat-heading';
+        heading.textContent = `${cat.emoji} ${cat.title}`;
+        list.appendChild(heading);
+      }
+      cat.items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'conv-starter-card';
+        card.textContent = item;
+        card.addEventListener('click', () => {
+          card.classList.toggle('highlighted');
+        });
+        list.appendChild(card);
+      });
+    });
   }
 
   // ============== AI STORIES ==============
@@ -3412,6 +3534,12 @@ ${numbered}`;
     });
 
     // ── Story Time ──────────────────────────────────────
+    $('conv-ages-back').addEventListener('click', () => switchTab('stories'));
+    $('conv-starters-back').addEventListener('click', () => {
+      switchView('view-conv-ages');
+      $('content').scrollTo({ top: 0, behavior: 'instant' });
+    });
+
     $('story-list-back').addEventListener('click', () => {
       stopTTS();
       switchTab('stories');

@@ -327,6 +327,36 @@
           <div id="story-list" class="story-list"></div>
         </section>
 
+        <!-- Conversation Starters: Age group picker -->
+        <section id="view-conv-ages" class="view hidden">
+          <button class="back-btn" id="conv-ages-back" aria-label="Back">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="view-header">
+            <div>
+              <h2 class="view-title">Conversation Starters 💬</h2>
+              <p class="view-sub">Choose your child's age group</p>
+            </div>
+          </div>
+          <div class="conv-age-grid" id="conv-age-grid"></div>
+        </section>
+
+        <!-- Conversation Starters: Starters list -->
+        <section id="view-conv-starters" class="view hidden">
+          <button class="back-btn" id="conv-starters-back" aria-label="Back">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="view-header">
+            <div>
+              <h2 class="view-title" id="conv-starters-title">Starters</h2>
+              <p class="view-sub" id="conv-starters-sub"></p>
+            </div>
+          </div>
+          <div id="conv-tip-bar" class="conv-tip-bar"></div>
+          <div class="conv-cat-scroll" id="conv-cat-scroll"></div>
+          <div id="conv-starters-list" class="conv-starters-list"></div>
+        </section>
+
         <!-- Story Time: Story reader -->
         <section id="view-story-reader" class="view hidden">
           <button class="back-btn" id="story-reader-back" aria-label="Back">
@@ -693,6 +723,7 @@
   <script src="stories-data.js"></script>
   <script src="translations-data.js"></script>
   <script src="title-translations.js"></script>
+  <script src="conversation-starters.js"></script>
   <script src="app.js"></script>
   <script>
     if ('serviceWorker' in navigator) {

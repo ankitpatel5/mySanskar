@@ -2752,6 +2752,138 @@ input { font-family: inherit; color: inherit; }
 [data-theme="light"] .story-row { border-bottom-color: rgba(0,0,0,0.07); }
 [data-theme="light"] .story-row:active { background: rgba(0,0,0,0.04); }
 
+/* ============== CONVERSATION STARTERS ============== */
+
+.conv-age-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding-bottom: 24px;
+}
+
+.conv-age-card {
+  border-radius: var(--r-lg);
+  padding: 28px 20px 22px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s, opacity 0.15s;
+  min-height: 130px;
+}
+.conv-age-card:active { transform: scale(0.96); opacity: 0.9; }
+.conv-age-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 10% 10%, rgba(255,255,255,0.14) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.conv-age-emoji {
+  font-size: 30px;
+  line-height: 1;
+}
+.conv-age-label {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.2;
+}
+.conv-age-range {
+  font-size: 12px;
+  color: rgba(255,255,255,0.65);
+  margin-top: 2px;
+}
+
+/* Tip bar */
+.conv-tip-bar {
+  background: var(--surface2);
+  border-radius: var(--r-md);
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.5;
+  margin-bottom: 16px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.conv-tip-bar::before {
+  content: '💡';
+  font-size: 15px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Category filter pills */
+.conv-cat-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  margin-bottom: 4px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.conv-cat-scroll::-webkit-scrollbar { display: none; }
+
+.conv-cat-pill {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--surface2);
+  color: var(--text2);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.conv-cat-pill.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Starters list */
+.conv-starters-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 32px;
+}
+
+.conv-starter-card {
+  background: var(--surface2);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text1);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.12s, transform 0.1s;
+  border-left: 3px solid transparent;
+}
+.conv-starter-card:active { transform: scale(0.98); }
+.conv-starter-card.highlighted {
+  border-left-color: var(--accent);
+  background: var(--surface3, var(--surface2));
+}
+
+.conv-cat-heading {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin: 18px 0 6px;
+}
+
 /* ============== DESKTOP TWEAKS ============== */
 @media (min-width: 600px) {
   .folders-list { grid-template-columns: repeat(3, 1fr); }
