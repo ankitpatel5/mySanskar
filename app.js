@@ -2340,10 +2340,11 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
     try { localStorage.setItem(TRANS_LS_KEY_PREFIX + storyId, JSON.stringify(data)); } catch {}
   }
 
-  async function fetchTranslation(storyId, paragraphs) {
+  async function fetchTranslation(storyId, paragraphs, title) {
     // 1. Check in-memory localStorage cache (fastest — already fetched this session)
     const cached = loadTransCache(storyId);
-    if (cached) return cached;
+    // If cached but missing title translations (old cache), bust it so we re-fetch with title
+    if (cached && (title ? cached.gujaratiTitle : true)) return cached;
 
     // 2. Check pre-bundled translations shipped with the app (no network needed)
     const bundled = window.STORY_TRANSLATIONS && window.STORY_TRANSLATIONS[storyId];
@@ -2357,15 +2358,21 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
     if (!key) throw new Error('no-key');
 
     const numbered = paragraphs.map((p, i) => `${i + 1}. "${p}"`).join('\n');
+    const titleLine = title
+      ? `\nStory title: "${title}"\n`
+      : '';
+    const titleJson = title
+      ? `  "gujaratiTitle": "story title in Gujarati script",\n  "transliterationTitle": "title in phonetic Roman",\n`
+      : '';
     const prompt = `You are a warm translator for a BAPS Swaminarayan children's app (ages 2–8).
 
-Translate the following story paragraphs into:
+Translate the following into:
 1. Simple, flowing Gujarati script suitable for reading aloud to a baby or toddler (natural, not literal)
 2. Roman transliteration of that Gujarati — phonetic English letters so parents who speak but cannot read Gujarati script can read aloud naturally
-
+${titleLine}
 Return ONLY valid JSON — no markdown, no extra text:
 {
-  "gujarati": ["paragraph 1 in Gujarati script", "..."],
+${titleJson}  "gujarati": ["paragraph 1 in Gujarati script", "..."],
   "transliteration": ["paragraph 1 phonetic English", "..."]
 }
 
@@ -2388,17 +2395,22 @@ ${numbered}`;
     const subEl  = $('story-reader-title-sub');
     if (!mainEl) return;
 
-    const t = window.STORY_TITLE_TRANSLATIONS && window.STORY_TITLE_TRANSLATIONS[story.id];
+    // Static bundle covers pre-built stories; trans cache covers AI-generated ones
+    const t  = (window.STORY_TITLE_TRANSLATIONS && window.STORY_TITLE_TRANSLATIONS[story.id]) || null;
+    const tc = !t ? loadTransCache(story.id) : null;
+
+    const gujaratiTitle = t ? t.gujarati      : (tc ? tc.gujaratiTitle      : null);
+    const translitTitle = t ? t.transliteration : (tc ? tc.transliterationTitle : null);
 
     if (state.storyLang === 'en') {
       mainEl.textContent = story.title;
-      if (subEl) { subEl.textContent = t ? t.gujarati : ''; subEl.classList.toggle('hidden', !t); }
+      if (subEl) { subEl.textContent = gujaratiTitle || ''; subEl.classList.toggle('hidden', !gujaratiTitle); }
     } else if (state.storyLang === 'gu') {
-      mainEl.textContent = t ? t.gujarati : story.title;
-      if (subEl) { subEl.textContent = t ? t.transliteration : ''; subEl.classList.toggle('hidden', !t); }
+      mainEl.textContent = gujaratiTitle || story.title;
+      if (subEl) { subEl.textContent = translitTitle || ''; subEl.classList.toggle('hidden', !translitTitle); }
     } else { // transliteration
-      mainEl.textContent = t ? t.transliteration : story.title;
-      if (subEl) { subEl.textContent = t ? t.gujarati : ''; subEl.classList.toggle('hidden', !t); }
+      mainEl.textContent = translitTitle || story.title;
+      if (subEl) { subEl.textContent = gujaratiTitle || ''; subEl.classList.toggle('hidden', !gujaratiTitle); }
     }
   }
 
@@ -2464,13 +2476,14 @@ ${numbered}`;
     else body.appendChild(loader);
 
     try {
-      const trans = await fetchTranslation(story.id, story.paragraphs);
+      const trans = await fetchTranslation(story.id, story.paragraphs, story.title);
 
       // By the time we're back, the user may have switched tabs — bail out silently.
       if (_storyLangReqId !== myReqId) { loader.remove(); return; }
 
       loader.remove();
       renderStoryParagraphs(lang === 'gu' ? trans.gujarati : trans.transliteration, story.id);
+      renderStoryReaderTitle(); // title translation is now in cache — update it
     } catch (e) {
       if (_storyLangReqId !== myReqId) { loader.remove(); return; }
 
