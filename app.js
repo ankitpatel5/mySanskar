@@ -1455,6 +1455,8 @@
     const btn = $('ai-generate-btn');
     btn.disabled = true;
     btn.innerHTML = `<div class="ai-spinner"></div> Writing your story…`;
+    const prevErr = $('ai-generator').querySelector('.ai-error-msg');
+    if (prevErr) prevErr.remove();
 
     try {
       const prompt = buildStoryPrompt(topic, character, length);
@@ -1483,15 +1485,25 @@
 
     } catch (e) {
       console.error('AI story error:', e);
+      let msg;
       if (e.message === 'no-key') {
-        toast('Gemini API key missing in config.js');
+        msg = 'Gemini API key missing in config.js';
       } else if (e.message.includes('API_KEY_INVALID') || e.message.includes('400')) {
-        toast('Invalid Gemini API key — check config.js');
+        msg = 'Invalid Gemini API key — check config.js';
       } else if (e.message.includes('429') || e.message.includes('RESOURCE_EXHAUSTED')) {
-        toast('Gemini rate limit hit — try again in a moment');
+        msg = 'Rate limit hit — try again in a moment';
       } else {
-        toast('Story generation failed — please try again');
+        msg = `Error: ${e.message}`;
       }
+      toast(msg, 5000);
+      // Also show inline so it doesn't vanish
+      const errEl = document.createElement('p');
+      errEl.style.cssText = 'color:var(--danger);font-size:13px;margin-top:8px;text-align:center;';
+      errEl.textContent = msg;
+      const existing = $('ai-generator').querySelector('.ai-error-msg');
+      if (existing) existing.remove();
+      errEl.className = 'ai-error-msg';
+      $('ai-generate-btn').after(errEl);
     } finally {
       btn.disabled = getAIUsageToday() >= AI_DAILY_LIMIT;
       btn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Generate Story`;
@@ -1530,7 +1542,7 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
   }
 
   async function callGemini(key, prompt) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
