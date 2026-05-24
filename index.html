@@ -728,7 +728,11 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
+        navigator.serviceWorker.register('/sw.js').then((reg) => {
+          // Poll for SW updates every 5 minutes so open sessions pick up
+          // new deploys without needing a manual reload.
+          setInterval(() => reg.update(), 5 * 60 * 1000);
+        }).catch(() => {});
       });
     }
   </script>
