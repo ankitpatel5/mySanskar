@@ -1258,7 +1258,7 @@
     const story = (data.stories[catId] || []).find((s) => s.id === storyId);
     if (!story) return;
     state.currentStory = story;
-    state.storyLang = getDefaultStoryLang();
+    state.storyLang = 'en'; // always start as English so setStoryLang() below isn't a no-op
     stopTTS();
 
     // Header
@@ -1314,9 +1314,10 @@
     if (ttsBar) ttsBar.classList.toggle('hidden', !hasParagraphs);
     if (voiceSheet) voiceSheet.classList.add('hidden');
 
-    // If user has a non-English default, switch to it now (uses bundled translations)
-    if (hasParagraphs && !isVideo && state.storyLang !== 'en') {
-      setStoryLang(state.storyLang);
+    // Switch to the user's default language (no-op if 'en' since we already rendered English)
+    const defaultLang = getDefaultStoryLang();
+    if (hasParagraphs && !isVideo && defaultLang !== 'en') {
+      setStoryLang(defaultLang);
     }
 
     updateTTSUI();
@@ -1554,7 +1555,7 @@
 
   function openAIStoryReader(story, savedIdx) {
     state.currentStory = { ...story, type: 'text', photo: null };
-    state.storyLang = getDefaultStoryLang();
+    state.storyLang = 'en'; // always start as English so setStoryLang() below isn't a no-op
     stopTTS();
 
     $('story-reader-title').textContent = story.title;
@@ -1585,9 +1586,10 @@
     if (ttsBar) ttsBar.classList.remove('hidden');
     if (voiceSheet) voiceSheet.classList.add('hidden');
 
-    // If user has a non-English default, switch to it now
-    if (state.storyLang !== 'en') {
-      setStoryLang(state.storyLang);
+    // Switch to the user's default language
+    const defaultLangAI = getDefaultStoryLang();
+    if (defaultLangAI !== 'en') {
+      setStoryLang(defaultLangAI);
     }
 
     // Override back button to return to AI stories
