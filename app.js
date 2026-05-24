@@ -1604,6 +1604,8 @@
         msg = 'Invalid Gemini API key — check config.js';
       } else if (e.message.includes('429') || e.message.includes('RESOURCE_EXHAUSTED')) {
         msg = 'Rate limit hit — try again in a moment';
+      } else if (e.message.toLowerCase().includes('high demand') || e.message.toLowerCase().includes('overloaded') || e.message.includes('503')) {
+        msg = 'Gemini is busy right now — please try again in a few seconds';
       } else {
         msg = `Error: ${e.message}`;
       }
@@ -1686,30 +1688,66 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
 
   async function callGemini(key, prompt) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          temperature: 0.9,
-          maxOutputTokens: 8192,
-        },
-      }),
+    const body = JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        temperature: 0.9,
+        maxOutputTokens: 8192,
+      },
     });
 
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data?.error?.message || `HTTP ${res.status}`);
+    const MAX_ATTEMPTS = 3;
+    const RETRY_DELAYS = [3000, 7000]; // ms between retries
+
+    let lastError;
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      if (attempt > 0) {
+        const delay = RETRY_DELAYS[attempt - 1];
+        const btn = $('ai-generate-btn');
+        if (btn) btn.innerHTML = `<div class="ai-spinner"></div> Retrying (${attempt}/${MAX_ATTEMPTS - 1})…`;
+        await new Promise((r) => setTimeout(r, delay));
+      }
+
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+        });
+
+        const data = await res.json();
+
+        // Retryable: server overload (503) or explicit UNAVAILABLE/high-demand
+        const isOverloaded =
+          res.status === 503 ||
+          (data?.error?.message || '').toLowerCase().includes('high demand') ||
+          (data?.error?.message || '').toLowerCase().includes('overloaded') ||
+          (data?.error?.status === 'UNAVAILABLE');
+
+        if (!res.ok) {
+          if (isOverloaded && attempt < MAX_ATTEMPTS - 1) {
+            lastError = new Error(data?.error?.message || `HTTP ${res.status}`);
+            continue; // retry
+          }
+          throw new Error(data?.error?.message || `HTTP ${res.status}`);
+        }
+
+        const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!raw) throw new Error('Empty response from Gemini');
+
+        // Strip any accidental markdown code fences
+        const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+        return JSON.parse(cleaned);
+
+      } catch (e) {
+        // Network error — retry
+        if (attempt < MAX_ATTEMPTS - 1) { lastError = e; continue; }
+        throw e;
+      }
     }
 
-    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!raw) throw new Error('Empty response from Gemini');
-
-    // Strip any accidental markdown code fences
-    const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
-    return JSON.parse(cleaned);
+    throw lastError;
   }
 
   // ============== TEXT-TO-SPEECH ==============
