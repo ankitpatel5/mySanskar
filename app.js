@@ -1395,21 +1395,52 @@
     try { localStorage.setItem(AI_LS_KEY, JSON.stringify({ date: today, count })); } catch {}
   }
 
+  function aiStoriesRef() {
+    return window.fbDb.collection(`users/${state.user.uid}/aiStories`);
+  }
+
   function loadAISavedStories() {
     try { return JSON.parse(localStorage.getItem(AI_SAVED_KEY) || '[]'); } catch { return []; }
   }
 
   function saveAIStory(story) {
+    if (!story.id) story.id = uid();
     const saved = loadAISavedStories();
     saved.unshift(story);
     if (saved.length > 20) saved.splice(20);
     try { localStorage.setItem(AI_SAVED_KEY, JSON.stringify(saved)); } catch {}
+    // Sync to Firestore so stories persist across devices
+    if (state.user) {
+      aiStoriesRef().doc(story.id).set(story)
+        .catch((e) => console.warn('aiStories Firestore save failed', e));
+    }
   }
 
   function deleteAIStory(idx) {
     const saved = loadAISavedStories();
+    const story = saved[idx];
     saved.splice(idx, 1);
     try { localStorage.setItem(AI_SAVED_KEY, JSON.stringify(saved)); } catch {}
+    // Remove from Firestore
+    if (state.user && story && story.id) {
+      aiStoriesRef().doc(story.id).delete()
+        .catch((e) => console.warn('aiStories Firestore delete failed', e));
+    }
+  }
+
+  async function syncAIStoriesFromFirestore() {
+    if (!state.user) return;
+    try {
+      const snap = await aiStoriesRef().orderBy('generatedAt', 'desc').limit(20).get();
+      if (!snap.empty) {
+        const stories = snap.docs.map((d) => d.data());
+        try { localStorage.setItem(AI_SAVED_KEY, JSON.stringify(stories)); } catch {}
+        renderAISavedList();
+        renderStoryCategories(); // refresh AI card count
+      }
+    } catch (e) {
+      console.warn('aiStories Firestore sync failed — using local cache', e);
+    }
   }
 
   function openAIStories() {
@@ -1417,8 +1448,9 @@
     $('ai-no-key').classList.toggle('hidden', !!key);
     $('ai-generator').classList.toggle('hidden', !key);
     renderAIUsageRow();
-    renderAISavedList();
+    renderAISavedList();      // render from local cache instantly
     renderSavedCharacters();
+    syncAIStoriesFromFirestore(); // then refresh from Firestore in background
     switchView('view-ai-stories');
     $('content').scrollTo({ top: 0, behavior: 'instant' });
   }
@@ -2569,11 +2601,24 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
       openConfirm(
         'Clear all AI stories?',
         'Your generated stories will be permanently deleted.',
-        () => {
+        async () => {
           localStorage.removeItem(AI_SAVED_KEY);
           renderAISavedList();
           renderStoryCategories();
           toast('Stories cleared');
+          // Also wipe from Firestore
+          if (state.user) {
+            try {
+              const snap = await aiStoriesRef().get();
+              if (!snap.empty) {
+                const batch = window.fbDb.batch();
+                snap.docs.forEach((d) => batch.delete(d.ref));
+                await batch.commit();
+              }
+            } catch (e) {
+              console.warn('aiStories Firestore clear failed', e);
+            }
+          }
         },
         { confirmLabel: 'Clear all', danger: true }
       );
