@@ -224,6 +224,16 @@
                 <button class="ai-chip" data-value="helping others">Kindness</button>
                 <button class="ai-chip" data-value="patience">Patience</button>
                 <button class="ai-chip" data-value="faith in Swaminarayan">Faith</button>
+                <button class="ai-chip" data-value="fun">🎉 Fun</button>
+                <button class="ai-chip" data-value="funny">😄 Funny</button>
+                <button class="ai-chip" data-value="custom">✏️ Custom</button>
+              </div>
+              <!-- Shown only when Custom chip is selected -->
+              <div id="ai-custom-topic-wrap" class="ai-custom-topic-wrap hidden">
+                <input id="ai-custom-topic-input" class="ai-text-input" type="text"
+                  placeholder="e.g. respecting elders, sharing with friends…"
+                  maxlength="60" autocomplete="off" />
+                <p id="ai-topic-error" class="ai-field-error hidden">Please keep the theme kid-friendly 🙏</p>
               </div>
             </div>
 
@@ -232,6 +242,8 @@
               <input id="ai-character-input" class="ai-text-input" type="text"
                 placeholder="e.g. a young boy named Arjun, a curious squirrel…"
                 maxlength="80" autocomplete="off" />
+              <!-- Saved characters rendered here by JS -->
+              <div id="ai-saved-chars" class="ai-saved-chars"></div>
             </div>
 
             <div class="ai-field">

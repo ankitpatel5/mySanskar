@@ -1597,6 +1597,37 @@
       long:   '8 to 12 paragraphs, about 500 words total',
     }[length] || '5 to 7 paragraphs';
 
+    const isFunMode = topic === 'fun' || topic === 'funny';
+    const isFunny   = topic === 'funny';
+
+    if (isFunMode) {
+      const characterLine = character
+        ? `The main character is: ${character}.`
+        : 'Choose a delightful main character — a clumsy bunny, a cheeky monkey, a forgetful elephant, or a curious little kid.';
+
+      const toneGuide = isFunny
+        ? 'Make the story laugh-out-loud funny with silly mix-ups, slapstick moments, and playful wordplay.'
+        : 'Make the story joyful and adventurous — full of wonder, surprises, and playful energy.';
+
+      return `You are a playful children's storyteller. Create a delightful, ${isFunny ? 'funny' : 'fun'} story for young children (ages 2 to 8).
+
+${characterLine}
+
+Guidelines:
+- Write ${lengthGuide}
+- ${toneGuide}
+- Use simple, bouncy language a parent can read aloud with expression
+- No religious or cultural angle needed — just pure, wholesome fun
+- Age-appropriate humor: silly sounds, funny mistakes, unexpected twists, happy endings
+- Keep it light, joyful, and absolutely kid-friendly — no fear or violence
+
+Return a JSON object with exactly this structure (no markdown, no extra text):
+{
+  "title": "A short, catchy title (4 to 7 words)",
+  "paragraphs": ["paragraph 1 text", "paragraph 2 text", "..."]
+}`;
+    }
+
     const characterLine = character
       ? `The main character is: ${character}.`
       : 'Choose a fitting main character — a curious child, a devoted saint, or a humble animal.';
