@@ -5,7 +5,7 @@
 // VERSIONING: bump CACHE whenever you deploy new app files so that
 // home-screen users get the update on their next visit.
 
-const CACHE = 'baal-shravan-v4';
+const CACHE = 'baal-shravan-v5';
 
 // Static assets — cache-first (safe: only change when CACHE is bumped)
 const SHELL = [
