@@ -1317,9 +1317,69 @@
 
   // ============== AI STORIES ==============
 
-  const AI_DAILY_LIMIT = 5;
-  const AI_LS_KEY      = 'drift.aiUsage';
-  const AI_SAVED_KEY   = 'drift.aiStories';
+  const AI_DAILY_LIMIT  = 5;
+  const AI_LS_KEY       = 'drift.aiUsage';
+  const AI_SAVED_KEY    = 'drift.aiStories';
+  const AI_CHARS_KEY    = 'drift.aiCharacters';
+
+  // ── Kid-friendly content filter ─────────────────────────────────
+  const BLOCKED_TERMS = [
+    'kill','murder','dead','death','blood','gore','stab','shoot','gun','weapon','bomb','war',
+    'drug','alcohol','beer','wine','drunk','smoke','weed','cocaine',
+    'sex','sexy','naked','nude','porn','adult','inappropriate',
+    'hate','racist','racist','violence','rape','abuse',
+    'devil','demon','satan','hell','curse','damn','crap','shit','fuck',
+  ];
+  function isKidFriendly(text) {
+    const lower = text.toLowerCase();
+    return !BLOCKED_TERMS.some((t) => lower.includes(t));
+  }
+
+  // ── Saved characters ─────────────────────────────────────────────
+  function loadSavedCharacters() {
+    try { return JSON.parse(localStorage.getItem(AI_CHARS_KEY) || '[]'); } catch { return []; }
+  }
+
+  function persistSavedCharacters(list) {
+    try { localStorage.setItem(AI_CHARS_KEY, JSON.stringify(list)); } catch {}
+  }
+
+  function saveCharacterIfNew(char) {
+    if (!char) return;
+    const list = loadSavedCharacters();
+    if (!list.includes(char)) {
+      list.unshift(char);
+      if (list.length > 10) list.splice(10);
+      persistSavedCharacters(list);
+    }
+  }
+
+  function renderSavedCharacters() {
+    const container = $('ai-saved-chars');
+    if (!container) return;
+    const list = loadSavedCharacters();
+    container.innerHTML = '';
+    list.forEach((char) => {
+      const chip = document.createElement('div');
+      chip.className = 'ai-char-chip';
+      chip.innerHTML = `
+        <span class="ai-char-chip-name">${char}</span>
+        <button class="ai-char-chip-remove" aria-label="Remove" data-char="${char.replace(/"/g, '&quot;')}">×</button>
+      `;
+      // Tap chip → populate input
+      chip.querySelector('.ai-char-chip-name').addEventListener('click', () => {
+        $('ai-character-input').value = char;
+      });
+      // × → remove
+      chip.querySelector('.ai-char-chip-remove').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const updated = loadSavedCharacters().filter((c) => c !== char);
+        persistSavedCharacters(updated);
+        renderSavedCharacters();
+      });
+      container.appendChild(chip);
+    });
+  }
 
   function getAIUsageToday() {
     try {
@@ -1358,6 +1418,7 @@
     $('ai-generator').classList.toggle('hidden', !key);
     renderAIUsageRow();
     renderAISavedList();
+    renderSavedCharacters();
     switchView('view-ai-stories');
     $('content').scrollTo({ top: 0, behavior: 'instant' });
   }
@@ -1446,7 +1507,22 @@
     if (getAIUsageToday() >= AI_DAILY_LIMIT) { toast(`Daily limit reached — come back tomorrow!`); return; }
 
     const topicEl  = document.querySelector('.ai-chip.active');
-    const topic    = topicEl ? topicEl.dataset.value : 'devotion to God';
+    let topic;
+    if (topicEl && topicEl.dataset.value === 'custom') {
+      topic = ($('ai-custom-topic-input').value || '').trim();
+      if (!topic) {
+        const errEl = $('ai-topic-error');
+        if (errEl) { errEl.textContent = 'Please enter a custom theme 🙏'; errEl.classList.remove('hidden'); }
+        return;
+      }
+      if (!isKidFriendly(topic)) {
+        const errEl = $('ai-topic-error');
+        if (errEl) errEl.classList.remove('hidden');
+        return;
+      }
+    } else {
+      topic = topicEl ? topicEl.dataset.value : 'devotion to God';
+    }
     const character = ($('ai-character-input').value || '').trim();
     const lenEl    = document.querySelector('.ai-length-btn.active');
     const length   = lenEl ? lenEl.dataset.len : 'medium';
@@ -1477,6 +1553,10 @@
 
       incrementAIUsage();
       saveAIStory(story);
+      if (character) {
+        saveCharacterIfNew(character);
+        renderSavedCharacters();
+      }
       renderAIUsageRow();
       renderAISavedList();
 
@@ -2425,7 +2505,24 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
       if (!chip) return;
       document.querySelectorAll('.ai-chip').forEach((c) => c.classList.remove('active'));
       chip.classList.add('active');
+      // Show custom topic input only when "custom" chip is selected
+      const isCustom = chip.dataset.value === 'custom';
+      const wrap = $('ai-custom-topic-wrap');
+      if (wrap) wrap.classList.toggle('hidden', !isCustom);
+      if (isCustom) {
+        const inp = $('ai-custom-topic-input');
+        if (inp) setTimeout(() => inp.focus(), 80);
+      }
     });
+
+    // Clear custom topic error as user types
+    const customTopicInput = $('ai-custom-topic-input');
+    if (customTopicInput) {
+      customTopicInput.addEventListener('input', () => {
+        const errEl = $('ai-topic-error');
+        if (errEl) errEl.classList.add('hidden');
+      });
+    }
 
     // Length buttons — single select
     document.querySelectorAll('.ai-length-btn').forEach((btn) => {
