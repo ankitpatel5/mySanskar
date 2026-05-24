@@ -112,6 +112,7 @@
     showMain();
     updateAdminUI();
     setupEventListeners();
+    loadVoices();
     setupAudio();
     bootstrapLibrary();
     loadFirestorePlaylists();
@@ -1268,7 +1269,99 @@
 
   // ============== TEXT-TO-SPEECH ==============
 
-  const ttsState = { active: false, paused: false, idx: 0 };
+  const ttsState = { active: false, paused: false, idx: 0, voice: null };
+  let _ttsVoices = [];
+
+  // Load voices — they load async in most browsers
+  function loadVoices() {
+    if (!('speechSynthesis' in window)) return;
+    const update = () => {
+      const all = window.speechSynthesis.getVoices();
+      if (!all.length) return;
+      // Prefer English voices; surface "enhanced"/"premium"/"natural" first
+      _ttsVoices = all
+        .filter((v) => v.lang.startsWith('en'))
+        .sort((a, b) => {
+          const score = (v) => {
+            const n = v.name.toLowerCase();
+            if (n.includes('premium') || n.includes('enhanced')) return 0;
+            if (n.includes('natural') || n.includes('neural'))   return 1;
+            if (v.localService)                                   return 2;
+            return 3;
+          };
+          return score(a) - score(b);
+        });
+      // Restore saved preference
+      const saved = localStorage.getItem('drift.ttsVoice');
+      if (saved) {
+        const match = _ttsVoices.find((v) => v.name === saved);
+        if (match) ttsState.voice = match;
+      }
+      // Auto-pick best if nothing saved
+      if (!ttsState.voice && _ttsVoices.length) ttsState.voice = _ttsVoices[0];
+    };
+    update();
+    window.speechSynthesis.onvoiceschanged = update;
+  }
+
+  function openVoicePicker() {
+    const sheet = $('tts-voice-sheet');
+    const list  = $('tts-voice-list');
+    if (!sheet || !list) return;
+
+    if (_ttsVoices.length === 0) {
+      toast('No voices found on this device');
+      return;
+    }
+
+    list.innerHTML = '';
+    _ttsVoices.forEach((v) => {
+      const isSelected = ttsState.voice && ttsState.voice.name === v.name;
+      const isEnhanced = /premium|enhanced|natural|neural/i.test(v.name);
+      const item = document.createElement('div');
+      item.className = 'tts-voice-item' + (isSelected ? ' selected' : '');
+      // Friendly name: strip OS prefixes like "com.apple.voice.compact.en-US."
+      const displayName = v.name.replace(/^.*\.\w+-\w+\./i, '').replace(/_/g, ' ');
+      item.innerHTML = `
+        <div class="tts-voice-item-info">
+          <div class="tts-voice-item-name">${displayName}</div>
+          <div class="tts-voice-item-lang">${v.lang}${v.localService ? ' · on-device' : ' · network'}</div>
+        </div>
+        ${isEnhanced ? '<span class="tts-voice-badge">HD</span>' : ''}
+        <svg class="tts-voice-item-check" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      `;
+      item.addEventListener('click', () => {
+        ttsState.voice = v;
+        localStorage.setItem('drift.ttsVoice', v.name);
+        // Update selection UI
+        list.querySelectorAll('.tts-voice-item').forEach((el) => el.classList.remove('selected'));
+        item.classList.add('selected');
+        // If already reading, restart from current paragraph with new voice
+        if (ttsState.active) {
+          const resumeIdx = ttsState.idx;
+          window.speechSynthesis.cancel();
+          setTimeout(() => speakParagraph(resumeIdx), 120);
+        }
+        // Preview the voice
+        const preview = new SpeechSynthesisUtterance('Jay Swaminarayan');
+        preview.voice = v;
+        preview.rate = 0.92;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(preview);
+      });
+      list.appendChild(item);
+    });
+
+    sheet.classList.remove('hidden');
+    $('tts-voice-btn').classList.add('active');
+  }
+
+  function closeVoicePicker() {
+    const sheet = $('tts-voice-sheet');
+    if (sheet) sheet.classList.add('hidden');
+    const btn = $('tts-voice-btn');
+    if (btn) btn.classList.remove('active');
+  }
 
   function startTTS() {
     if (!('speechSynthesis' in window)) { toast('Text-to-speech not supported on this device'); return; }
@@ -1289,7 +1382,16 @@
 
   function resumeTTS() {
     if (!ttsState.active || !ttsState.paused) return;
+    // Some browsers (Chrome Android) don't resume well — restart paragraph instead
     window.speechSynthesis.resume();
+    // Fallback: if still paused after 200ms, restart the paragraph
+    setTimeout(() => {
+      if (ttsState.paused && ttsState.active) {
+        ttsState.paused = false;
+        window.speechSynthesis.cancel();
+        speakParagraph(ttsState.idx);
+      }
+    }, 200);
     ttsState.paused = false;
     updateTTSUI();
   }
@@ -1330,6 +1432,7 @@
     const utter = new SpeechSynthesisUtterance(story.paragraphs[idx]);
     utter.rate = 0.92;
     utter.lang = 'en-US';
+    if (ttsState.voice) utter.voice = ttsState.voice;
     utter.onend = () => {
       if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1);
     };
@@ -1349,7 +1452,6 @@
     const isPlaying = ttsState.active && !ttsState.paused;
     const isPaused  = ttsState.active && ttsState.paused;
 
-    // Toggle play/pause icon
     playBtn.innerHTML = isPlaying
       ? `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`
       : `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>`;
@@ -1357,14 +1459,14 @@
     playBtn.classList.toggle('reading', ttsState.active);
 
     if (label) {
-      label.textContent = isPlaying ? 'Reading…' : isPaused ? 'Paused' : 'Read aloud';
+      const voiceName = ttsState.voice
+        ? ttsState.voice.name.replace(/^.*\.\w+-\w+\./i, '').replace(/_/g, ' ')
+        : 'Read aloud';
+      label.textContent = isPlaying ? 'Reading…' : isPaused ? 'Paused' : voiceName;
     }
 
-    if (stopBtn) {
-      stopBtn.classList.toggle('hidden', !ttsState.active);
-    }
+    if (stopBtn) stopBtn.classList.toggle('hidden', !ttsState.active);
 
-    // Reset progress bar when idle
     if (!ttsState.active) {
       const bar = $('tts-progress-bar');
       if (bar) bar.style.width = '0%';
@@ -2032,6 +2134,12 @@
       else pauseTTS();
     });
     $('tts-stop-btn').addEventListener('click', stopTTS);
+    $('tts-voice-btn').addEventListener('click', () => {
+      const sheet = $('tts-voice-sheet');
+      if (sheet && !sheet.classList.contains('hidden')) closeVoicePicker();
+      else openVoicePicker();
+    });
+    $('tts-voice-close').addEventListener('click', closeVoicePicker);
     // ────────────────────────────────────────────────────
 
     // Mini player — info row opens full sheet; controls don't

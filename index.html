@@ -221,13 +221,26 @@
             <button id="tts-play-btn" class="tts-play-btn" aria-label="Read aloud">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
             </button>
-            <div class="tts-label" id="tts-label">Read aloud</div>
-            <div class="tts-track">
-              <div class="tts-progress-bar" id="tts-progress-bar"></div>
+            <div class="tts-center">
+              <div class="tts-label" id="tts-label">Read aloud</div>
+              <div class="tts-track">
+                <div class="tts-progress-bar" id="tts-progress-bar"></div>
+              </div>
             </div>
             <button id="tts-stop-btn" class="tts-stop-btn hidden" aria-label="Stop reading">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
             </button>
+            <button id="tts-voice-btn" class="tts-voice-btn" aria-label="Choose voice">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            </button>
+          </div>
+          <!-- Voice picker sheet -->
+          <div id="tts-voice-sheet" class="tts-voice-sheet hidden">
+            <div class="tts-voice-sheet-header">
+              <span class="tts-voice-sheet-title">Choose a voice</span>
+              <button id="tts-voice-close" class="tts-voice-close" aria-label="Close">×</button>
+            </div>
+            <div id="tts-voice-list" class="tts-voice-list"></div>
           </div>
           <div id="story-reader-body" class="story-reader-body"></div>
         </section>
