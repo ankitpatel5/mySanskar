@@ -1610,15 +1610,17 @@
 
   // Shrink a data-URL to a JPEG at maxPx × maxPx and the given quality (0–1).
   // Drops a typical Imagen PNG from ~1.5 MB to ~50–80 KB — safe for localStorage.
-  function compressImageDataUrl(dataUrl, maxPx = 480, quality = 0.82) {
+  // Preserves the natural aspect ratio of the source image.
+  function compressImageDataUrl(dataUrl, maxWidth = 854, quality = 0.82) {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
         try {
           const canvas = document.createElement('canvas');
-          canvas.width  = maxPx;
-          canvas.height = maxPx;
-          canvas.getContext('2d').drawImage(img, 0, 0, maxPx, maxPx);
+          const scale  = Math.min(1, maxWidth / img.naturalWidth);
+          canvas.width  = Math.round(img.naturalWidth  * scale);
+          canvas.height = Math.round(img.naturalHeight * scale);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
           resolve(canvas.toDataURL('image/jpeg', quality));
         } catch {
           resolve(dataUrl); // canvas blocked (e.g. CORS) — fall back to original
@@ -1636,7 +1638,7 @@
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGEN_MODEL}:predict?key=${key}`;
     const body = {
       instances: [{ prompt: buildImagenPrompt(topic, character) }],
-      parameters: { sampleCount: 1, aspectRatio: '1:1' },
+      parameters: { sampleCount: 1, aspectRatio: '16:9' },
     };
 
     try {

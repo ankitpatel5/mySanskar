@@ -2520,18 +2520,19 @@ input { font-family: inherit; color: inherit; }
 
 .story-reader-img {
   width: 100%;
-  height: min(33vh, 280px);
+  height: auto;
+  max-height: min(33vh, 280px);
   border-radius: var(--r-lg);
   margin-bottom: 16px;
   display: block;
   object-fit: cover;
-  object-position: center top;
 }
 
 /* Shimmer placeholder while Imagen generates */
 .story-reader-img.ai-img-loading {
   display: block;
-  height: min(33vh, 280px);
+  /* 16:9 shimmer — matches generated landscape images */
+  height: clamp(160px, 56.25vw, min(33vh, 280px));
   background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3, #e8eaf0) 50%, var(--surface2) 75%);
   background-size: 200% 100%;
   animation: ai-img-shimmer 1.4s infinite;
