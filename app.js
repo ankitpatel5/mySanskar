@@ -1345,14 +1345,16 @@
       month: 'long', day: 'numeric',
     });
 
+    const typeLabel = ekadashi.fastType === 'Nirjala Upvas' ? 'Nirjala Upvas' : 'Fast';
+
     if (ekadashi.daysAway === 0) {
-      subEl.textContent = `Today — ${dateLabel} 🙏`;
+      subEl.textContent = `${typeLabel} • Today — ${dateLabel} 🙏`;
       subEl.classList.add('ekadashi-today');
     } else if (ekadashi.daysAway === 1) {
-      subEl.textContent = `Tomorrow — ${dateLabel}`;
+      subEl.textContent = `${typeLabel} • Tomorrow — ${dateLabel}`;
       subEl.classList.remove('ekadashi-today');
     } else {
-      subEl.textContent = `In ${ekadashi.daysAway} days — ${dateLabel}`;
+      subEl.textContent = `${typeLabel} • In ${ekadashi.daysAway} days — ${dateLabel}`;
       subEl.classList.remove('ekadashi-today');
     }
 

@@ -60,11 +60,12 @@ module.exports = async function handler(req, res) {
         const nameMatch = tooltip.match(
           /Ekadashi(?:\/\w+)?\s+([A-Za-z][\w\s-]*Ekadashi)\s*[-–]?\s*(?:Nirjala Upvas|\(Fast\))/
         );
-        const name = nameMatch ? nameMatch[1].trim() : 'Ekadashi';
+        const name     = nameMatch ? nameMatch[1].trim() : 'Ekadashi';
+        const fastType = tooltip.includes('Nirjala Upvas') ? 'Nirjala Upvas' : 'Fast';
 
         const dateStr = toDateStr(year, monthNum, day);
         if (dateStr >= todayStr) {
-          results.push({ date: dateStr, name });
+          results.push({ date: dateStr, name, fastType });
         }
       }
     } catch (e) {
