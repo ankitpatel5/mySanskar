@@ -1259,6 +1259,7 @@
       if (miniPlayer)  miniPlayer.classList.add('hidden');
       content.classList.remove('mini-visible');
       switchView('view-home');
+      renderHomeFeed();
       content.scrollTo({ top: 0, behavior: 'instant' });
     } else if (tab === 'music') {
       if (musicSubnav) musicSubnav.classList.remove('hidden');
@@ -1279,6 +1280,103 @@
       renderStoryCategories();
       content.scrollTo({ top: 0, behavior: 'instant' });
     }
+  }
+
+  // ============== HOME FEED ==============
+
+  const EKADASHI_CACHE_KEY = 'drift.ekadashiCache';
+  const EKADASHI_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+
+  function renderHomeFeed() {
+    // Update date header
+    const dateEl = $('home-date');
+    if (dateEl) {
+      const now = new Date();
+      dateEl.textContent = now.toLocaleDateString('en-US', {
+        weekday: 'long', month: 'long', day: 'numeric',
+      });
+    }
+    loadEkadashiTile();
+  }
+
+  async function loadEkadashiTile() {
+    // Try valid cache first (filter out past dates inline)
+    try {
+      const cached = JSON.parse(localStorage.getItem(EKADASHI_CACHE_KEY) || 'null');
+      if (cached && Date.now() - cached.ts < EKADASHI_CACHE_TTL) {
+        const todayMs = Date.UTC(...todayParts());
+        const future  = (cached.data || []).filter((r) => {
+          const [yr, mo, dy] = r.date.split('-').map(Number);
+          return Date.UTC(yr, mo - 1, dy) >= todayMs;
+        });
+        if (future.length) {
+          reattachDaysAway(future);
+          showEkadashiTile(future[0]);
+          return;
+        }
+      }
+    } catch {}
+
+    // Fetch from API
+    try {
+      const resp = await fetch('/api/ekadashi');
+      if (!resp.ok) throw new Error(resp.status);
+      const data = await resp.json();
+      try { localStorage.setItem(EKADASHI_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch {}
+      if (data.length) showEkadashiTile(data[0]);
+      else hideEkadashiTile();
+    } catch {
+      hideEkadashiTile();
+    }
+  }
+
+  function showEkadashiTile(ekadashi) {
+    const tile     = $('ekadashi-tile');
+    const skeleton = $('ekadashi-skeleton');
+    const nameEl   = $('ekadashi-name');
+    const subEl    = $('ekadashi-sub');
+    if (!tile || !nameEl || !subEl) return;
+
+    if (skeleton) skeleton.classList.add('hidden');
+    nameEl.textContent = ekadashi.name;
+
+    const [yr, mo, dy] = ekadashi.date.split('-').map(Number);
+    const dateLabel = new Date(yr, mo - 1, dy).toLocaleDateString('en-US', {
+      month: 'long', day: 'numeric',
+    });
+
+    if (ekadashi.daysAway === 0) {
+      subEl.textContent = `Today — ${dateLabel} 🙏`;
+      subEl.classList.add('ekadashi-today');
+    } else if (ekadashi.daysAway === 1) {
+      subEl.textContent = `Tomorrow — ${dateLabel}`;
+      subEl.classList.remove('ekadashi-today');
+    } else {
+      subEl.textContent = `In ${ekadashi.daysAway} days — ${dateLabel}`;
+      subEl.classList.remove('ekadashi-today');
+    }
+
+    tile.classList.remove('hidden');
+  }
+
+  function hideEkadashiTile() {
+    const tile     = $('ekadashi-tile');
+    const skeleton = $('ekadashi-skeleton');
+    if (tile)     tile.classList.add('hidden');
+    if (skeleton) skeleton.classList.add('hidden');
+  }
+
+  function todayParts() {
+    const n = new Date();
+    return [n.getFullYear(), n.getMonth(), n.getDate()];
+  }
+
+  function reattachDaysAway(items) {
+    const todayMs = Date.UTC(...todayParts());
+    items.forEach((r) => {
+      const [yr, mo, dy] = r.date.split('-').map(Number);
+      r.daysAway = Math.round((Date.UTC(yr, mo - 1, dy) - todayMs) / 86400000);
+    });
   }
 
   // ============== STORY TIME ==============
