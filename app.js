@@ -2430,75 +2430,67 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
     return age >= 0 ? age : null;
   }
   function buildChildCharacterString(profile) {
-    const { name, gender, dob } = profile;
+    const { name, gender } = profile;
     if (!name) return '';
     const genderWord = gender === 'girl' ? 'girl' : gender === 'boy' ? 'boy' : 'child';
-    const age        = calcAgeFromDob(dob);
-    const agePart    = age !== null ? `, ${age} years old,` : '';
-    return `${name}${agePart} a sweet ${genderWord}`;
+    return `a ${genderWord} named ${name}`;
   }
 
-  // ── Child toggle in story generator ───────────────────────────
-  let _childToggleActive = false;
+  // ── Child chip in story generator ─────────────────────────────
+  // Replaces the old checkbox-toggle pattern.
+  // Chip sits below the character input as a quick-fill suggestion.
+  // Selected by default when a profile exists; typing auto-deselects it.
+  let _childChipActive = false;
 
-  function refreshChildToggle() {
+  function refreshChildChip() {
     const profile = getChildProfile();
     const charStr = buildChildCharacterString(profile);
-    const row     = $('ai-child-toggle-row');
-    const btn     = $('ai-child-toggle-btn');
-    const label   = $('ai-child-toggle-label');
+    const chip    = $('ai-child-chip');
     const input   = $('ai-character-input');
-    if (!row) return;
+    if (!chip) return;
 
     if (!charStr) {
-      // No profile — hide the toggle, reset state
-      row.classList.add('hidden');
-      _childToggleActive = false;
+      chip.classList.add('hidden');
+      _childChipActive = false;
       return;
     }
 
-    row.classList.remove('hidden');
-    if (label) label.textContent = `Make a story with ${profile.name}`;
+    chip.classList.remove('hidden');
+    chip.querySelector('.ai-chip-label').textContent = profile.name;
 
-    if (_childToggleActive) {
-      btn.classList.add('active');
-      btn.setAttribute('aria-pressed', 'true');
+    if (_childChipActive) {
+      chip.classList.add('active');
       input.value = charStr;
-      input.disabled = true;
-      input.classList.add('input-disabled');
     } else {
-      btn.classList.remove('active');
-      btn.setAttribute('aria-pressed', 'false');
-      input.disabled = false;
-      input.classList.remove('input-disabled');
+      chip.classList.remove('active');
     }
   }
 
   function initChildToggle() {
     const profile = getChildProfile();
     const charStr = buildChildCharacterString(profile);
-    // Default to ON if a profile exists
-    _childToggleActive = !!charStr;
-    refreshChildToggle();
+    // Default to selected if a profile exists
+    _childChipActive = !!charStr;
+    refreshChildChip();
 
-    const btn   = $('ai-child-toggle-btn');
+    const chip  = $('ai-child-chip');
     const input = $('ai-character-input');
-    if (!btn || !input) return;
+    if (!chip || !input) return;
 
-    // Toggle button clicked
-    btn.addEventListener('click', () => {
-      _childToggleActive = !_childToggleActive;
-      if (!_childToggleActive) input.value = '';
-      refreshChildToggle();
+    // Chip tapped — toggle selection
+    chip.addEventListener('click', () => {
+      _childChipActive = !_childChipActive;
+      if (!_childChipActive) input.value = '';
+      refreshChildChip();
+      if (_childChipActive) input.blur();
     });
 
-    // User types → uncheck the toggle
+    // User types → deselect chip (keep their text intact)
     input.addEventListener('input', () => {
-      if (_childToggleActive) {
-        _childToggleActive = false;
-        // Re-enable input without clearing what they just typed
+      if (_childChipActive) {
+        _childChipActive = false;
         const val = input.value;
-        refreshChildToggle();
+        refreshChildChip();
         input.value = val;
       }
     });

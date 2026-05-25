@@ -2266,50 +2266,48 @@ input { font-family: inherit; color: inherit; }
 }
 
 /* ── Story generator — child toggle ─────────────────────────── */
-.ai-child-toggle-row {
-  margin-bottom: 4px;
-}
-.ai-child-toggle-row.hidden { display: none; }
-.ai-child-toggle-btn {
+/* Child profile quick-fill chip */
+.ai-child-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  margin-top: 8px;
   background: none;
-  border: 1.5px solid var(--line);
-  border-radius: 22px;
-  padding: 7px 14px 7px 8px;
-  font-size: 13px;
+  border: 1.5px solid var(--line-2);
+  border-radius: 999px;
+  padding: 5px 12px 5px 7px;
+  font-size: 12.5px;
   font-weight: 500;
   color: var(--fg-2);
   cursor: pointer;
-  transition: border-color 0.18s, color 0.18s, background 0.18s;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
-.ai-child-toggle-btn.active {
+.ai-child-chip:hover {
+  border-color: var(--fg-3);
+  color: var(--fg-1);
+}
+.ai-child-chip.active {
   border-color: var(--accent);
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
-.ai-child-toggle-check {
-  width: 18px;
-  height: 18px;
+.ai-chip-check {
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   border: 1.5px solid currentColor;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: background 0.18s;
+  transition: background 0.15s;
 }
-.ai-child-toggle-btn.active .ai-child-toggle-check {
+.ai-child-chip.active .ai-chip-check {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--bg-0);
 }
-.ai-child-toggle-btn:not(.active) .ai-child-toggle-check svg { opacity: 0; }
-.input-disabled {
-  opacity: 0.45;
-  pointer-events: none;
-}
+.ai-child-chip:not(.active) .ai-chip-check svg { opacity: 0; }
 
 /* ── Story list EN/ગુ toggle ─────────────────────────────────── */
 .story-list-lang-toggle {

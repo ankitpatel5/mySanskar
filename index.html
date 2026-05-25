@@ -274,21 +274,18 @@
               </div>
             </div>
 
-            <!-- Shown when a child profile is saved in settings -->
-            <div id="ai-child-toggle-row" class="ai-child-toggle-row hidden">
-              <button id="ai-child-toggle-btn" class="ai-child-toggle-btn active" aria-pressed="true">
-                <span class="ai-child-toggle-check">
-                  <svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg>
-                </span>
-                <span id="ai-child-toggle-label">Make a story with…</span>
-              </button>
-            </div>
-
             <div class="ai-field">
               <div class="ai-field-label">Main character <span class="ai-optional">(optional)</span></div>
               <input id="ai-character-input" class="ai-text-input" type="text"
                 placeholder="e.g. a young boy named Arjun, a curious squirrel…"
                 maxlength="80" autocomplete="off" />
+              <!-- Child profile quick-fill chip — hidden until a profile is saved -->
+              <button id="ai-child-chip" class="ai-child-chip hidden" type="button">
+                <span class="ai-chip-check">
+                  <svg viewBox="0 0 12 12" width="9" height="9" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg>
+                </span>
+                <span class="ai-chip-label"></span>
+              </button>
               <!-- Saved characters rendered here by JS -->
               <div id="ai-saved-chars" class="ai-saved-chars"></div>
             </div>
