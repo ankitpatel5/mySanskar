@@ -1297,6 +1297,7 @@
       });
     }
     loadEkadashiTile();
+    loadStoryOfDay();
   }
 
   async function loadEkadashiTile() {
@@ -1379,6 +1380,177 @@
       const [yr, mo, dy] = r.date.split('-').map(Number);
       r.daysAway = Math.round((Date.UTC(yr, mo - 1, dy) - todayMs) / 86400000);
     });
+  }
+
+  // ── Story of the Day ───────────────────────────────────────────────────────
+
+  function sotdDateStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  function sotdFirestoreRef(uid, dateStr) {
+    return window.fbDb.collection(`users/${uid}/storyOfDay`).doc(dateStr);
+  }
+
+  async function loadStoryOfDay() {
+    const tile       = $('sotd-tile');
+    const skeleton   = $('sotd-skeleton');
+    const setupTile  = $('sotd-setup-tile');
+
+    // Reset all states
+    [tile, skeleton, setupTile].forEach((el) => el && el.classList.add('hidden'));
+
+    if (!state.user) return;
+
+    const profile   = getChildProfile();
+    const character = buildChildCharacterString(profile);
+
+    // No child configured — show welcoming prompt
+    if (!character) {
+      if (setupTile) {
+        setupTile.classList.remove('hidden');
+        setupTile.onclick = () => $('settings-btn').click();
+      }
+      return;
+    }
+
+    const key = (window.DRIFT_CONFIG || {}).geminiKey || '';
+    if (!key) return;
+
+    const dateStr = sotdDateStr();
+
+    // Show skeleton while loading
+    if (skeleton) skeleton.classList.remove('hidden');
+
+    try {
+      // 1. Check Firestore for today's story
+      const doc = await sotdFirestoreRef(state.user.uid, dateStr).get();
+      if (skeleton) skeleton.classList.add('hidden');
+
+      if (doc.exists) {
+        showSOTDTile(doc.data());
+        return;
+      }
+
+      // 2. Not in Firestore — generate now
+      const topic  = RANDOM_TOPICS[Math.floor(Math.random() * RANDOM_TOPICS.length)];
+      const prompt = buildStoryPrompt(topic, character, 'short');
+      const result = await callGemini(key, prompt);
+      if (!result?.title || !result?.paragraphs?.length) throw new Error('bad response');
+
+      const story = {
+        id:          `sotd-${dateStr}`,
+        date:        dateStr,
+        title:       result.title,
+        paragraphs:  result.paragraphs,
+        topic,
+        character,
+        generatedAt: Date.now(),
+      };
+
+      // 3. Persist to Firestore so subsequent opens are instant
+      sotdFirestoreRef(state.user.uid, dateStr).set(story).catch(() => {});
+
+      showSOTDTile(story);
+
+    } catch (e) {
+      console.warn('[SOTD] generation failed:', e.message);
+      if (skeleton) skeleton.classList.add('hidden');
+      // Fail silently — home feed stays clean
+    }
+  }
+
+  function showSOTDTile(story) {
+    const tile    = $('sotd-tile');
+    const titleEl = $('sotd-title');
+    const subEl   = $('sotd-sub');
+    if (!tile) return;
+
+    if (titleEl) titleEl.textContent = story.title;
+    if (subEl) {
+      const preview = (story.paragraphs?.[0] || '').trim();
+      subEl.textContent = preview.length > 62 ? preview.slice(0, 59) + '…' : preview;
+    }
+
+    tile.classList.remove('hidden');
+    tile.onclick = () => openSOTDStory(story);
+  }
+
+  function openSOTDStory(story) {
+    state.currentStory = { ...story, type: 'text', photo: null };
+    state.storyLang = 'en';
+    stopTTS();
+
+    const imgEl = $('story-reader-img');
+    if (story.imageUrl) {
+      imgEl.src = story.imageUrl;
+      imgEl.classList.remove('hidden', 'ai-img-loading');
+    } else {
+      imgEl.src = '';
+      imgEl.classList.add('hidden');
+      imgEl.classList.remove('ai-img-loading');
+    }
+
+    const body = $('story-reader-body');
+    body.innerHTML = '';
+
+    const badge = document.createElement('div');
+    badge.className = 'story-ai-badge';
+    badge.innerHTML = `✨ Story of the Day · ${story.topic}`;
+    body.appendChild(badge);
+
+    story.paragraphs.forEach((p, i) => {
+      const el = document.createElement('p');
+      el.className = 'story-para';
+      el.dataset.idx = i;
+      el.textContent = p;
+      body.appendChild(el);
+    });
+
+    renderMarkCompleteBtn(story.id);
+    renderLangToggle(true);
+
+    const ttsBar     = $('story-tts-bar');
+    const voiceSheet = $('tts-voice-sheet');
+    if (voiceSheet) voiceSheet.classList.add('hidden');
+
+    const defaultLang = getDefaultStoryLang();
+    if (ttsBar) ttsBar.classList.toggle('hidden', defaultLang !== 'en');
+
+    renderStoryReaderTitle();
+    if (defaultLang !== 'en') setStoryLang(defaultLang);
+
+    // Back → return to home
+    $('story-reader-back')._sotdMode = true;
+    $('story-reader-back')._aiMode   = false;
+
+    updateTTSUI();
+    switchView('view-story-reader');
+    $('content').scrollTo({ top: 0, behavior: 'instant' });
+
+    // Generate cover image if not yet saved
+    if (!story.imageUrl && !isImagenQuotaExhausted()) {
+      imgEl.src = '';
+      imgEl.classList.remove('hidden');
+      imgEl.classList.add('ai-img-loading');
+
+      generateImagenImage(story.topic, story.character, story.id).then((dataUrl) => {
+        if (state.currentStory?.id !== story.id) return;
+        if (dataUrl) {
+          imgEl.src = dataUrl;
+          imgEl.classList.remove('ai-img-loading');
+          // Persist imageUrl back to Firestore so it survives tomorrow's open
+          if (state.user) {
+            sotdFirestoreRef(state.user.uid, story.date)
+              .update({ imageUrl: dataUrl }).catch(() => {});
+          }
+        } else {
+          imgEl.classList.add('hidden');
+          imgEl.classList.remove('ai-img-loading');
+        }
+      });
+    }
   }
 
   // ============== STORY TIME ==============
@@ -3921,9 +4093,12 @@ ${numbered}`;
     });
     $('story-reader-back').addEventListener('click', () => {
       stopTTS();
-      // If opened from AI stories, go back there; otherwise go to story list
-      if ($('story-reader-back')._aiMode) {
-        $('story-reader-back')._aiMode = false;
+      const btn = $('story-reader-back');
+      if (btn._sotdMode) {
+        btn._sotdMode = false;
+        switchTab('home');
+      } else if (btn._aiMode) {
+        btn._aiMode = false;
         switchView('view-ai-stories');
       } else {
         switchView('view-story-list');

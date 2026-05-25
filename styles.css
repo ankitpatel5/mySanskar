@@ -502,7 +502,16 @@ input { font-family: inherit; color: inherit; }
 .story-tile {
   background: linear-gradient(135deg, #52333F 0%, #835262 100%);
   color: #F2DDE4;
+  cursor: pointer;
 }
+.sotd-setup-tile {
+  background: linear-gradient(135deg, #232327 0%, #2e2e34 100%);
+  color: var(--fg-2);
+  cursor: pointer;
+  border: 1px solid var(--line);
+}
+.sotd-setup-tile .home-tile-title { color: var(--fg-1); font-weight: 500; }
+.sotd-setup-tile .home-tile-sub   { color: var(--fg-3); }
 
 /* Skeleton shimmer — warm tint to match tile backgrounds */
 @keyframes shimmer {
