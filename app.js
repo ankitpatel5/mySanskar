@@ -106,6 +106,7 @@
     bootstrapLibrary();
     loadFirestorePlaylists();
     syncCompletedStoriesFromFirestore();
+    syncChildProfileFromFirestore();
     checkShareParam();
 
     // Skip auth-dependent setup when booting from the localStorage cache snapshot.
@@ -222,6 +223,7 @@
           setupBlockedListener(user);
           loadFirestorePlaylists();
           syncCompletedStoriesFromFirestore();
+          syncChildProfileFromFirestore();
         } else {
           proceedAsUser(user);
         }
@@ -2603,6 +2605,34 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
     localStorage.setItem('drift.childName',   name);
     localStorage.setItem('drift.childGender', gender);
     localStorage.setItem('drift.childDob',    dob);
+    // Sync to Firestore so the profile is shared across all browser contexts
+    // (Chrome tab vs installed PWA both read from the same Firestore document)
+    if (state.user) {
+      window.fbDb.doc(`users/${state.user.uid}/settings/childProfile`)
+        .set({ name, gender, dob })
+        .catch((e) => console.warn('childProfile Firestore save failed:', e));
+    }
+  }
+
+  async function syncChildProfileFromFirestore() {
+    if (!state.user) return;
+    try {
+      const doc = await window.fbDb
+        .doc(`users/${state.user.uid}/settings/childProfile`)
+        .get();
+      if (!doc.exists) return;
+      const { name = '', gender = '', dob = '' } = doc.data();
+      // Only overwrite localStorage if Firestore has a name set
+      // (avoids wiping a locally-set profile with an empty cloud record)
+      if (!name) return;
+      localStorage.setItem('drift.childName',   name);
+      localStorage.setItem('drift.childGender', gender);
+      localStorage.setItem('drift.childDob',    dob);
+      // Refresh any UI that reads the profile
+      refreshChildChip();
+    } catch (e) {
+      console.warn('childProfile Firestore sync failed:', e);
+    }
   }
   function calcAgeFromDob(dob) {
     if (!dob) return null;
