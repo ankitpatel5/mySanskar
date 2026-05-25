@@ -5,7 +5,7 @@
 // VERSIONING: bump CACHE whenever you deploy new app files so that
 // home-screen users get the update on their next visit.
 
-const CACHE = 'sanskar-v19';
+const CACHE = 'sanskar-v20';
 
 // Static assets — cache-first (safe: only change when CACHE is bumped)
 const SHELL = [

@@ -1952,7 +1952,19 @@
     try {
       const snap = await aiStoriesRef().orderBy('generatedAt', 'desc').limit(20).get();
       if (!snap.empty) {
-        const stories = snap.docs.map((d) => d.data());
+        const firestoreStories = snap.docs.map((d) => d.data());
+
+        // imageUrls are stored only in localStorage (not Firestore — binary data).
+        // Preserve them so a sync doesn't wipe already-generated cover images.
+        const local = loadAISavedStories();
+        const localById = {};
+        local.forEach((s) => { if (s.id) localById[s.id] = s; });
+
+        const stories = firestoreStories.map((s) => {
+          const localCopy = localById[s.id];
+          return localCopy?.imageUrl ? { ...s, imageUrl: localCopy.imageUrl } : s;
+        });
+
         try { localStorage.setItem(AI_SAVED_KEY, JSON.stringify(stories)); } catch {}
         renderAISavedList();
         renderStoryCategories(); // refresh AI card count
