@@ -1299,6 +1299,14 @@
       });
     }
     loadEkadashiTile();
+
+    // Show the SOTD skeleton immediately (synchronous) if we know a story
+    // will be needed — avoids a blank gap while the async load runs.
+    const skeleton = $('sotd-skeleton');
+    if (skeleton && state.user && buildChildCharacterString(getChildProfile())) {
+      skeleton.classList.remove('hidden');
+    }
+
     loadStoryOfDay();
   }
 
@@ -1436,6 +1444,9 @@
       }
 
       // 2. Not in Firestore — generate now
+      const loadingSub = $('sotd-loading-sub');
+      if (loadingSub) loadingSub.textContent = 'Writing today\'s story…';
+
       const topic  = RANDOM_TOPICS[Math.floor(Math.random() * RANDOM_TOPICS.length)];
       const prompt = buildStoryPrompt(topic, character, 'medium');
       const result = await callGemini(key, prompt);

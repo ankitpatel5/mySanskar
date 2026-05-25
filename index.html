@@ -127,13 +127,13 @@
               </div>
             </div>
 
-            <!-- Story of the Day skeleton -->
-            <div class="home-tile story-tile home-tile-skeleton hidden" id="sotd-skeleton">
+            <!-- Story of the Day skeleton — visible by default, hidden once story loads or no child -->
+            <div class="home-tile story-tile sotd-loading-tile hidden" id="sotd-skeleton">
               <div class="home-tile-icon">📖</div>
               <div class="home-tile-body">
                 <div class="home-tile-label">Today's Story</div>
-                <div class="home-tile-title skeleton-line" style="width:70%"></div>
-                <div class="home-tile-sub skeleton-line" style="width:50%;margin-top:6px"></div>
+                <div class="home-tile-title">Crafting your story…</div>
+                <div class="home-tile-sub" id="sotd-loading-sub">Just a moment</div>
               </div>
             </div>
 

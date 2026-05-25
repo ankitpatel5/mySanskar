@@ -504,6 +504,15 @@ input { font-family: inherit; color: inherit; }
   color: #F2DDE4;
   cursor: pointer;
 }
+.sotd-loading-tile {
+  opacity: 0.72;
+  animation: sotd-pulse 2s ease-in-out infinite;
+  cursor: default;
+}
+@keyframes sotd-pulse {
+  0%, 100% { opacity: 0.72; }
+  50%       { opacity: 0.50; }
+}
 .sotd-setup-tile {
   background: linear-gradient(135deg, #232327 0%, #2e2e34 100%);
   color: var(--fg-2);
