@@ -479,16 +479,32 @@ input { font-family: inherit; color: inherit; }
 .ekadashi-today {
   opacity: 1 !important;
   font-weight: 600;
-  color: #ffd166;
+  color: #F5D882;
 }
 
-/* Ekadashi tile — deep indigo gradient */
+/*
+  Home tile colour palette — earthy pastels
+  Each tile type gets its own class; colours are chosen to harmonise.
+  ┌─────────────────────────────────────────────────────────────────┐
+  │  .ekadashi-tile  — saffron / warm ochre  (spiritual, fasting)  │
+  │  .routine-tile   — sage / muted green    (daily rhythm)        │
+  │  .story-tile     — dusty rose / mauve    (narrative, warmth)   │
+  └─────────────────────────────────────────────────────────────────┘
+*/
 .ekadashi-tile {
-  background: linear-gradient(135deg, #2d1f6e 0%, #5040a0 100%);
-  color: #fff;
+  background: linear-gradient(135deg, #5C3D1E 0%, #966835 100%);
+  color: #F5E8CC;
+}
+.routine-tile {
+  background: linear-gradient(135deg, #384D38 0%, #5C7D58 100%);
+  color: #DFF0DA;
+}
+.story-tile {
+  background: linear-gradient(135deg, #52333F 0%, #835262 100%);
+  color: #F2DDE4;
 }
 
-/* Skeleton shimmer */
+/* Skeleton shimmer — warm tint to match tile backgrounds */
 @keyframes shimmer {
   0%   { background-position: -400px 0; }
   100% { background-position: 400px 0; }
@@ -500,9 +516,9 @@ input { font-family: inherit; color: inherit; }
   height: 14px;
   border-radius: 6px;
   background: linear-gradient(90deg,
-    rgba(255,255,255,0.08) 25%,
-    rgba(255,255,255,0.18) 50%,
-    rgba(255,255,255,0.08) 75%);
+    rgba(255,255,255,0.07) 25%,
+    rgba(255,255,255,0.16) 50%,
+    rgba(255,255,255,0.07) 75%);
   background-size: 800px 100%;
   animation: shimmer 1.4s infinite linear;
 }
