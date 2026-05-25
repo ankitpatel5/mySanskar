@@ -6,8 +6,14 @@
 // Known gaps — dates the monthly page omits entirely (no tooltip at all).
 // Add new entries here whenever a future year has a missing date.
 const KNOWN_GAPS = {
-  '2026-09-22': { name: 'Bhadarvo Sud Ekadashi', fastType: 'Fast' },
-  '2026-11-21': { name: 'Prabodhini Ekadashi',   fastType: 'Nirjala Upvas' },
+  '2026-09-22': { name: 'Bhadarvo Sud Ekadashi',             fastType: 'Fast' },
+  '2026-11-21': { name: 'Chaturmas Ends (Prabodhini Ekadashi)', fastType: 'Nirjala Upvas' },
+};
+
+// Name overrides — applied after scraping to customise BAPS's default names.
+const NAME_OVERRIDES = {
+  '2026-06-25': 'Start of Chaturmas (Devpodhi Ekadashi)',
+  '2026-11-21': 'Chaturmas Ends (Prabodhini Ekadashi)',
 };
 
 const MONTH_NAMES = [
@@ -91,7 +97,12 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // ── 3. Sort and add daysAway ───────────────────────────────────────────────
+  // ── 3. Apply name overrides ────────────────────────────────────────────────
+  for (const [date, name] of Object.entries(NAME_OVERRIDES)) {
+    if (results[date]) results[date].name = name;
+  }
+
+  // ── 4. Sort and add daysAway ───────────────────────────────────────────────
   const todayMs = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
 
   const sorted = Object.entries(results)
