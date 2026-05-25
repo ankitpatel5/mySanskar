@@ -1435,7 +1435,7 @@
 
       // 2. Not in Firestore — generate now
       const topic  = RANDOM_TOPICS[Math.floor(Math.random() * RANDOM_TOPICS.length)];
-      const prompt = buildStoryPrompt(topic, character, 'short');
+      const prompt = buildStoryPrompt(topic, character, 'medium');
       const result = await callGemini(key, prompt);
       if (!result?.title || !result?.paragraphs?.length) throw new Error('bad response');
 
