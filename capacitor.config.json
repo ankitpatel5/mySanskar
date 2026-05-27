@@ -10,6 +10,9 @@
     "backgroundColor": "#000000",
     "contentInset": "always"
   },
+  "android": {
+    "backgroundColor": "#000000"
+  },
   "plugins": {
     "SplashScreen": {
       "launchAutoHide": false,

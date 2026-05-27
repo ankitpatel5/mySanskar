@@ -44,7 +44,13 @@ public class GoogleSignInPlugin extends Plugin {
     }
 
     @ActivityCallback
-    private void handleSignInResult(PluginCall call, ActivityResult result) {
+    void handleSignInResult(PluginCall call, ActivityResult result) {
+        // getData() is null when the user presses the device Back button to dismiss
+        // the sign-in sheet — treat it the same as a deliberate cancel.
+        if (result.getData() == null) {
+            call.reject("SIGN_IN_CANCELLED");
+            return;
+        }
         Task<GoogleSignInAccount> task =
             GoogleSignIn.getSignedInAccountFromIntent(result.getData());
         try {
