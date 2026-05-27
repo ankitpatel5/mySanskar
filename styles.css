@@ -187,6 +187,29 @@ input { font-family: inherit; color: inherit; }
   text-align: left;
   line-height: 1.4;
 }
+.inapp-browser-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  background: rgba(180, 120, 20, 0.12);
+  border: 1px solid rgba(180, 120, 20, 0.3);
+  color: #c8920a;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 11px 14px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  text-align: left;
+  line-height: 1.45;
+}
+.inapp-browser-msg svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  stroke: #c8920a;
+}
+.inapp-browser-msg strong {
+  font-weight: 700;
+}
 .setup-label {
   font-size: 11px;
   color: var(--fg-2);
@@ -1371,7 +1394,6 @@ input { font-family: inherit; color: inherit; }
   transition: background .15s;
 }
 .extra-btn:hover { background: rgba(255, 255, 255, 0.14); }
-
 /* ============== MODALS ============== */
 .modal {
   position: fixed;
@@ -2246,16 +2268,29 @@ input { font-family: inherit; color: inherit; }
 .child-profile-form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
-.child-profile-row {
+.child-field-group {
   display: flex;
-  gap: 8px;
-  align-items: center;
+  flex-direction: column;
+  gap: 6px;
+}
+.child-field-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.child-field-optional {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--fg-4);
+  font-size: 11px;
 }
 .child-gender-btns {
   display: flex;
-  flex: 1;
   background: var(--bg-3);
   border-radius: 22px;
   padding: 3px;
@@ -2279,8 +2314,7 @@ input { font-family: inherit; color: inherit; }
   color: #fff;
 }
 .child-dob-input {
-  flex-shrink: 0;
-  width: 150px !important;
+  width: 100% !important;
 }
 
 /* ── Story generator — child toggle ─────────────────────────── */

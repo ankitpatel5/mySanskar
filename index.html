@@ -31,6 +31,10 @@
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
           Your account has been blocked. Contact the admin for help.
         </p>
+        <div id="inapp-browser-msg" class="inapp-browser-msg hidden">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span>Google sign-in doesn't work inside <span id="inapp-browser-name">this browser</span>. Please open <strong>baal-shravan.vercel.app</strong> in Chrome or Safari.</span>
+        </div>
         <button id="google-signin-btn" class="google-signin-btn">
           <svg viewBox="0 0 24 24" width="20" height="20">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -616,14 +620,21 @@
         <div class="settings-section">
           <div class="settings-section-label">My Child</div>
           <div class="child-profile-form">
-            <input id="child-name-input" class="ai-text-input" type="text"
-              placeholder="Child's name" maxlength="40" autocomplete="off" />
-            <div class="child-profile-row">
+            <div class="child-field-group">
+              <label class="child-field-label" for="child-name-input">Name</label>
+              <input id="child-name-input" class="ai-text-input" type="text"
+                placeholder="Child's name" maxlength="40" autocomplete="off" />
+            </div>
+            <div class="child-field-group">
+              <label class="child-field-label">Gender</label>
               <div class="child-gender-btns">
                 <button class="child-gender-btn" data-gender="girl">Girl</button>
                 <button class="child-gender-btn" data-gender="boy">Boy</button>
                 <button class="child-gender-btn" data-gender="child">Prefer not to say</button>
               </div>
+            </div>
+            <div class="child-field-group">
+              <label class="child-field-label" for="child-dob-input">Date of Birth <span class="child-field-optional">(optional)</span></label>
               <input id="child-dob-input" class="ai-text-input child-dob-input" type="date" />
             </div>
           </div>
@@ -775,7 +786,8 @@
   <script src="conversation-starters.js"></script>
   <script src="app.js"></script>
   <script>
-    if ('serviceWorker' in navigator) {
+    // Skip service worker in native Capacitor app — WKWebView doesn't support it.
+    if ('serviceWorker' in navigator && !window.Capacitor) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js').then((reg) => {
           // Poll for SW updates every 5 minutes so open sessions pick up

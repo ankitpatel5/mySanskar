@@ -149,19 +149,82 @@
         if (msg) msg.classList.remove('hidden');
       }
     } catch {}
+    // Detect in-app browsers where Google sign-in popups don't work
+    // (WhatsApp, Instagram, Facebook, Line, WeChat, TikTok, etc.)
+    const ua = navigator.userAgent || '';
+    const inAppName = (
+      /WhatsApp/i.test(ua)       ? 'WhatsApp' :
+      /Instagram/i.test(ua)      ? 'Instagram' :
+      /FBAN|FBAV|FB_IAB/i.test(ua) ? 'Facebook' :
+      /\bLine\b/i.test(ua)       ? 'Line' :
+      /MicroMessenger/i.test(ua) ? 'WeChat' :
+      /TikTok/i.test(ua)         ? 'TikTok' :
+      /Snapchat/i.test(ua)       ? 'Snapchat' :
+      null
+    );
+    const inAppMsg = $('inapp-browser-msg');
+    const inAppName$ = $('inapp-browser-name');
+    if (inAppName && inAppMsg) {
+      inAppMsg.classList.remove('hidden');
+      if (inAppName$) inAppName$.textContent = inAppName;
+    }
+
     // Wire sign-in button (only once)
     const btn = $('google-signin-btn');
     if (btn && !btn.dataset.wired) {
       btn.dataset.wired = '1';
       btn.addEventListener('click', () => {
+        if (inAppName) {
+          // Re-surface the message in case user missed it
+          if (inAppMsg) inAppMsg.classList.remove('hidden');
+          return;
+        }
         btn.disabled = true;
         btn.textContent = 'Signing in…';
-        window.fbAuth.signInWithPopup(window.fbGoogle)
-          .catch((e) => {
-            console.error('sign-in error:', e.code, e.message);
+        // In native Capacitor app use the native Google Sign-In plugin —
+        // WKWebView blocks popups and the redirect flow needs Cordova plugins.
+        // On the web, use the standard Firebase popup (better UX, no extra setup).
+        const isNative = !!(window.Capacitor &&
+          (window.Capacitor.isNativePlatform
+            ? window.Capacitor.isNativePlatform()
+            : true));
+        if (isNative) {
+          // Native iOS path — uses our custom GoogleSignInPlugin (Swift + Google Sign-In SDK)
+          const nativeGoogleSignIn = window.Capacitor?.Plugins?.GoogleSignIn;
+          if (!nativeGoogleSignIn) {
+            // Plugin not compiled yet — Google Sign-In SDK not added via SPM in Xcode
+            console.error('native sign-in error: GoogleSignIn plugin not available — add GoogleSignIn-iOS via SPM in Xcode');
             btn.disabled = false;
             btn.textContent = 'Try again';
-          });
+            return;
+          }
+          (async () => {
+            try {
+              const result = await nativeGoogleSignIn.signIn();
+              const idToken = result?.idToken;
+              if (!idToken) throw new Error('No ID token returned from Google Sign-In');
+              const credential = firebase.auth.GoogleAuthProvider.credential(idToken);
+              await window.fbAuth.signInWithCredential(credential);
+              // onAuthStateChanged will fire and handle the rest
+            } catch (e) {
+              const errMsg = e.message || e.code || '';
+              if (errMsg === 'SIGN_IN_CANCELLED') {
+                // User deliberately dismissed the sign-in sheet — reset silently.
+              } else {
+                console.error('native sign-in error:', errMsg);
+                btn.textContent = 'Try again';
+              }
+              btn.disabled = false;
+            }
+          })();
+        } else {
+          window.fbAuth.signInWithPopup(window.fbGoogle)
+            .catch((e) => {
+              console.error('sign-in error:', e.code, e.message);
+              btn.disabled = false;
+              btn.textContent = 'Try again';
+            });
+        }
       });
     }
   }
@@ -224,6 +287,7 @@
           loadFirestorePlaylists();
           syncCompletedStoriesFromFirestore();
           syncChildProfileFromFirestore();
+          syncAIStoriesFromFirestore();
         } else {
           proceedAsUser(user);
         }
@@ -1439,7 +1503,11 @@
       if (skeleton) skeleton.classList.add('hidden');
 
       if (doc.exists) {
-        showSOTDTile(doc.data());
+        const sotdStory = doc.data();
+        showSOTDTile(sotdStory);
+        // Cross-save to "Your Stories" (no-op if already there)
+        saveAIStory(sotdStory);
+        renderAISavedList();
         return;
       }
 
@@ -1464,6 +1532,10 @@
 
       // 3. Persist to Firestore so subsequent opens are instant
       sotdFirestoreRef(state.user.uid, dateStr).set(story).catch(() => {});
+
+      // 4. Cross-save to "Your Stories" so it appears in Stories tab
+      saveAIStory(story);
+      renderAISavedList();
 
       showSOTDTile(story);
 
@@ -2110,6 +2182,8 @@
   function saveAIStory(story) {
     if (!story.id) story.id = uid();
     const saved = loadAISavedStories();
+    // Upsert by ID — skip if already present so SOTD cross-saves don't duplicate
+    if (saved.some((s) => s.id === story.id)) return;
     saved.unshift(story);
     if (saved.length > 20) saved.splice(20);
     try { localStorage.setItem(AI_SAVED_KEY, JSON.stringify(saved)); } catch {}
@@ -2226,15 +2300,10 @@
         openConfirm(
           'Delete this story?',
           `"${story.title}" will be permanently removed.`,
-          async () => {
-            deleteAIStory(idx);
+          () => {
+            deleteAIStory(idx); // handles both localStorage and Firestore
             renderAISavedList();
             renderStoryCategories();
-            // Also remove from Firestore
-            if (state.user && story.id) {
-              aiStoriesRef().doc(story.id).delete()
-                .catch((err) => console.warn('Firestore delete failed', err));
-            }
           },
           { confirmLabel: 'Delete', danger: true }
         );
@@ -2616,8 +2685,9 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
     localStorage.setItem('drift.childName',   name);
     localStorage.setItem('drift.childGender', gender);
     localStorage.setItem('drift.childDob',    dob);
-    // Sync to Firestore so the profile is shared across all browser contexts
-    // (Chrome tab vs installed PWA both read from the same Firestore document)
+    // Sync to Firestore so the profile persists across domains and devices.
+    // If auth hasn't resolved yet, syncChildProfileFromFirestore() will upload
+    // the localStorage data once auth arrives.
     if (state.user) {
       window.fbDb.doc(`users/${state.user.uid}/settings/childProfile`)
         .set({ name, gender, dob })
@@ -2631,16 +2701,41 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
       const doc = await window.fbDb
         .doc(`users/${state.user.uid}/settings/childProfile`)
         .get();
-      if (!doc.exists) return;
+
+      if (!doc.exists) {
+        // Firestore has no record — if localStorage has data, push it up now.
+        // This fixes the case where the profile was saved before auth resolved
+        // and the Firestore write was silently skipped.
+        const local = getChildProfile();
+        if (local.name) {
+          window.fbDb.doc(`users/${state.user.uid}/settings/childProfile`)
+            .set(local)
+            .catch((e) => console.warn('childProfile Firestore upload failed:', e));
+        }
+        return;
+      }
+
       const { name = '', gender = '', dob = '' } = doc.data();
       // Only overwrite localStorage if Firestore has a name set
       // (avoids wiping a locally-set profile with an empty cloud record)
       if (!name) return;
+      const hadProfile = !!localStorage.getItem('drift.childName');
       localStorage.setItem('drift.childName',   name);
       localStorage.setItem('drift.childGender', gender);
       localStorage.setItem('drift.childDob',    dob);
       // Refresh any UI that reads the profile
       refreshChildChip();
+      // If localStorage was empty (e.g. new domain/device), the home feed rendered
+      // with no profile and showed the setup tile. Re-run SOTD now that we have data.
+      if (!hadProfile) loadStoryOfDay();
+      // Also update settings form fields if the modal is currently open
+      if (!hadProfile && $('settings-modal') && !$('settings-modal').classList.contains('hidden')) {
+        $('child-name-input').value = name;
+        $('child-dob-input').value  = dob;
+        document.querySelectorAll('.child-gender-btn').forEach((b) =>
+          b.classList.toggle('active', b.dataset.gender === gender)
+        );
+      }
     } catch (e) {
       console.warn('childProfile Firestore sync failed:', e);
     }
@@ -2701,6 +2796,10 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
     const chip  = $('ai-child-chip');
     const input = $('ai-character-input');
     if (!chip || !input) return;
+
+    // Guard: only attach listeners once (openAIStories calls this on every visit)
+    if (chip._toggleInit) return;
+    chip._toggleInit = true;
 
     // Chip tapped — toggle selection
     chip.addEventListener('click', () => {
@@ -3500,12 +3599,12 @@ ${numbered}`;
     $('loading-overlay').classList.add('hidden');
   }
   let toastTimer = null;
-  function toast(msg) {
+  function toast(msg, duration) {
     const el = $('toast');
     el.textContent = msg;
     el.classList.remove('hidden');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.add('hidden'), 2200);
+    toastTimer = setTimeout(() => el.classList.add('hidden'), duration || 2200);
   }
 
   // ============== UTIL ==============
@@ -3895,7 +3994,7 @@ ${numbered}`;
         b.classList.toggle('active', b.dataset.lang === curLang);
       });
 
-      // Populate child profile fields
+      // Populate child profile fields from localStorage (instant)
       const cp = getChildProfile();
       $('child-name-input').value = cp.name;
       $('child-dob-input').value  = cp.dob;
@@ -3904,6 +4003,26 @@ ${numbered}`;
       );
 
       showModal('settings-modal');
+
+      // Also pull fresh from Firestore in case localStorage is empty (e.g. new domain/device)
+      if (state.user && !cp.name) {
+        window.fbDb.doc(`users/${state.user.uid}/settings/childProfile`).get()
+          .then((doc) => {
+            if (!doc.exists) return;
+            const { name = '', gender = '', dob = '' } = doc.data();
+            if (!name) return;
+            $('child-name-input').value = name;
+            $('child-dob-input').value  = dob;
+            document.querySelectorAll('.child-gender-btn').forEach((b) =>
+              b.classList.toggle('active', b.dataset.gender === gender)
+            );
+            localStorage.setItem('drift.childName',   name);
+            localStorage.setItem('drift.childGender', gender);
+            localStorage.setItem('drift.childDob',    dob);
+            refreshChildChip();
+          })
+          .catch(() => {});
+      }
     });
 
     // Child profile — save on input change
@@ -3918,7 +4037,7 @@ ${numbered}`;
             gender,
             dob:    ($('child-dob-input').value  || '').trim(),
           });
-          refreshChildToggle();
+          refreshChildChip();
         }, 400);
       };
     })();
@@ -4200,7 +4319,6 @@ ${numbered}`;
       if (!state.currentTrackId) return;
       openPlaylistPicker(state.currentTrackId);
     });
-
     // Sheet seek
     const seek = $('sheet-seek');
     seek.addEventListener('input', (e) => {

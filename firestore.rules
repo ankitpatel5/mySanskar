@@ -75,5 +75,6 @@ service cloud.firestore {
       allow delete: if request.auth != null
                     && request.auth.uid == resource.data.ownerId;
     }
+
   }
 }

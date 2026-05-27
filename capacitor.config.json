@@ -1,0 +1,21 @@
+{
+  "appId": "com.ankit.mysanskar",
+  "appName": "mySanskar",
+  "webDir": "www",
+  "server": {
+    "url": "https://mysanskar.vercel.app",
+    "cleartext": false
+  },
+  "ios": {
+    "backgroundColor": "#000000",
+    "contentInset": "always"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false,
+      "backgroundColor": "#000000",
+      "androidSplashResourceName": "splash",
+      "showSpinner": false
+    }
+  }
+}
