@@ -12,7 +12,7 @@
  * --skip-existing  Skip stories that already have a complete Firestore doc
  *
  * Storage layout:
- *   Firebase Storage:  prerendered-tts/{voice}/{storyId}/p{idx}.mp3
+ *   Firebase Storage:  prerendered-tts/{voice}/{storyId}/p{idx}.wav
  *   Firestore doc:     prerenderedTTS/{storyId}
  *                        { voice, paragraphUrls: [url0, url1, ...], generatedAt }
  */
@@ -45,7 +45,17 @@ eval(fs.readFileSync(path.join(ROOT, 'stories-data.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'translations-data.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'config.js'), 'utf8'));
 
-const SARVAM_KEY = g.DRIFT_CONFIG.sarvamKey;
+// Key rotation pool — falls back to single key if sarvamKeys not defined
+const SARVAM_KEYS   = g.DRIFT_CONFIG.sarvamKeys || [g.DRIFT_CONFIG.sarvamKey];
+let   SARVAM_KEY_IDX = 0;
+function currentKey()  { return SARVAM_KEYS[SARVAM_KEY_IDX]; }
+function rotateKey()   {
+  SARVAM_KEY_IDX++;
+  if (SARVAM_KEY_IDX >= SARVAM_KEYS.length) return false;   // all keys exhausted
+  console.log(`\n   🔑 Key quota exhausted — rotating to key ${SARVAM_KEY_IDX + 1}/${SARVAM_KEYS.length}\n`);
+  return true;
+}
+
 const STORIES    = g.STORIES_DATA.stories['satsang'] || [];
 const TRANS      = g.STORY_TRANSLATIONS;
 
@@ -76,6 +86,18 @@ function getAccessToken() {
 }
 
 // ── Sarvam helpers ─────────────────────────────────────────────────
+
+// Preprocess Gujarati text so Sarvam gu-IN TTS doesn't read punctuation literally.
+// English "." → Gujarati danda "।", commas/quotes stripped/normalized.
+function preprocessGujaratiForTTS(text) {
+  return text
+    .replace(/\.+/g, '।')         // "..." or "." → single Gujarati danda (collapse runs)
+    .replace(/,/g, ' ')           // Comma → pause space
+    .replace(/["""'']/g, '')      // Strip curly/straight quotes
+    .replace(/\s{2,}/g, ' ')      // Collapse extra spaces
+    .trim();
+}
+
 function splitTextForSarvam(text, maxChars = 450) {
   if (text.length <= maxChars) return [text];
   const chunks = [];
@@ -105,6 +127,8 @@ function splitTextForSarvam(text, maxChars = 450) {
   return chunks.filter(c => c.length > 0);
 }
 
+const QUOTA_ERROR = 'SARVAM_QUOTA_EXHAUSTED';
+
 function sarvamChunk(text) {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
@@ -116,15 +140,20 @@ function sarvamChunk(text) {
     });
     const req = https.request({
       hostname: 'api.sarvam.ai', path: '/text-to-speech', method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'api-subscription-key': SARVAM_KEY, 'Content-Length': Buffer.byteLength(body) },
+      headers: { 'Content-Type': 'application/json', 'api-subscription-key': currentKey(), 'Content-Length': Buffer.byteLength(body) },
     }, res => {
       let d = ''; res.on('data', c => d += c);
       res.on('end', () => {
         const r = JSON.parse(d);
-        if (!r.audios?.[0]) return reject(new Error(r.error?.message || r.message || `Sarvam HTTP ${res.statusCode}`));
-        const b64 = r.audios[0];
-        const buf = Buffer.from(b64, 'base64');
-        resolve(buf);
+        if (!r.audios?.[0]) {
+          const msg = r.error?.message || r.message || `Sarvam HTTP ${res.statusCode}`;
+          // Tag quota errors so the caller can rotate the key and retry
+          const isQuota = /no credits|quota|limit|exhausted/i.test(msg);
+          const err = new Error(msg);
+          if (isQuota) err.code = QUOTA_ERROR;
+          return reject(err);
+        }
+        resolve(Buffer.from(r.audios[0], 'base64'));
       });
     });
     req.on('error', reject);
@@ -187,7 +216,24 @@ async function generateAudio(gujaratiText) {
   const buffers = [];
   for (const chunk of chunks) {
     process.stdout.write(`      chunk (${chunk.length} chars)… `);
-    const buf = await sarvamChunk(chunk);
+
+    // Retry loop: on quota error rotate to the next key and retry once
+    let buf;
+    while (true) {
+      try {
+        buf = await sarvamChunk(chunk);
+        break;
+      } catch (e) {
+        if (e.code === QUOTA_ERROR) {
+          const rotated = rotateKey();
+          if (!rotated) throw new Error('All Sarvam API keys exhausted — add more keys to config.js');
+          // retry immediately with the new key
+        } else {
+          throw e;
+        }
+      }
+    }
+
     process.stdout.write(`${buf.length} bytes\n`);
     buffers.push(buf);
     // Small delay to avoid rate limiting
@@ -276,7 +322,7 @@ function uploadToStorage(token, audioBuffer, storagePath) {
 // ── Firestore read (check if already rendered) ────────────────────
 function firestoreGet(token, storyId) {
   return new Promise((resolve) => {
-    const docPath = `projects/${PROJECT}/databases/(default)/documents/prerenderedTTS/${storyId}`;
+    const docPath = `projects/${PROJECT}/databases/(default)/documents/prerenderedTTS/${storyId.trim()}`;
     const req = https.request({
       hostname: 'firestore.googleapis.com',
       path: `/v1/${docPath}`,
@@ -304,7 +350,7 @@ function firestoreGet(token, storyId) {
 // ── Firestore write ───────────────────────────────────────────────
 function firestoreSet(token, storyId, paragraphUrls) {
   return new Promise((resolve, reject) => {
-    const docPath = `projects/${PROJECT}/databases/(default)/documents/prerenderedTTS/${storyId}`;
+    const docPath = `projects/${PROJECT}/databases/(default)/documents/prerenderedTTS/${storyId.trim()}`;
     // Build Firestore field map
     const urlFields = {};
     paragraphUrls.forEach((url, i) => {
@@ -355,7 +401,7 @@ async function main() {
 
   // Get access token
   console.log('🔑 Getting Firebase access token…');
-  const token = await getAccessToken();
+  let token = await getAccessToken();
   console.log('   ✅ Token acquired\n');
 
   // Verify Firebase Storage bucket exists
@@ -365,6 +411,18 @@ async function main() {
 
   let successCount = 0;
   let failCount = 0;
+  let tokenAcquiredAt = Date.now();
+
+  // Refresh token if it's been more than 45 minutes
+  async function freshToken() {
+    if (Date.now() - tokenAcquiredAt > 45 * 60 * 1000) {
+      console.log('\n🔑 Refreshing Firebase access token…');
+      token = await getAccessToken();
+      tokenAcquiredAt = Date.now();
+      console.log('   ✅ Token refreshed\n');
+    }
+    return token;
+  }
 
   for (const story of eligible) {
     const trans = TRANS[story.id];
@@ -374,7 +432,7 @@ async function main() {
 
     // --skip-existing: check Firestore for a complete, matching doc before doing any API work
     if (SKIP_EXISTING) {
-      const existing = await firestoreGet(token, story.id);
+      const existing = await firestoreGet(await freshToken(), story.id);
       if (existing && existing.voice === VOICE && existing.count >= paragraphs.length) {
         console.log(`   ⏭️  Already pre-rendered (${existing.count} paragraph(s), voice=${existing.voice}) — skipping\n`);
         successCount++;
@@ -386,14 +444,14 @@ async function main() {
     let storyFailed = false;
 
     for (let i = 0; i < paragraphs.length; i++) {
-      const para = paragraphs[i];
-      const storagePath = `prerendered-tts/${VOICE}/${story.id}/p${i}.wav`;
+      const para = preprocessGujaratiForTTS(paragraphs[i]);
+      const storagePath = `prerendered-tts/${VOICE}/${story.id.trim()}/p${i}.wav`;
       process.stdout.write(`   [p${i}] Generating audio (${para.length} chars)…\n`);
 
       try {
         const wav = await generateAudio(para);
         process.stdout.write(`   [p${i}] Uploading ${(wav.length / 1024).toFixed(0)} KB to Storage…`);
-        const url = await uploadToStorage(token, wav, storagePath);
+        const url = await uploadToStorage(await freshToken(), wav, storagePath);
         process.stdout.write(` ✅\n`);
         paragraphUrls.push(url);
       } catch (e) {
@@ -406,7 +464,7 @@ async function main() {
     if (!storyFailed && paragraphUrls.length === paragraphs.length) {
       process.stdout.write(`   Saving ${paragraphUrls.length} URL(s) to Firestore…`);
       try {
-        await firestoreSet(token, story.id, paragraphUrls);
+        await firestoreSet(await freshToken(), story.id, paragraphUrls);
         process.stdout.write(` ✅\n`);
         successCount++;
       } catch (e) {

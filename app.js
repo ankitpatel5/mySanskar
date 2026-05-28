@@ -74,6 +74,7 @@
     currentCatId: null,
     storyListLang: localStorage.getItem('drift.storyListLang') || 'en',
     isVIPTTS: false,
+    hasPrerenderedTTS: false,  // true when prerenderedTTS/{storyId} exists for the current story
   };
 
   // ============== DOM ==============
@@ -2665,7 +2666,7 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
   // ============== STORY PROGRESS & LANGUAGE ==============
 
   const COMPLETED_LS_KEY   = 'drift.completedStories';
-  const TRANS_LS_KEY_PREFIX = 'drift.trans.';
+  const TRANS_LS_KEY_PREFIX = 'drift.trans.v2.';
 
   // ── Default story language ─────────────────────────────────────
   function getDefaultStoryLang() {
@@ -2870,17 +2871,18 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
   }
 
   async function fetchTranslation(storyId, paragraphs, title) {
-    // 1. Check in-memory localStorage cache (fastest — already fetched this session)
+    // 1. Check pre-bundled translations first — these are the source of truth and override
+    //    any stale localStorage cache (e.g. after a paragraph dedup fix ships).
+    const bundled = window.STORY_TRANSLATIONS && window.STORY_TRANSLATIONS[storyId];
+    if (bundled && Array.isArray(bundled.gujarati) && Array.isArray(bundled.transliteration)) {
+      saveTransCache(storyId, bundled); // keep localStorage in sync
+      return bundled;
+    }
+
+    // 2. Check localStorage cache (for AI-generated stories not in the bundle)
     const cached = loadTransCache(storyId);
     // If cached but missing title translations (old cache), bust it so we re-fetch with title
     if (cached && (title ? cached.gujaratiTitle : true)) return cached;
-
-    // 2. Check pre-bundled translations shipped with the app (no network needed)
-    const bundled = window.STORY_TRANSLATIONS && window.STORY_TRANSLATIONS[storyId];
-    if (bundled && Array.isArray(bundled.gujarati) && Array.isArray(bundled.transliteration)) {
-      saveTransCache(storyId, bundled); // warm the localStorage cache too
-      return bundled;
-    }
 
     // 3. Fallback: fetch live from Gemini (for AI-generated stories which have no bundle entry)
     const key = (window.DRIFT_CONFIG || {}).geminiKey || '';
@@ -2969,9 +2971,20 @@ ${numbered}`;
     renderLangToggle(true);
     stopTTS();
 
-    // TTS: always for VIP users; English-only for non-VIP
+    // TTS: always for VIP users; English-only for non-VIP (unless prerendered audio exists)
+    state.hasPrerenderedTTS = false;   // reset; will be re-checked below for Gujarati/transliteration
     const ttsBar = $('story-tts-bar');
     if (ttsBar) ttsBar.classList.toggle('hidden', !isTTSAvailableForLang(lang));
+
+    // For Gujarati / transliteration, async-check whether prerendered audio exists.
+    // If it does, reveal the TTS bar even for non-VIP users.
+    if (lang !== 'en' && !state.isVIPTTS && story.id) {
+      loadPrerenderedTTS(story.id).then((doc) => {
+        if (_storyLangReqId !== myReqId) return; // user already switched away
+        state.hasPrerenderedTTS = !!(doc && doc.paragraphUrls);
+        if (state.hasPrerenderedTTS && ttsBar) ttsBar.classList.remove('hidden');
+      }).catch(() => {});
+    }
 
     // Update title + subtitle
     renderStoryReaderTitle();
@@ -3075,8 +3088,9 @@ ${numbered}`;
 
   // Returns true when TTS should be visible for the given story language
   function isTTSAvailableForLang(lang) {
-    if (state.isVIPTTS) return true;   // VIP: ElevenLabs (en) + Sarvam (gu / transliteration)
-    return lang === 'en';              // non-VIP: Web Speech English only
+    if (state.isVIPTTS) return true;              // VIP: ElevenLabs (en) + Sarvam (gu/transliteration)
+    if (lang !== 'en' && state.hasPrerenderedTTS) return true;  // prerendered audio available for all
+    return lang === 'en';                         // non-VIP: Web Speech English only
   }
 
   const ttsState = { active: false, paused: false, idx: 0, voice: null, loading: false };
@@ -3165,6 +3179,17 @@ ${numbered}`;
   }
 
   // ── Sarvam API limit: 500 chars per request — split long text into chunks ──
+  // Preprocess Gujarati text so Sarvam gu-IN TTS doesn't read English punctuation literally.
+  // AI-generated translations use English "." and "," — Sarvam reads them as "dot"/"comma".
+  function preprocessGujaratiForTTS(text) {
+    return text
+      .replace(/\.+/g, '।')       // "..." or "." → single Gujarati danda (collapse runs)
+      .replace(/,/g, ' ')         // Comma → pause space
+      .replace(/["""'']/g, '')    // Strip curly/straight quotes
+      .replace(/\s{2,}/g, ' ')    // Collapse extra spaces
+      .trim();
+  }
+
   function splitTextForSarvam(text, maxChars = 450) {
     if (text.length <= maxChars) return [text];
 
@@ -3222,8 +3247,8 @@ ${numbered}`;
     const key = (window.DRIFT_CONFIG || {}).sarvamKey || '';
     if (!key) throw new Error('no-sarvam-key');
 
-    // Split text into ≤450-char chunks to respect Sarvam's 500-char API limit
-    const chunks = splitTextForSarvam(text);
+    // Preprocess then split into ≤450-char chunks to respect Sarvam's 500-char API limit
+    const chunks = splitTextForSarvam(preprocessGujaratiForTTS(text));
 
     const fetchChunk = async (chunk) => {
       const res = await fetch('https://api.sarvam.ai/text-to-speech', {
@@ -3529,6 +3554,7 @@ ${numbered}`;
   }
 
   function stopTTS() {
+    state.hasPrerenderedTTS = false;  // reset on each new story/stop
     // Stop VIP TTS audio element (ElevenLabs / Sarvam)
     if (_vipAudio) {
       _vipAudio.pause();
@@ -3582,6 +3608,29 @@ ${numbered}`;
 
     const text = paraEls[idx].textContent || '';
     const gttsKey = (window.DRIFT_CONFIG || {}).googleTTSKey || '';
+
+    // ── Prerendered TTS path (available to ALL users when prerendered audio exists) ──
+    if (!state.isVIPTTS && state.storyLang !== 'en' && state.hasPrerenderedTTS && state.currentStory) {
+      const prerendered = await loadPrerenderedTTS(state.currentStory.id);
+      if (prerendered && prerendered.paragraphUrls?.[`p${idx}`]) {
+        ttsState.loading = true;
+        updateTTSUI();
+        try {
+          const audioUrl = prerendered.paragraphUrls[`p${idx}`];
+          if (_vipAudio) { _vipAudio.pause(); _vipAudio.onended = null; _vipAudio.onerror = null; }
+          _vipAudio = new Audio(audioUrl);
+          ttsState.loading = false;
+          updateTTSUI();
+          _vipAudio.onended = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
+          _vipAudio.onerror = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
+          await _vipAudio.play();
+          return;
+        } catch (e) {
+          ttsState.loading = false;
+          // fall through to standard TTS
+        }
+      }
+    }
 
     // ── VIP TTS path (ElevenLabs for English, Sarvam for Gujarati/Transliteration) ──
     if (state.isVIPTTS) {
