@@ -2,8 +2,6 @@
 .vercel
 .env*
 
-# Local config — contains real API keys, never commit
-config.js
 
 # Logs & debug
 firebase-debug.log
@@ -21,6 +19,9 @@ ios/App/App.xcworkspace/xcuserdata/
 ios/App/Pods/
 ios/App/.build/
 ios/DerivedData/
+
+# Android signing password — never commit
+android/keystore.properties
 
 # Firebase config files — contain project API keys, never commit
 # Add these manually after cloning (download from Firebase console)
