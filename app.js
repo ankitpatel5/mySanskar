@@ -2971,19 +2971,25 @@ ${numbered}`;
     renderLangToggle(true);
     stopTTS();
 
-    // TTS: always for VIP users; English-only for non-VIP (unless prerendered audio exists)
-    state.hasPrerenderedTTS = false;   // reset; will be re-checked below for Gujarati/transliteration
+    // TTS bar visibility:
+    // - English: always show
+    // - Gujarati/Transliteration: hide immediately, then show only if Firebase has prerendered audio
+    state.hasPrerenderedTTS = false;
     const ttsBar = $('story-tts-bar');
-    if (ttsBar) ttsBar.classList.toggle('hidden', !isTTSAvailableForLang(lang));
-
-    // For Gujarati / transliteration, async-check whether prerendered audio exists.
-    // If it does, reveal the TTS bar even for non-VIP users.
-    if (lang !== 'en' && !state.isVIPTTS && story.id) {
-      loadPrerenderedTTS(story.id).then((doc) => {
-        if (_storyLangReqId !== myReqId) return; // user already switched away
-        state.hasPrerenderedTTS = !!(doc && doc.paragraphUrls);
-        if (state.hasPrerenderedTTS && ttsBar) ttsBar.classList.remove('hidden');
-      }).catch(() => {});
+    if (lang === 'en') {
+      if (ttsBar) ttsBar.classList.remove('hidden');
+    } else {
+      // Hide by default — reveal async only if prerendered audio doc exists in Firestore
+      if (ttsBar) ttsBar.classList.add('hidden');
+      if (story.id) {
+        loadPrerenderedTTS(story.id).then((doc) => {
+          if (_storyLangReqId !== myReqId) return;
+          if (doc && doc.paragraphUrls) {
+            state.hasPrerenderedTTS = true;
+            if (ttsBar) ttsBar.classList.remove('hidden');
+          }
+        }).catch(() => {});
+      }
     }
 
     // Update title + subtitle
@@ -3088,9 +3094,8 @@ ${numbered}`;
 
   // Returns true when TTS should be visible for the given story language
   function isTTSAvailableForLang(lang) {
-    if (state.isVIPTTS) return true;              // VIP: ElevenLabs (en) + Sarvam (gu/transliteration)
-    if (lang !== 'en' && state.hasPrerenderedTTS) return true;  // prerendered audio available for all
-    return lang === 'en';                         // non-VIP: Web Speech English only
+    if (lang === 'en') return true;              // English always available (Web Speech / ElevenLabs)
+    return state.hasPrerenderedTTS;              // Gujarati/transliteration: only if Firebase has audio
   }
 
   const ttsState = { active: false, paused: false, idx: 0, voice: null, loading: false };
@@ -3609,117 +3614,58 @@ ${numbered}`;
     const text = paraEls[idx].textContent || '';
     const gttsKey = (window.DRIFT_CONFIG || {}).googleTTSKey || '';
 
-    // ── Prerendered TTS path (available to ALL users when prerendered audio exists) ──
-    if (!state.isVIPTTS && state.storyLang !== 'en' && state.hasPrerenderedTTS && state.currentStory) {
-      const prerendered = await loadPrerenderedTTS(state.currentStory.id);
-      if (prerendered && prerendered.paragraphUrls?.[`p${idx}`]) {
-        ttsState.loading = true;
-        updateTTSUI();
-        try {
-          const audioUrl = prerendered.paragraphUrls[`p${idx}`];
-          if (_vipAudio) { _vipAudio.pause(); _vipAudio.onended = null; _vipAudio.onerror = null; }
-          _vipAudio = new Audio(audioUrl);
-          ttsState.loading = false;
-          updateTTSUI();
-          _vipAudio.onended = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
-          _vipAudio.onerror = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
-          await _vipAudio.play();
-          return;
-        } catch (e) {
-          ttsState.loading = false;
-          // fall through to standard TTS
-        }
-      }
-    }
-
-    // ── VIP TTS path (ElevenLabs for English, Sarvam for Gujarati/Transliteration) ──
-    if (state.isVIPTTS) {
+    // ── Gujarati / Transliteration: ONLY use prerendered Firebase audio, no API fallbacks ──
+    if (state.storyLang !== 'en') {
       ttsState.loading = true;
       updateTTSUI();
-
       try {
-        let audioUrl;
-        const isTransliteration = state.storyLang !== 'en' && state.storyLang !== 'gu';
+        const prerendered = state.currentStory ? await loadPrerenderedTTS(state.currentStory.id) : null;
+        const audioUrl = prerendered?.paragraphUrls?.[`p${idx}`] || null;
 
-        if (state.storyLang === 'en') {
-          // English → ElevenLabs
-          audioUrl = await fetchElevenLabsAudio(text);
-        } else {
-          // Gujarati or Transliteration → check pre-rendered first, then Sarvam
-          let gujaratiText = text;
-          if (isTransliteration && state.currentStory) {
-            // DOM shows transliteration (roman script) — fetch Gujarati script from cache
-            const tc = loadTransCache(state.currentStory.id);
-            gujaratiText = tc?.gujarati?.[idx] || text;
-          }
-          const voiceId = getSarvamVoiceId();
-          // Try pre-rendered audio first (voice match not required — use what we have)
-          if (state.currentStory) {
-            const prerendered = await loadPrerenderedTTS(state.currentStory.id);
-            if (prerendered && prerendered.paragraphUrls?.[`p${idx}`]) {
-              audioUrl = prerendered.paragraphUrls[`p${idx}`];
-              console.log(`[TTS] Using pre-rendered audio for ${state.currentStory.id} p${idx}`);
-            }
-          }
-          if (!audioUrl) {
-            audioUrl = await fetchSarvamAudio(gujaratiText, 'gu-IN', voiceId);
-          }
-        }
-
-        // Guard: user may have stopped/paused while we were fetching
         if (!ttsState.active || ttsState.paused) { ttsState.loading = false; return; }
 
-        // Stop any previously playing VIP audio
-        if (_vipAudio) {
-          _vipAudio.pause();
-          _vipAudio.onended = null;
-          _vipAudio.onerror = null;
+        if (!audioUrl) {
+          // No prerendered audio for this paragraph — skip to next
+          ttsState.loading = false;
+          updateTTSUI();
+          speakParagraph(idx + 1);
+          return;
         }
 
+        if (_vipAudio) { _vipAudio.pause(); _vipAudio.onended = null; _vipAudio.onerror = null; }
         _vipAudio = new Audio(audioUrl);
         ttsState.loading = false;
         updateTTSUI();
-
-        _vipAudio.onended = () => {
-          if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1);
-        };
-        _vipAudio.onerror = () => {
-          console.warn('VIP TTS audio playback error');
-          if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1);
-        };
+        _vipAudio.onended = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
+        _vipAudio.onerror = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
         await _vipAudio.play();
-
-        // Pre-fetch next paragraph in background to eliminate gap
-        if (idx + 1 < paraEls.length) {
-          const nextText = paraEls[idx + 1].textContent || '';
-          if (state.storyLang === 'en') {
-            fetchElevenLabsAudio(nextText).catch(() => {});
-          } else {
-            let nextGujaratiText = nextText;
-            if (isTransliteration && state.currentStory) {
-              const tc = loadTransCache(state.currentStory.id);
-              nextGujaratiText = tc?.gujarati?.[idx + 1] || nextText;
-            }
-            // Only call Sarvam if pre-rendered version isn't already available
-            (async () => {
-              const nextVoiceId = getSarvamVoiceId();
-              let hasPrerendered = false;
-              if (state.currentStory) {
-                const prerendered = await loadPrerenderedTTS(state.currentStory.id);
-                hasPrerendered = !!(prerendered && prerendered.paragraphUrls?.[`p${idx + 1}`]);
-              }
-              if (!hasPrerendered) {
-                fetchSarvamAudio(nextGujaratiText, 'gu-IN', nextVoiceId).catch(() => {});
-              }
-            })();
-          }
-        }
-        return;
-
       } catch (e) {
         ttsState.loading = false;
-        console.warn('VIP TTS failed, falling back to standard path:', e.message);
-        // Fall through to Google TTS / Web Speech
+        console.warn('[TTS] Prerendered audio playback error:', e.message);
+      }
+      return;
+    }
+
+    // ── English: ElevenLabs (VIP) or Web Speech / Google TTS ──
+    if (state.isVIPTTS) {
+      ttsState.loading = true;
+      updateTTSUI();
+      try {
+        const audioUrl = await fetchElevenLabsAudio(text);
+        if (!ttsState.active || ttsState.paused) { ttsState.loading = false; return; }
+        if (_vipAudio) { _vipAudio.pause(); _vipAudio.onended = null; _vipAudio.onerror = null; }
+        _vipAudio = new Audio(audioUrl);
+        ttsState.loading = false;
+        updateTTSUI();
+        _vipAudio.onended = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
+        _vipAudio.onerror = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
+        await _vipAudio.play();
+        if (idx + 1 < paraEls.length) fetchElevenLabsAudio(paraEls[idx + 1].textContent || '').catch(() => {});
+        return;
+      } catch (e) {
+        ttsState.loading = false;
+        console.warn('ElevenLabs TTS failed, falling back:', e.message);
+        // Fall through to Google TTS / Web Speech for English
       }
     }
 
