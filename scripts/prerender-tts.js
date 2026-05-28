@@ -6,10 +6,11 @@
  * the MP3 files in Firebase Storage, with URLs indexed in Firestore.
  *
  * Usage:
- *   node scripts/prerender-tts.js [--count 5] [--voice rohan] [--all] [--skip-existing]
+ *   node scripts/prerender-tts.js [--count 5] [--voice rohan] [--all] [--skip-existing] [--ids id1,id2,...]
  *
  * Defaults: first 5 non-video satsang stories, voice = rohan
  * --skip-existing  Skip stories that already have a complete Firestore doc
+ * --ids id1,id2    Only process the specified story IDs (comma-separated)
  *
  * Storage layout:
  *   Firebase Storage:  prerendered-tts/{voice}/{storyId}/p{idx}.wav
@@ -26,10 +27,12 @@ const path    = require('path');
 const args  = process.argv.slice(2);
 const _ci   = args.indexOf('--count');
 const _vi   = args.indexOf('--voice');
+const _idi  = args.indexOf('--ids');
 const COUNT        = args.includes('--all') ? Infinity : parseInt(_ci >= 0 ? args[_ci + 1] : '5', 10);
 const VOICE        = _vi >= 0 ? args[_vi + 1] : 'rohan';
 const MODEL        = 'bulbul:v3';   // rohan is v3
 const SKIP_EXISTING = args.includes('--skip-existing');  // skip stories already in Firestore
+const IDS_FILTER   = _idi >= 0 ? new Set(args[_idi + 1].split(',').map(s => s.trim())) : null;  // only these IDs
 
 // ── Project constants ─────────────────────────────────────────────
 const PROJECT    = 'baal-shravan';
@@ -394,7 +397,8 @@ async function main() {
   const eligible = STORIES.filter(s =>
     s.type !== 'youtube' &&
     s.paragraphs && s.paragraphs.length > 0 &&
-    TRANS[s.id] && Array.isArray(TRANS[s.id].gujarati) && TRANS[s.id].gujarati.length > 0
+    TRANS[s.id] && Array.isArray(TRANS[s.id].gujarati) && TRANS[s.id].gujarati.length > 0 &&
+    (!IDS_FILTER || IDS_FILTER.has(s.id.trim()))
   ).slice(0, COUNT);
 
   console.log(`Found ${eligible.length} eligible satsang stories\n`);

@@ -2662,26 +2662,39 @@ input { font-family: inherit; color: inherit; }
   margin-bottom: 20px;
 }
 
-.story-reader-img {
+.story-reader-img-wrap {
+  position: relative;
   width: 100%;
-  height: auto;
-  max-height: min(33vh, 280px);
+  height: min(33vh, 280px);
   border-radius: var(--r-lg);
+  overflow: hidden;
   margin-bottom: 16px;
+}
+
+.story-reader-img-blur {
+  position: absolute;
+  inset: -20px;
+  background-size: cover;
+  background-position: center;
+  filter: blur(18px);
+  transform: scale(1.05);
+  opacity: 0.85;
+}
+
+.story-reader-img {
+  position: relative;
+  width: 100%;
+  height: 100%;
   display: block;
-  object-fit: cover;
+  object-fit: contain;
+  z-index: 1;
 }
 
 /* Shimmer placeholder while Imagen generates */
-.story-reader-img.ai-img-loading {
-  display: block;
-  /* 16:9 shimmer — matches generated landscape images */
-  height: clamp(160px, 56.25vw, min(33vh, 280px));
+.story-reader-img-wrap.ai-img-loading {
   background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3, #e8eaf0) 50%, var(--surface2) 75%);
   background-size: 200% 100%;
   animation: ai-img-shimmer 1.4s infinite;
-  border-radius: var(--r-lg);
-  margin-bottom: 16px;
 }
 @keyframes ai-img-shimmer {
   0%   { background-position: 200% 0; }

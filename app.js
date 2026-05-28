@@ -81,6 +81,35 @@
   const $ = (id) => document.getElementById(id);
   const audio = $('audio');
 
+  // Sets the story hero image with blurred backdrop, or hides it
+  function setStoryHeroImage(src) {
+    const wrap = $('story-reader-img-wrap');
+    const blur = $('story-reader-img-blur');
+    const img  = $('story-reader-img');
+    if (!wrap) return;
+    if (src) {
+      img.src = src;
+      blur.style.backgroundImage = `url('${src.replace(/'/g, "\\'")}')`;
+      wrap.classList.remove('hidden', 'ai-img-loading');
+      img.onerror = () => { wrap.classList.add('hidden'); };
+    } else {
+      img.src = '';
+      blur.style.backgroundImage = '';
+      wrap.classList.add('hidden');
+      wrap.classList.remove('ai-img-loading');
+    }
+  }
+
+  // Shows a shimmer placeholder while an AI image is being generated
+  function setStoryHeroShimmer() {
+    const wrap = $('story-reader-img-wrap');
+    const img  = $('story-reader-img');
+    if (!wrap) return;
+    img.src = '';
+    wrap.classList.remove('hidden');
+    wrap.classList.add('ai-img-loading');
+  }
+
   // ============== INIT ==============
   let _appBooted = false; // guard: only run full setup once
 
@@ -1570,15 +1599,7 @@
     state.storyLang = 'en';
     stopTTS();
 
-    const imgEl = $('story-reader-img');
-    if (story.imageUrl) {
-      imgEl.src = story.imageUrl;
-      imgEl.classList.remove('hidden', 'ai-img-loading');
-    } else {
-      imgEl.src = '';
-      imgEl.classList.add('hidden');
-      imgEl.classList.remove('ai-img-loading');
-    }
+    setStoryHeroImage(story.imageUrl || null);
 
     const body = $('story-reader-body');
     body.innerHTML = '';
@@ -1619,23 +1640,14 @@
 
     // Generate cover image if not yet saved
     if (!story.imageUrl && !isImagenQuotaExhausted()) {
-      imgEl.src = '';
-      imgEl.classList.remove('hidden');
-      imgEl.classList.add('ai-img-loading');
+      setStoryHeroShimmer();
 
       generateImagenImage(story.topic, story.character, story.id).then((dataUrl) => {
         if (state.currentStory?.id !== story.id) return;
-        if (dataUrl) {
-          imgEl.src = dataUrl;
-          imgEl.classList.remove('ai-img-loading');
-          // Persist imageUrl back to Firestore so it survives tomorrow's open
-          if (state.user) {
-            sotdFirestoreRef(state.user.uid, story.date)
-              .update({ imageUrl: dataUrl }).catch(() => {});
-          }
-        } else {
-          imgEl.classList.add('hidden');
-          imgEl.classList.remove('ai-img-loading');
+        setStoryHeroImage(dataUrl || null);
+        if (dataUrl && state.user) {
+          sotdFirestoreRef(state.user.uid, story.date)
+            .update({ imageUrl: dataUrl }).catch(() => {});
         }
       });
     }
@@ -1780,19 +1792,10 @@
     $('story-reader-title').textContent = story.title;
 
     const isVideo = story.type === 'youtube';
-    const img = $('story-reader-img');
     const ttsBar = $('story-tts-bar');
     const voiceSheet = $('tts-voice-sheet');
 
-    if (isVideo) {
-      img.classList.add('hidden');
-    } else if (story.photo) {
-      img.src = story.photo;
-      img.classList.remove('hidden');
-      img.onerror = () => img.classList.add('hidden');
-    } else {
-      img.classList.add('hidden');
-    }
+    setStoryHeroImage(isVideo ? null : (story.photo || null));
 
     // Body
     const body = $('story-reader-body');
@@ -2326,16 +2329,7 @@
     stopTTS();
 
     // Show saved image immediately if available, otherwise show shimmer placeholder
-    const imgEl = $('story-reader-img');
-    if (story.imageUrl) {
-      imgEl.src = story.imageUrl;
-      imgEl.classList.remove('hidden');
-      imgEl.classList.remove('ai-img-loading');
-    } else {
-      imgEl.src = '';
-      imgEl.classList.add('hidden');
-      imgEl.classList.remove('ai-img-loading');
-    }
+    setStoryHeroImage(story.imageUrl || null);
 
     const body = $('story-reader-body');
     body.innerHTML = '';
@@ -2381,21 +2375,11 @@
 
     // Generate image in background if not already saved and quota is available
     if (!story.imageUrl && !isImagenQuotaExhausted()) {
-      // Show shimmer while generating
-      imgEl.src = '';
-      imgEl.classList.remove('hidden');
-      imgEl.classList.add('ai-img-loading');
+      setStoryHeroShimmer();
 
       generateImagenImage(story.topic, story.character, story.id).then(dataUrl => {
-        // Only update if the user is still on the same story
         if (state.currentStory && state.currentStory.generatedAt === story.generatedAt) {
-          if (dataUrl) {
-            imgEl.src = dataUrl;
-            imgEl.classList.remove('ai-img-loading');
-          } else {
-            imgEl.classList.add('hidden');
-            imgEl.classList.remove('ai-img-loading');
-          }
+          setStoryHeroImage(dataUrl || null);
         }
       });
     }
