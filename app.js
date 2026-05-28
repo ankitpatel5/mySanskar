@@ -4718,6 +4718,7 @@ ${numbered}`;
     });
     $('story-reader-back').addEventListener('click', () => {
       stopTTS();
+      closeSizePopover();
       const btn = $('story-reader-back');
       if (btn._sotdMode) {
         btn._sotdMode = false;
@@ -4729,6 +4730,65 @@ ${numbered}`;
         switchView('view-story-list');
       }
       $('content').scrollTo({ top: 0, behavior: 'instant' });
+    });
+
+    // ── Text size (Aa) ────────────────────────────────────────────
+    const STORY_SIZE_KEY = 'drift.storyTextSize';
+    const STORY_SIZES    = { sm: true, md: true, lg: true, xl: true };
+
+    function applyStorySize(size) {
+      if (!STORY_SIZES[size]) size = 'md';
+      document.body.dataset.storySize = size;
+      // highlight selected chip
+      document.querySelectorAll('.story-size-opt').forEach(el => {
+        el.classList.toggle('size-selected', el.dataset.size === size);
+      });
+      // tint Aa button when non-default
+      const aaBtn = $('story-aa-btn');
+      if (aaBtn) aaBtn.classList.toggle('aa-active', size !== 'md');
+    }
+
+    function closeSizePopover() {
+      const pop = $('story-size-popover');
+      const btn = $('story-aa-btn');
+      if (!pop) return;
+      pop.classList.add('hidden');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    }
+
+    // Restore persisted size on boot
+    applyStorySize(localStorage.getItem(STORY_SIZE_KEY) || 'md');
+
+    $('story-aa-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const pop = $('story-size-popover');
+      const btn = $('story-aa-btn');
+      const isOpen = !pop.classList.contains('hidden');
+      if (isOpen) {
+        closeSizePopover();
+      } else {
+        pop.classList.remove('hidden');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    });
+
+    document.querySelectorAll('.story-size-opt').forEach(el => {
+      el.addEventListener('click', () => {
+        const size = el.dataset.size;
+        applyStorySize(size);
+        localStorage.setItem(STORY_SIZE_KEY, size);
+        // auto-close after a brief moment so user sees the selection
+        setTimeout(closeSizePopover, 500);
+      });
+    });
+
+    // Close popover when tapping outside
+    document.addEventListener('click', (e) => {
+      const pop = $('story-size-popover');
+      if (pop && !pop.classList.contains('hidden') &&
+          !pop.contains(e.target) && e.target !== $('story-aa-btn')) {
+        closeSizePopover();
+      }
     });
     const storySearchInput = $('story-search-input');
     storySearchInput.addEventListener('input', () => {

@@ -412,9 +412,34 @@
 
         <!-- Story Time: Story reader -->
         <section id="view-story-reader" class="view hidden">
-          <button class="back-btn" id="story-reader-back" aria-label="Back">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
+          <div class="story-reader-topbar">
+            <button class="back-btn" id="story-reader-back" aria-label="Back">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <button class="aa-btn" id="story-aa-btn" aria-label="Text size" aria-haspopup="true" aria-expanded="false">Aa</button>
+          </div>
+          <!-- Text size popover -->
+          <div id="story-size-popover" class="story-size-popover hidden" role="dialog" aria-label="Text size">
+            <div class="story-size-label">Text Size</div>
+            <div class="story-size-options">
+              <button class="story-size-opt" data-size="sm" aria-label="Small">
+                <span class="story-size-sample">A</span>
+                <span class="story-size-name">Small</span>
+              </button>
+              <button class="story-size-opt" data-size="md" aria-label="Default">
+                <span class="story-size-sample">A</span>
+                <span class="story-size-name">Default</span>
+              </button>
+              <button class="story-size-opt" data-size="lg" aria-label="Large">
+                <span class="story-size-sample">A</span>
+                <span class="story-size-name">Large</span>
+              </button>
+              <button class="story-size-opt" data-size="xl" aria-label="XL">
+                <span class="story-size-sample">A</span>
+                <span class="story-size-name">XL</span>
+              </button>
+            </div>
+          </div>
           <div class="story-reader-hero">
             <div id="story-reader-img-wrap" class="story-reader-img-wrap hidden">
               <div id="story-reader-img-blur" class="story-reader-img-blur"></div>
