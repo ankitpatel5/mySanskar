@@ -3084,7 +3084,9 @@ ${numbered}`;
 
   const ttsState = { active: false, paused: false, idx: 0, voice: null, loading: false };
   let _ttsVoices = [];
-  let _ttsTotal  = 0;   // total paragraph count, for progress bar
+  let _ttsTotal        = 0;   // total paragraph count, for progress bar
+  let _ttsParaDurs     = [];  // known audio durations per paragraph index
+  let _ttsElapsedBefore = 0; // sum of durations of paragraphs before current one
   const TTS_SPEED_KEY   = 'drift.ttsSpeed';
   const TTS_SPEED_STEPS = [0.5, 0.75, 1, 1.5, 2];
   let _ttsSpeed = parseFloat(localStorage.getItem(TTS_SPEED_KEY) || '1');
@@ -3574,6 +3576,8 @@ ${numbered}`;
     ttsState.active  = false;
     ttsState.paused  = false;
     ttsState.loading = false;
+    _ttsElapsedBefore = 0;
+    _ttsParaDurs = [];
     stopTTSProgressLoop();
     ttsState.idx     = 0;
     document.querySelectorAll('.story-para.tts-active').forEach((el) => el.classList.remove('tts-active'));
@@ -3600,6 +3604,7 @@ ${numbered}`;
 
     // Progress bar — paragraph-level snapshot; rAF loop refines in real-time
     _ttsTotal = paraEls.length;
+    if (idx === 0) { _ttsParaDurs = []; _ttsElapsedBefore = 0; }
     setTTSProgress(idx, 0, null);
 
     const text = paraEls[idx].textContent || '';
@@ -3626,9 +3631,17 @@ ${numbered}`;
         if (_vipAudio) { _vipAudio.pause(); _vipAudio.onended = null; _vipAudio.onerror = null; }
         _vipAudio = new Audio(audioUrl);
         _vipAudio.playbackRate = _ttsSpeed;
+        _vipAudio.onloadedmetadata = () => {
+          if (isFinite(_vipAudio.duration)) {
+            _ttsParaDurs[idx] = _vipAudio.duration / _ttsSpeed;
+          }
+        };
         ttsState.loading = false;
         updateTTSUI();
-        _vipAudio.onended = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
+        _vipAudio.onended = () => {
+          _ttsElapsedBefore += isFinite(_vipAudio.duration) ? _vipAudio.duration / _ttsSpeed : 0;
+          if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1);
+        };
         _vipAudio.onerror = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
         await _vipAudio.play();
         startTTSProgressLoop();
@@ -3649,9 +3662,15 @@ ${numbered}`;
         if (_vipAudio) { _vipAudio.pause(); _vipAudio.onended = null; _vipAudio.onerror = null; }
         _vipAudio = new Audio(audioUrl);
         _vipAudio.playbackRate = _ttsSpeed;
+        _vipAudio.onloadedmetadata = () => {
+          if (isFinite(_vipAudio.duration)) _ttsParaDurs[idx] = _vipAudio.duration / _ttsSpeed;
+        };
         ttsState.loading = false;
         updateTTSUI();
-        _vipAudio.onended = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
+        _vipAudio.onended = () => {
+          _ttsElapsedBefore += isFinite(_vipAudio.duration) ? _vipAudio.duration / _ttsSpeed : 0;
+          if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1);
+        };
         _vipAudio.onerror = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
         await _vipAudio.play();
         startTTSProgressLoop();
@@ -3687,10 +3706,14 @@ ${numbered}`;
 
         _gttsAudio = new Audio(audioUrl);
         _gttsAudio.playbackRate = _ttsSpeed;
+        _gttsAudio.onloadedmetadata = () => {
+          if (isFinite(_gttsAudio.duration)) _ttsParaDurs[idx] = _gttsAudio.duration / _ttsSpeed;
+        };
         ttsState.loading = false;
         updateTTSUI();
 
         _gttsAudio.onended = () => {
+          _ttsElapsedBefore += isFinite(_gttsAudio.duration) ? _gttsAudio.duration / _ttsSpeed : 0;
           if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1);
         };
         _gttsAudio.onerror = () => {
@@ -3769,20 +3792,8 @@ ${numbered}`;
         label.textContent = 'Reading…';
       } else if (isPaused) {
         label.textContent = 'Paused';
-      } else if (state.isVIPTTS) {
-        if (state.storyLang === 'en') {
-          label.textContent = '⭐ ElevenLabs';
-        } else {
-          const v = getSarvamVoiceObj();
-          label.textContent = `⭐ ${v.label}`;
-        }
-      } else if (usingGTTS) {
-        label.textContent = 'Neural · Google';
       } else {
-        const voiceName = ttsState.voice
-          ? ttsState.voice.name.replace(/^.*\.\w+-\w+\./i, '').replace(/_/g, ' ')
-          : 'Read aloud';
-        label.textContent = voiceName;
+        label.textContent = 'Read aloud';
       }
     }
 
@@ -4865,14 +4876,13 @@ ${numbered}`;
       const timeEl = $('tts-time');
       if (!bar) return;
 
+      const dur = (audio && isFinite(audio.duration) && audio.duration > 0) ? audio.duration : 0;
+
       let fraction;
       if (total <= 1) {
-        // Single paragraph — fill is driven purely by currentTime/duration
-        const dur = audio ? audio.duration : 0;
-        fraction = (dur > 0) ? Math.min(currentTime / dur, 1) : (ttsState.active ? 1 : 0);
+        fraction = dur > 0 ? Math.min(currentTime / dur, 1) : (ttsState.active ? 1 : 0);
       } else {
-        const dur = audio ? audio.duration : 0;
-        const within = (dur > 0) ? Math.min(currentTime / dur, 1) : 0;
+        const within = dur > 0 ? Math.min(currentTime / dur, 1) : 0;
         fraction = Math.min((paraIdx + within) / total, 1);
       }
 
@@ -4881,11 +4891,20 @@ ${numbered}`;
       if (thumb) thumb.style.left = pct;
       if (track) track.setAttribute('aria-valuenow', Math.round(fraction * 100));
 
-      // Time label: show elapsed / total when audio duration is known
-      if (timeEl && audio && isFinite(audio.duration) && audio.duration > 0) {
-        // Approximate total duration as duration-per-para × total (rough but useful)
-        const elapsed = paraIdx * audio.duration + currentTime;
-        timeEl.textContent = fmtTime(currentTime) + ' / ' + fmtTime(audio.duration);
+      // Time label — elapsed across all paragraphs / estimated total
+      if (timeEl) {
+        if (dur > 0) {
+          const elapsed = _ttsElapsedBefore + currentTime / _ttsSpeed;
+          // Estimate total: average known paragraph duration × total paragraphs
+          const knownDurs = _ttsParaDurs.filter(d => d > 0);
+          const avgDur = knownDurs.length > 0
+            ? knownDurs.reduce((a, b) => a + b, 0) / knownDurs.length
+            : dur / _ttsSpeed;
+          const totalEst = total > 0 ? avgDur * total : avgDur;
+          timeEl.textContent = fmtTime(elapsed) + ' / ' + fmtTime(Math.max(elapsed, totalEst));
+        } else if (!ttsState.active) {
+          timeEl.textContent = '';
+        }
       }
     }
 
@@ -4959,13 +4978,6 @@ ${numbered}`;
         _ttsTrack.classList.remove('tts-dragging');
       });
     }
-
-    $('tts-voice-btn').addEventListener('click', () => {
-      const sheet = $('tts-voice-sheet');
-      if (sheet && !sheet.classList.contains('hidden')) closeVoicePicker();
-      else openVoicePicker();
-    });
-    $('tts-voice-close').addEventListener('click', closeVoicePicker);
 
     // Language toggle buttons
     const langBar = $('story-lang-bar');
