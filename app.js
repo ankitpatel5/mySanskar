@@ -3584,6 +3584,69 @@ ${numbered}`;
     updateTTSUI();
   }
 
+  // ── Progress bar helpers (module-scope so speakParagraph can call them) ──
+  function fmtTime(secs) {
+    if (!isFinite(secs) || secs < 0) return '';
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  function setTTSProgress(paraIdx, currentTime, audio) {
+    const total = _ttsTotal;
+    const bar   = $('tts-progress-bar');
+    const thumb = $('tts-thumb');
+    const track = $('tts-track');
+    const timeEl = $('tts-time');
+    if (!bar) return;
+
+    const dur = (audio && isFinite(audio.duration) && audio.duration > 0) ? audio.duration : 0;
+
+    let fraction;
+    if (total <= 1) {
+      fraction = dur > 0 ? Math.min(currentTime / dur, 1) : (ttsState.active ? 1 : 0);
+    } else {
+      const within = dur > 0 ? Math.min(currentTime / dur, 1) : 0;
+      fraction = Math.min((paraIdx + within) / total, 1);
+    }
+
+    const pct = (fraction * 100).toFixed(2) + '%';
+    bar.style.width = pct;
+    if (thumb) thumb.style.left = pct;
+    if (track) track.setAttribute('aria-valuenow', Math.round(fraction * 100));
+
+    if (timeEl) {
+      if (dur > 0) {
+        const elapsed = _ttsElapsedBefore + currentTime / _ttsSpeed;
+        const knownDurs = _ttsParaDurs.filter(d => d > 0);
+        const avgDur = knownDurs.length > 0
+          ? knownDurs.reduce((a, b) => a + b, 0) / knownDurs.length
+          : dur / _ttsSpeed;
+        const totalEst = total > 0 ? avgDur * total : avgDur;
+        timeEl.textContent = fmtTime(elapsed) + ' / ' + fmtTime(Math.max(elapsed, totalEst));
+      } else if (!ttsState.active) {
+        timeEl.textContent = '';
+      }
+    }
+  }
+
+  let _ttsRafId = null;
+  function startTTSProgressLoop() {
+    if (_ttsRafId) return;
+    function tick() {
+      if (!ttsState.active) { _ttsRafId = null; return; }
+      const audio = _vipAudio || _gttsAudio;
+      if (audio && !audio.paused && !audio.ended && isFinite(audio.duration)) {
+        setTTSProgress(ttsState.idx, audio.currentTime, audio);
+      }
+      _ttsRafId = requestAnimationFrame(tick);
+    }
+    _ttsRafId = requestAnimationFrame(tick);
+  }
+  function stopTTSProgressLoop() {
+    if (_ttsRafId) { cancelAnimationFrame(_ttsRafId); _ttsRafId = null; }
+  }
+
   async function speakParagraph(idx) {
     // Read text from DOM so we speak whatever language is currently displayed
     const paraEls = document.querySelectorAll('.story-para');
@@ -4857,74 +4920,6 @@ ${numbered}`;
       const next = TTS_SPEED_STEPS[(idx + 1) % TTS_SPEED_STEPS.length];
       applyTTSSpeed(next);
     });
-
-    // ── Progress bar helpers ──────────────────────────────────────
-    function fmtTime(secs) {
-      if (!isFinite(secs) || secs < 0) return '';
-      const m = Math.floor(secs / 60);
-      const s = Math.floor(secs % 60);
-      return `${m}:${s.toString().padStart(2, '0')}`;
-    }
-
-    // setTTSProgress(paragraphIdx, currentTime, audio?)
-    // Paints the bar + thumb + time label at an exact position.
-    function setTTSProgress(paraIdx, currentTime, audio) {
-      const total = _ttsTotal;
-      const bar   = $('tts-progress-bar');
-      const thumb = $('tts-thumb');
-      const track = $('tts-track');
-      const timeEl = $('tts-time');
-      if (!bar) return;
-
-      const dur = (audio && isFinite(audio.duration) && audio.duration > 0) ? audio.duration : 0;
-
-      let fraction;
-      if (total <= 1) {
-        fraction = dur > 0 ? Math.min(currentTime / dur, 1) : (ttsState.active ? 1 : 0);
-      } else {
-        const within = dur > 0 ? Math.min(currentTime / dur, 1) : 0;
-        fraction = Math.min((paraIdx + within) / total, 1);
-      }
-
-      const pct = (fraction * 100).toFixed(2) + '%';
-      bar.style.width = pct;
-      if (thumb) thumb.style.left = pct;
-      if (track) track.setAttribute('aria-valuenow', Math.round(fraction * 100));
-
-      // Time label — elapsed across all paragraphs / estimated total
-      if (timeEl) {
-        if (dur > 0) {
-          const elapsed = _ttsElapsedBefore + currentTime / _ttsSpeed;
-          // Estimate total: average known paragraph duration × total paragraphs
-          const knownDurs = _ttsParaDurs.filter(d => d > 0);
-          const avgDur = knownDurs.length > 0
-            ? knownDurs.reduce((a, b) => a + b, 0) / knownDurs.length
-            : dur / _ttsSpeed;
-          const totalEst = total > 0 ? avgDur * total : avgDur;
-          timeEl.textContent = fmtTime(elapsed) + ' / ' + fmtTime(Math.max(elapsed, totalEst));
-        } else if (!ttsState.active) {
-          timeEl.textContent = '';
-        }
-      }
-    }
-
-    // rAF loop — runs while TTS is active, updates bar from live audio currentTime
-    let _ttsRafId = null;
-    function startTTSProgressLoop() {
-      if (_ttsRafId) return;
-      function tick() {
-        if (!ttsState.active) { _ttsRafId = null; return; }
-        const audio = _vipAudio || _gttsAudio;
-        if (audio && !audio.paused && !audio.ended && isFinite(audio.duration)) {
-          setTTSProgress(ttsState.idx, audio.currentTime, audio);
-        }
-        _ttsRafId = requestAnimationFrame(tick);
-      }
-      _ttsRafId = requestAnimationFrame(tick);
-    }
-    function stopTTSProgressLoop() {
-      if (_ttsRafId) { cancelAnimationFrame(_ttsRafId); _ttsRafId = null; }
-    }
 
     // ── Seek on click / drag ──────────────────────────────────────
     const _ttsTrack = $('tts-track');
