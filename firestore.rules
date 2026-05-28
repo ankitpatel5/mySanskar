@@ -68,6 +68,20 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ── VIP TTS access list ──
+    // Keyed by email address; users can only read their own status
+    match /vipTTSUsers/{email} {
+      allow read:  if request.auth != null
+                   && (request.auth.token.email == email || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // ── Pre-rendered TTS audio index (read by any signed-in user) ──
+    match /prerenderedTTS/{storyId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
     // ── Shared playlists (public read, auth write) ──
     match /sharedPlaylists/{shareId} {
       allow read:   if true;

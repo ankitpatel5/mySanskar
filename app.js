@@ -73,6 +73,7 @@
     currentStory: null,
     currentCatId: null,
     storyListLang: localStorage.getItem('drift.storyListLang') || 'en',
+    isVIPTTS: false,
   };
 
   // ============== DOM ==============
@@ -133,6 +134,7 @@
 
     syncUserProfile(user);
     setupBlockedListener(user);
+    checkVIPTTSAccess(user);
     updateAdminUI();
   }
 
@@ -1601,7 +1603,7 @@
     if (voiceSheet) voiceSheet.classList.add('hidden');
 
     const defaultLang = getDefaultStoryLang();
-    if (ttsBar) ttsBar.classList.toggle('hidden', defaultLang !== 'en');
+    if (ttsBar) ttsBar.classList.toggle('hidden', !isTTSAvailableForLang(defaultLang));
 
     renderStoryReaderTitle();
     if (defaultLang !== 'en') setStoryLang(defaultLang);
@@ -1823,9 +1825,9 @@
     // Language toggle — only for text (non-video) stories with paragraphs
     renderLangToggle(hasParagraphs && !isVideo);
 
-    // TTS only available in English; hide for other languages
+    // TTS: always for VIP users; English-only for non-VIP
     const defaultLang = getDefaultStoryLang();
-    if (ttsBar) ttsBar.classList.toggle('hidden', !hasParagraphs || defaultLang !== 'en');
+    if (ttsBar) ttsBar.classList.toggle('hidden', !hasParagraphs || !isTTSAvailableForLang(defaultLang));
     if (voiceSheet) voiceSheet.classList.add('hidden');
 
     // Render title (English initially; updated again after lang switch below)
@@ -2360,7 +2362,7 @@
 
     // Render title based on default lang
     const defaultLangAI = getDefaultStoryLang();
-    if (ttsBar) ttsBar.classList.toggle('hidden', defaultLangAI !== 'en');
+    if (ttsBar) ttsBar.classList.toggle('hidden', !isTTSAvailableForLang(defaultLangAI));
 
     renderStoryReaderTitle();
 
@@ -2967,9 +2969,9 @@ ${numbered}`;
     renderLangToggle(true);
     stopTTS();
 
-    // TTS only available in English
+    // TTS: always for VIP users; English-only for non-VIP
     const ttsBar = $('story-tts-bar');
-    if (ttsBar) ttsBar.classList.toggle('hidden', lang !== 'en');
+    if (ttsBar) ttsBar.classList.toggle('hidden', !isTTSAvailableForLang(lang));
 
     // Update title + subtitle
     renderStoryReaderTitle();
@@ -3071,10 +3073,57 @@ ${numbered}`;
 
   // ============== TEXT-TO-SPEECH ==============
 
+  // Returns true when TTS should be visible for the given story language
+  function isTTSAvailableForLang(lang) {
+    if (state.isVIPTTS) return true;   // VIP: ElevenLabs (en) + Sarvam (gu / transliteration)
+    return lang === 'en';              // non-VIP: Web Speech English only
+  }
+
   const ttsState = { active: false, paused: false, idx: 0, voice: null, loading: false };
   let _ttsVoices = [];
   let _gttsAudio  = null;                    // current Google TTS Audio element
   const _gttsCache = new Map();              // 'text' -> blob URL (session memory)
+  let _vipAudio   = null;                    // current VIP TTS Audio element (ElevenLabs / Sarvam)
+  const _sarvamCache = new Map();            // 'model|speaker|langCode|text' -> blob URL
+  const _elevenLabsCache = new Map();        // 'text' -> blob URL
+  const _prerenderedCache = new Map();       // storyId -> {voice, paragraphUrls:{p0,p1,...}} | null
+
+  // Audiobook-quality voices curated for Gujarati narration
+  // model: 'bulbul:v2' voices are the original set; 'bulbul:v3' is the latest generation
+  const SARVAM_VOICES = [
+    // ── Female ──
+    { id: 'anushka',  model: 'bulbul:v2', gender: 'F', label: 'Anushka',  desc: 'Warm & Gentle' },
+    { id: 'manisha',  model: 'bulbul:v2', gender: 'F', label: 'Manisha',  desc: 'Clear & Expressive' },
+    { id: 'vidya',    model: 'bulbul:v2', gender: 'F', label: 'Vidya',    desc: 'Soft & Narrative' },
+    { id: 'priya',    model: 'bulbul:v3', gender: 'F', label: 'Priya',    desc: 'Warm & Expressive' },
+    { id: 'kavya',    model: 'bulbul:v3', gender: 'F', label: 'Kavya',    desc: 'Gentle & Clear' },
+    { id: 'simran',   model: 'bulbul:v3', gender: 'F', label: 'Simran',   desc: 'Soft & Lyrical' },
+    { id: 'tanya',    model: 'bulbul:v3', gender: 'F', label: 'Tanya',    desc: 'Calm & Steady' },
+    { id: 'suhani',   model: 'bulbul:v3', gender: 'F', label: 'Suhani',   desc: 'Bright & Warm' },
+    { id: 'roopa',    model: 'bulbul:v3', gender: 'F', label: 'Roopa',    desc: 'Rich & Full' },
+    { id: 'rupali',   model: 'bulbul:v3', gender: 'F', label: 'Rupali',   desc: 'Crisp & Natural' },
+    // ── Male ──
+    { id: 'abhilash', model: 'bulbul:v2', gender: 'M', label: 'Abhilash', desc: 'Deep & Composed' },
+    { id: 'karun',    model: 'bulbul:v2', gender: 'M', label: 'Karun',    desc: 'Strong & Clear' },
+    { id: 'ratan',    model: 'bulbul:v3', gender: 'M', label: 'Ratan',    desc: 'Rich & Authoritative' },
+    { id: 'advait',   model: 'bulbul:v3', gender: 'M', label: 'Advait',   desc: 'Calm & Deep' },
+    { id: 'rohan',    model: 'bulbul:v3', gender: 'M', label: 'Rohan',    desc: 'Clear & Engaging' },
+    { id: 'rahul',    model: 'bulbul:v3', gender: 'M', label: 'Rahul',    desc: 'Steady & Narrative' },
+    { id: 'manan',    model: 'bulbul:v3', gender: 'M', label: 'Manan',    desc: 'Smooth & Consistent' },
+    { id: 'kabir',    model: 'bulbul:v3', gender: 'M', label: 'Kabir',    desc: 'Bold & Resonant' },
+  ];
+  const SARVAM_DEFAULT_VOICE = 'rohan';
+
+  function getSarvamVoiceId() {
+    return localStorage.getItem('drift.sarvamVoice') || SARVAM_DEFAULT_VOICE;
+  }
+  function getSarvamVoiceObj(id) {
+    return SARVAM_VOICES.find((v) => v.id === (id || getSarvamVoiceId())) || SARVAM_VOICES[3]; // priya
+  }
+  function setSarvamVoice(id) {
+    localStorage.setItem('drift.sarvamVoice', id);
+    _sarvamCache.clear();  // invalidate cache — different voice, different audio
+  }
 
   // ── Google Cloud TTS (Neural2 Gujarati) ───────────────────────────────────
   async function fetchGTTSAudio(text) {
@@ -3115,6 +3164,141 @@ ${numbered}`;
     return url;
   }
 
+  // ── Sarvam API limit: 500 chars per request — split long text into chunks ──
+  function splitTextForSarvam(text, maxChars = 450) {
+    if (text.length <= maxChars) return [text];
+
+    const chunks = [];
+    // Split on sentence-ending punctuation (Gujarati । ॥ and Latin . ? !)
+    const sentences = text.split(/(?<=[.।?!॥])\s*/);
+    let current = '';
+
+    for (const sentence of sentences) {
+      const s = sentence.trim();
+      if (!s) continue;
+      if (current.length + (current ? 1 : 0) + s.length <= maxChars) {
+        current = current ? current + ' ' + s : s;
+      } else {
+        if (current) chunks.push(current);
+        if (s.length > maxChars) {
+          // Single sentence still too long — split at word boundaries
+          let remainder = s;
+          while (remainder.length > maxChars) {
+            const cut = remainder.lastIndexOf(' ', maxChars);
+            const splitAt = cut > 0 ? cut : maxChars;
+            chunks.push(remainder.substring(0, splitAt).trim());
+            remainder = remainder.substring(splitAt).trim();
+          }
+          current = remainder;
+        } else {
+          current = s;
+        }
+      }
+    }
+    if (current) chunks.push(current);
+    return chunks.filter((c) => c.length > 0);
+  }
+
+  // ── Pre-rendered TTS lookup (Firestore prerenderedTTS/{storyId}) ─────────
+  async function loadPrerenderedTTS(storyId) {
+    if (_prerenderedCache.has(storyId)) return _prerenderedCache.get(storyId);
+    try {
+      const doc = await window.fbDb.collection('prerenderedTTS').doc(storyId).get();
+      const data = doc.exists ? doc.data() : null;
+      _prerenderedCache.set(storyId, data);
+      return data;
+    } catch (e) {
+      _prerenderedCache.set(storyId, null);
+      return null;
+    }
+  }
+
+  // ── Sarvam AI TTS (Gujarati / Indian languages — VIP) ─────────────────────
+  async function fetchSarvamAudio(text, langCode, voiceId) {
+    const voice = getSarvamVoiceObj(voiceId);
+    const cacheKey = `${voice.model}|${voice.id}|${langCode}|${text}`;
+    if (_sarvamCache.has(cacheKey)) return _sarvamCache.get(cacheKey);
+
+    const key = (window.DRIFT_CONFIG || {}).sarvamKey || '';
+    if (!key) throw new Error('no-sarvam-key');
+
+    // Split text into ≤450-char chunks to respect Sarvam's 500-char API limit
+    const chunks = splitTextForSarvam(text);
+
+    const fetchChunk = async (chunk) => {
+      const res = await fetch('https://api.sarvam.ai/text-to-speech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'api-subscription-key': key,
+        },
+        body: JSON.stringify({
+          inputs: [chunk],
+          target_language_code: langCode,
+          speaker: voice.id,
+          model: voice.model,
+          enable_preprocessing: true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || data.message || `Sarvam HTTP ${res.status}`);
+      const b64 = data.audios?.[0];
+      if (!b64) throw new Error('No audio in Sarvam response');
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    };
+
+    // Fetch chunks sequentially (avoids rate limits) then concatenate MP3 bytes
+    const audioChunks = [];
+    for (const chunk of chunks) {
+      audioChunks.push(await fetchChunk(chunk));
+    }
+
+    // Concatenate all MP3 byte arrays into one Blob — MP3 frames are self-contained
+    const totalLength = audioChunks.reduce((sum, c) => sum + c.length, 0);
+    const combined = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const c of audioChunks) { combined.set(c, offset); offset += c.length; }
+
+    const url = URL.createObjectURL(new Blob([combined], { type: 'audio/mpeg' }));
+    _sarvamCache.set(cacheKey, url);
+    return url;
+  }
+
+  // ── ElevenLabs TTS (English — VIP) ────────────────────────────────────────
+  async function fetchElevenLabsAudio(text) {
+    if (_elevenLabsCache.has(text)) return _elevenLabsCache.get(text);
+
+    const cfg = window.DRIFT_CONFIG || {};
+    const key = cfg.elevenLabsKey || '';
+    if (!key) throw new Error('no-elevenlabs-key');
+    const voiceId = cfg.elevenLabsVoiceId || '21m00Tcm4TlvDq8ikWAM'; // Rachel
+
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'xi-api-key': key,
+      },
+      body: JSON.stringify({
+        text,
+        model_id: 'eleven_turbo_v2_5',
+        voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail?.message || `ElevenLabs HTTP ${res.status}`);
+    }
+    const buf = await res.arrayBuffer();
+    const url = URL.createObjectURL(new Blob([buf], { type: 'audio/mpeg' }));
+
+    _elevenLabsCache.set(text, url);
+    return url;
+  }
+
   // ── Load voices — they load async in most browsers ────────────────────────
   function loadVoices() {
     if (!('speechSynthesis' in window)) return;
@@ -3151,6 +3335,78 @@ ${numbered}`;
     const sheet = $('tts-voice-sheet');
     const list  = $('tts-voice-list');
     if (!sheet || !list) return;
+
+    // VIP users
+    if (state.isVIPTTS) {
+      const isEn = state.storyLang === 'en';
+
+      if (isEn) {
+        // English: ElevenLabs — no voice selection (single voice)
+        list.innerHTML = `
+          <div style="padding:20px 16px;text-align:center;color:var(--fg-2);font-size:14px;line-height:1.6;">
+            <div style="font-size:22px;margin-bottom:8px;">⭐</div>
+            <strong>ElevenLabs · Rachel</strong><br>
+            <span style="color:var(--fg-3);font-size:13px;">Natural English voice via ElevenLabs.</span>
+          </div>`;
+        sheet.classList.remove('hidden');
+        $('tts-voice-btn').classList.add('active');
+        return;
+      }
+
+      // Gujarati / Transliteration: Sarvam AI voice picker
+      const currentVoiceId = getSarvamVoiceId();
+      list.innerHTML = `
+        <div style="padding:12px 16px 6px;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--fg-3);">
+          Sarvam AI · Gujarati Voices
+        </div>
+        <div style="padding:4px 16px 10px;font-size:12px;color:var(--fg-3);">Female</div>`;
+
+      const femaleVoices = SARVAM_VOICES.filter((v) => v.gender === 'F');
+      const maleVoices   = SARVAM_VOICES.filter((v) => v.gender === 'M');
+
+      const buildItems = (voices) => {
+        voices.forEach((v) => {
+          const isSelected = v.id === currentVoiceId;
+          const item = document.createElement('div');
+          item.className = 'tts-voice-item' + (isSelected ? ' selected' : '');
+          item.innerHTML = `
+            <div class="tts-voice-item-info">
+              <div class="tts-voice-item-name">${v.label}</div>
+              <div class="tts-voice-item-lang">${v.desc} · ${v.model === 'bulbul:v2' ? 'v2' : 'v3 HD'}</div>
+            </div>
+            <svg class="tts-voice-item-check" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          `;
+          item.addEventListener('click', () => {
+            setSarvamVoice(v.id);
+            list.querySelectorAll('.tts-voice-item').forEach((el) => el.classList.remove('selected'));
+            item.classList.add('selected');
+            // Restart reading from current paragraph with new voice
+            if (ttsState.active) {
+              const resumeIdx = ttsState.idx;
+              stopTTS();
+              setTimeout(() => {
+                ttsState.active = true;
+                ttsState.paused = false;
+                speakParagraph(resumeIdx);
+                updateTTSUI();
+              }, 80);
+            }
+          });
+          list.appendChild(item);
+        });
+      };
+
+      buildItems(femaleVoices);
+      const maleDivider = document.createElement('div');
+      maleDivider.style.cssText = 'padding:8px 16px 4px;font-size:12px;color:var(--fg-3);';
+      maleDivider.textContent = 'Male';
+      list.appendChild(maleDivider);
+      buildItems(maleVoices);
+
+      sheet.classList.remove('hidden');
+      $('tts-voice-btn').classList.add('active');
+      return;
+    }
 
     // If Gujarati + Google TTS key configured, show info instead of voice list
     const gttsKey = (window.DRIFT_CONFIG || {}).googleTTSKey || '';
@@ -3222,10 +3478,12 @@ ${numbered}`;
 
   function startTTS() {
     if (!state.currentStory) return;
-    // Google TTS doesn't need speechSynthesis; only check for Web Speech fallback
-    const gttsKey = (window.DRIFT_CONFIG || {}).googleTTSKey || '';
-    if (!gttsKey && !('speechSynthesis' in window)) {
-      toast('Text-to-speech not supported on this device'); return;
+    if (!state.isVIPTTS) {
+      // Non-VIP: Google TTS doesn't need speechSynthesis; only check for Web Speech fallback
+      const gttsKey = (window.DRIFT_CONFIG || {}).googleTTSKey || '';
+      if (!gttsKey && !('speechSynthesis' in window)) {
+        toast('Text-to-speech not supported on this device'); return;
+      }
     }
     ttsState.active = true;
     ttsState.paused = false;
@@ -3237,7 +3495,9 @@ ${numbered}`;
 
   function pauseTTS() {
     if (!ttsState.active || ttsState.paused) return;
-    if (_gttsAudio) {
+    if (_vipAudio) {
+      _vipAudio.pause();
+    } else if (_gttsAudio) {
       _gttsAudio.pause();
     } else {
       window.speechSynthesis.pause();
@@ -3250,7 +3510,9 @@ ${numbered}`;
   function resumeTTS() {
     if (!ttsState.active || !ttsState.paused) return;
     ttsState.paused = false;
-    if (_gttsAudio) {
+    if (_vipAudio) {
+      _vipAudio.play().catch(() => speakParagraph(ttsState.idx));
+    } else if (_gttsAudio) {
       _gttsAudio.play().catch(() => speakParagraph(ttsState.idx));
     } else {
       // Some browsers (Chrome Android) don't resume well — restart paragraph instead
@@ -3267,6 +3529,14 @@ ${numbered}`;
   }
 
   function stopTTS() {
+    // Stop VIP TTS audio element (ElevenLabs / Sarvam)
+    if (_vipAudio) {
+      _vipAudio.pause();
+      _vipAudio.onended = null;
+      _vipAudio.onerror = null;
+      _vipAudio.src = '';
+      _vipAudio = null;
+    }
     // Stop Google TTS audio element
     if (_gttsAudio) {
       _gttsAudio.pause();
@@ -3312,6 +3582,97 @@ ${numbered}`;
 
     const text = paraEls[idx].textContent || '';
     const gttsKey = (window.DRIFT_CONFIG || {}).googleTTSKey || '';
+
+    // ── VIP TTS path (ElevenLabs for English, Sarvam for Gujarati/Transliteration) ──
+    if (state.isVIPTTS) {
+      ttsState.loading = true;
+      updateTTSUI();
+
+      try {
+        let audioUrl;
+        const isTransliteration = state.storyLang !== 'en' && state.storyLang !== 'gu';
+
+        if (state.storyLang === 'en') {
+          // English → ElevenLabs
+          audioUrl = await fetchElevenLabsAudio(text);
+        } else {
+          // Gujarati or Transliteration → check pre-rendered first, then Sarvam
+          let gujaratiText = text;
+          if (isTransliteration && state.currentStory) {
+            // DOM shows transliteration (roman script) — fetch Gujarati script from cache
+            const tc = loadTransCache(state.currentStory.id);
+            gujaratiText = tc?.gujarati?.[idx] || text;
+          }
+          const voiceId = getSarvamVoiceId();
+          // Try pre-rendered audio for this story/paragraph/voice
+          if (state.currentStory) {
+            const prerendered = await loadPrerenderedTTS(state.currentStory.id);
+            if (prerendered && prerendered.voice === voiceId && prerendered.paragraphUrls?.[`p${idx}`]) {
+              audioUrl = prerendered.paragraphUrls[`p${idx}`];
+              console.log(`[TTS] Using pre-rendered audio for ${state.currentStory.id} p${idx}`);
+            }
+          }
+          if (!audioUrl) {
+            audioUrl = await fetchSarvamAudio(gujaratiText, 'gu-IN', voiceId);
+          }
+        }
+
+        // Guard: user may have stopped/paused while we were fetching
+        if (!ttsState.active || ttsState.paused) { ttsState.loading = false; return; }
+
+        // Stop any previously playing VIP audio
+        if (_vipAudio) {
+          _vipAudio.pause();
+          _vipAudio.onended = null;
+          _vipAudio.onerror = null;
+        }
+
+        _vipAudio = new Audio(audioUrl);
+        ttsState.loading = false;
+        updateTTSUI();
+
+        _vipAudio.onended = () => {
+          if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1);
+        };
+        _vipAudio.onerror = () => {
+          console.warn('VIP TTS audio playback error');
+          if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1);
+        };
+        await _vipAudio.play();
+
+        // Pre-fetch next paragraph in background to eliminate gap
+        if (idx + 1 < paraEls.length) {
+          const nextText = paraEls[idx + 1].textContent || '';
+          if (state.storyLang === 'en') {
+            fetchElevenLabsAudio(nextText).catch(() => {});
+          } else {
+            let nextGujaratiText = nextText;
+            if (isTransliteration && state.currentStory) {
+              const tc = loadTransCache(state.currentStory.id);
+              nextGujaratiText = tc?.gujarati?.[idx + 1] || nextText;
+            }
+            // Only call Sarvam if pre-rendered version isn't already available
+            (async () => {
+              const nextVoiceId = getSarvamVoiceId();
+              let hasPrerendered = false;
+              if (state.currentStory) {
+                const prerendered = await loadPrerenderedTTS(state.currentStory.id);
+                hasPrerendered = !!(prerendered && prerendered.voice === nextVoiceId && prerendered.paragraphUrls?.[`p${idx + 1}`]);
+              }
+              if (!hasPrerendered) {
+                fetchSarvamAudio(nextGujaratiText, 'gu-IN', nextVoiceId).catch(() => {});
+              }
+            })();
+          }
+        }
+        return;
+
+      } catch (e) {
+        ttsState.loading = false;
+        console.warn('VIP TTS failed, falling back to standard path:', e.message);
+        // Fall through to Google TTS / Web Speech
+      }
+    }
 
     // ── Google Cloud TTS path (Gujarati) ──────────────────────────────────
     if (state.storyLang === 'gu' && gttsKey) {
@@ -3396,7 +3757,7 @@ ${numbered}`;
     const isPlaying = ttsState.active && !ttsState.paused && !ttsState.loading;
     const isPaused  = ttsState.active && ttsState.paused;
     const gttsKey   = (window.DRIFT_CONFIG || {}).googleTTSKey || '';
-    const usingGTTS = state.storyLang === 'gu' && !!gttsKey;
+    const usingGTTS = !state.isVIPTTS && state.storyLang === 'gu' && !!gttsKey;
 
     // Loading spinner replaces the play icon while fetching first paragraph
     if (isLoading) {
@@ -3416,6 +3777,13 @@ ${numbered}`;
         label.textContent = 'Reading…';
       } else if (isPaused) {
         label.textContent = 'Paused';
+      } else if (state.isVIPTTS) {
+        if (state.storyLang === 'en') {
+          label.textContent = '⭐ ElevenLabs';
+        } else {
+          const v = getSarvamVoiceObj();
+          label.textContent = `⭐ ${v.label}`;
+        }
       } else if (usingGTTS) {
         label.textContent = 'Neural · Google';
       } else {
@@ -3653,6 +4021,23 @@ ${numbered}`;
     }
   }
 
+  async function checkVIPTTSAccess(user) {
+    if (!user?.email) return;
+    try {
+      const doc = await window.fbDb.collection('vipTTSUsers').doc(user.email).get();
+      state.isVIPTTS = doc.exists;
+      updateTTSUI();
+      // If the user is already on a story when VIP status resolves, show the TTS bar
+      if (state.isVIPTTS && state.currentStory) {
+        const ttsBar = $('story-tts-bar');
+        if (ttsBar) ttsBar.classList.remove('hidden');
+      }
+    } catch (e) {
+      console.warn('VIP TTS check failed — defaulting to standard TTS', e);
+      state.isVIPTTS = false;
+    }
+  }
+
   function setupBlockedListener(user) {
     // 1. Real-time listener — fires instantly while the tab is active
     const unsub = window.fbDb.collection('blockedUsers').doc(user.uid)
@@ -3732,6 +4117,8 @@ ${numbered}`;
     content.innerHTML = '<div class="admin-loading">Loading…</div>';
     if (adminCurrentTab === 'users') {
       await loadAdminUsers();
+    } else if (adminCurrentTab === 'viptts') {
+      await loadAdminVIPTTS();
     } else {
       await loadAdminSongs();
     }
@@ -3794,6 +4181,105 @@ ${numbered}`;
       console.error('loadAdminSongs failed', e);
       $('admin-content').innerHTML =
         '<div class="admin-loading">Failed to load songs. Check Firestore rules.</div>';
+    }
+  }
+
+  // ── VIP TTS Admin ──────────────────────────────────────────────────────────
+  async function loadAdminVIPTTS() {
+    try {
+      const snap = await window.fbDb.collection('vipTTSUsers').get();
+      const users = snap.docs.map((d) => ({ email: d.id, ...d.data() }));
+      renderAdminVIPTTS(users);
+    } catch (e) {
+      console.error('loadAdminVIPTTS failed', e);
+      $('admin-content').innerHTML =
+        '<div class="admin-loading">Failed to load VIP TTS users. Check Firestore rules.</div>';
+    }
+  }
+
+  function renderAdminVIPTTS(users) {
+    const content = $('admin-content');
+    content.innerHTML = `
+      <div style="padding:12px 0 8px;display:flex;gap:8px;align-items:center;">
+        <input id="vip-tts-email-input" type="email" placeholder="user@example.com"
+          style="flex:1;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-2);color:var(--fg);font-size:14px;"/>
+        <button id="vip-tts-grant-btn"
+          style="padding:9px 16px;border-radius:8px;background:var(--accent);color:#fff;border:none;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;">
+          Grant Access
+        </button>
+      </div>
+      <div style="font-size:12px;color:var(--fg-3);margin-bottom:12px;">
+        English → ElevenLabs &nbsp;·&nbsp; Gujarati / Transliteration → Sarvam AI
+      </div>`;
+
+    $('vip-tts-grant-btn').addEventListener('click', () => {
+      const email = $('vip-tts-email-input')?.value?.trim();
+      grantVIPTTS(email);
+    });
+
+    if (!users.length) {
+      const empty = document.createElement('div');
+      empty.className = 'admin-loading';
+      empty.style.paddingTop = '12px';
+      empty.textContent = 'No VIP TTS users yet.';
+      content.appendChild(empty);
+      return;
+    }
+
+    const list = document.createElement('div');
+    list.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+    users.forEach((u) => {
+      const row = document.createElement('div');
+      row.style.cssText =
+        'display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--bg-2);';
+      const grantedDate = u.grantedAt ? new Date(u.grantedAt).toLocaleDateString() : '';
+      const revokeBtn = document.createElement('button');
+      revokeBtn.textContent = 'Revoke';
+      revokeBtn.style.cssText =
+        'padding:5px 11px;border-radius:7px;background:rgba(255,80,80,0.12);color:#f44336;border:none;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;';
+      revokeBtn.addEventListener('click', () => revokeVIPTTS(u.email));
+      row.innerHTML = `
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(u.email)}</div>
+          ${grantedDate ? `<div style="font-size:12px;color:var(--fg-3);">Granted ${grantedDate}${u.grantedBy ? ` by ${escapeHtml(u.grantedBy)}` : ''}</div>` : ''}
+        </div>
+        <span style="padding:3px 8px;border-radius:12px;background:rgba(100,200,100,0.15);color:#4caf50;font-size:11px;font-weight:700;letter-spacing:.4px;">VIP</span>`;
+      row.appendChild(revokeBtn);
+      list.appendChild(row);
+    });
+    content.appendChild(list);
+  }
+
+  async function grantVIPTTS(email) {
+    if (!email) { toast('Enter an email address'); return; }
+    if (!isAdmin()) return;
+    try {
+      await window.fbDb.collection('vipTTSUsers').doc(email).set({
+        grantedAt: Date.now(),
+        grantedBy: state.user?.email || '',
+      });
+      toast(`✅ VIP TTS granted to ${email}`);
+      loadAdminData('viptts');
+    } catch (e) {
+      console.error('grantVIPTTS failed', e);
+      toast('Failed to grant VIP TTS access');
+    }
+  }
+
+  async function revokeVIPTTS(email) {
+    if (!isAdmin()) return;
+    try {
+      await window.fbDb.collection('vipTTSUsers').doc(email).delete();
+      toast(`VIP TTS revoked for ${email}`);
+      // Live-update if the currently signed-in user was revoked
+      if (state.user?.email === email) {
+        state.isVIPTTS = false;
+        updateTTSUI();
+      }
+      loadAdminData('viptts');
+    } catch (e) {
+      console.error('revokeVIPTTS failed', e);
+      toast('Failed to revoke VIP TTS access');
     }
   }
 
