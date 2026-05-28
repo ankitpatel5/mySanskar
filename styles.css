@@ -2973,6 +2973,39 @@ body[data-story-size="xl"] .story-para { font-size: 24px; line-height: 1.85; }
 .tts-speed-btn:hover { background: var(--accent-soft); color: var(--accent); }
 .tts-speed-btn.speed-active { background: var(--accent-soft); color: var(--accent); }
 
+/* Audio language pill (EN · GU) */
+.tts-audio-lang-pill {
+  display: flex;
+  align-items: center;
+  background: var(--bg-3);
+  border-radius: 12px;
+  overflow: hidden;
+  flex-shrink: 0;
+  height: 28px;
+  transition: box-shadow 0.2s;
+}
+.tts-audio-lang-pill.tts-lang-mismatch {
+  box-shadow: 0 0 0 1.5px var(--accent);
+}
+.tts-lang-btn {
+  background: none;
+  border: none;
+  color: var(--fg-3);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0 8px;
+  height: 100%;
+  transition: background 0.12s, color 0.12s;
+}
+.tts-lang-btn:hover { color: var(--fg-1); }
+.tts-lang-btn.tts-lang-active {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 12px;
+}
+
 /* Voice picker sheet */
 .tts-voice-sheet {
   background: var(--bg-elev);

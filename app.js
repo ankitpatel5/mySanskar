@@ -3084,6 +3084,8 @@ ${numbered}`;
 
   const ttsState = { active: false, paused: false, idx: 0, voice: null, loading: false };
   let _ttsVoices = [];
+  const TTS_AUDIO_LANG_KEY = 'drift.ttsAudioLang';
+  let _ttsAudioLang = localStorage.getItem(TTS_AUDIO_LANG_KEY) || 'en'; // 'en' | 'gu'
   let _ttsTotal        = 0;   // total paragraph count, for progress bar
   let _ttsParaDurs     = [];  // known audio durations per paragraph index
   let _ttsElapsedBefore = 0; // sum of durations of paragraphs before current one
@@ -3673,8 +3675,8 @@ ${numbered}`;
     const text = paraEls[idx].textContent || '';
     const gttsKey = (window.DRIFT_CONFIG || {}).googleTTSKey || '';
 
-    // ── Gujarati / Transliteration: ONLY use prerendered Firebase audio, no API fallbacks ──
-    if (state.storyLang !== 'en') {
+    // ── Gujarati audio: use prerendered Firebase audio (driven by _ttsAudioLang, not text tab) ──
+    if (_ttsAudioLang === 'gu') {
       ttsState.loading = true;
       updateTTSUI();
       try {
@@ -3868,6 +3870,36 @@ ${numbered}`;
       const timeEl = $('tts-time');
       if (timeEl) timeEl.textContent = '';
     }
+
+    updateTTSAudioLangUI();
+  }
+
+  function updateTTSAudioLangUI() {
+    const pill = $('tts-audio-lang-pill');
+    if (!pill) return;
+    const enBtn = pill.querySelector('[data-audio-lang="en"]');
+    const guBtn = pill.querySelector('[data-audio-lang="gu"]');
+    if (!enBtn || !guBtn) return;
+    enBtn.classList.toggle('tts-lang-active', _ttsAudioLang === 'en');
+    guBtn.classList.toggle('tts-lang-active', _ttsAudioLang === 'gu');
+    // Glow the pill when audio language differs from text tab
+    pill.classList.toggle('tts-lang-mismatch', _ttsAudioLang !== 'en' && state.storyLang === 'en'
+      || _ttsAudioLang === 'en' && state.storyLang !== 'en');
+  }
+
+  function setTTSAudioLang(lang) {
+    _ttsAudioLang = lang;
+    localStorage.setItem(TTS_AUDIO_LANG_KEY, lang);
+    // If TTS is currently playing, restart from current paragraph with new audio lang
+    if (ttsState.active && !ttsState.paused) {
+      if (_vipAudio) { _vipAudio.pause(); _vipAudio.onended = null; _vipAudio.onerror = null; _vipAudio = null; }
+      if (_gttsAudio) { _gttsAudio.pause(); _gttsAudio.onended = null; _gttsAudio.onerror = null; _gttsAudio = null; }
+      window.speechSynthesis && window.speechSynthesis.cancel();
+      _ttsParaDurs = [];
+      _ttsElapsedBefore = 0;
+      speakParagraph(ttsState.idx);
+    }
+    updateTTSAudioLangUI();
   }
 
   // ============== SEARCH ==============
@@ -4896,6 +4928,17 @@ ${numbered}`;
       else pauseTTS();
     });
     $('tts-stop-btn').addEventListener('click', stopTTS);
+
+    // ── Audio language pill ───────────────────────────────────────
+    const _ttsPill = $('tts-audio-lang-pill');
+    if (_ttsPill) {
+      _ttsPill.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-audio-lang]');
+        if (!btn) return;
+        setTTSAudioLang(btn.dataset.audioLang);
+      });
+    }
+    updateTTSAudioLangUI();
 
     // ── Playback speed ────────────────────────────────────────────
     function applyTTSSpeed(speed) {
