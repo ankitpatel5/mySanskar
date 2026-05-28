@@ -3084,6 +3084,10 @@ ${numbered}`;
 
   const ttsState = { active: false, paused: false, idx: 0, voice: null, loading: false };
   let _ttsVoices = [];
+  const TTS_SPEED_KEY   = 'drift.ttsSpeed';
+  const TTS_SPEED_STEPS = [0.5, 0.75, 1, 1.5, 2];
+  let _ttsSpeed = parseFloat(localStorage.getItem(TTS_SPEED_KEY) || '1');
+  if (!TTS_SPEED_STEPS.includes(_ttsSpeed)) _ttsSpeed = 1;
   let _gttsAudio  = null;                    // current Google TTS Audio element
   const _gttsCache = new Map();              // 'text' -> blob URL (session memory)
   let _vipAudio   = null;                    // current VIP TTS Audio element (ElevenLabs / Sarvam)
@@ -4812,11 +4816,6 @@ ${numbered}`;
     $('tts-stop-btn').addEventListener('click', stopTTS);
 
     // ── Playback speed ────────────────────────────────────────────
-    const TTS_SPEED_KEY   = 'drift.ttsSpeed';
-    const TTS_SPEED_STEPS = [0.5, 0.75, 1, 1.5, 2];
-    let _ttsSpeed = parseFloat(localStorage.getItem(TTS_SPEED_KEY) || '1');
-    if (!TTS_SPEED_STEPS.includes(_ttsSpeed)) _ttsSpeed = 1;
-
     function applyTTSSpeed(speed) {
       _ttsSpeed = speed;
       localStorage.setItem(TTS_SPEED_KEY, String(speed));
