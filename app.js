@@ -3084,6 +3084,7 @@ ${numbered}`;
 
   const ttsState = { active: false, paused: false, idx: 0, voice: null, loading: false };
   let _ttsVoices = [];
+  let _ttsTotal  = 0;   // total paragraph count, for progress bar
   const TTS_SPEED_KEY   = 'drift.ttsSpeed';
   const TTS_SPEED_STEPS = [0.5, 0.75, 1, 1.5, 2];
   let _ttsSpeed = parseFloat(localStorage.getItem(TTS_SPEED_KEY) || '1');
@@ -3530,8 +3531,10 @@ ${numbered}`;
     ttsState.paused = false;
     if (_vipAudio) {
       _vipAudio.play().catch(() => speakParagraph(ttsState.idx));
+      startTTSProgressLoop();
     } else if (_gttsAudio) {
       _gttsAudio.play().catch(() => speakParagraph(ttsState.idx));
+      startTTSProgressLoop();
     } else {
       // Some browsers (Chrome Android) don't resume well — restart paragraph instead
       window.speechSynthesis.resume();
@@ -3571,6 +3574,7 @@ ${numbered}`;
     ttsState.active  = false;
     ttsState.paused  = false;
     ttsState.loading = false;
+    stopTTSProgressLoop();
     ttsState.idx     = 0;
     document.querySelectorAll('.story-para.tts-active').forEach((el) => el.classList.remove('tts-active'));
     updateTTSUI();
@@ -3594,10 +3598,9 @@ ${numbered}`;
     const activeEl = document.querySelector(`.story-para[data-idx="${idx}"]`);
     if (activeEl) activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-    // Progress bar
-    const total = paraEls.length;
-    const bar = $('tts-progress-bar');
-    if (bar) bar.style.width = total > 1 ? `${(idx / (total - 1)) * 100}%` : '100%';
+    // Progress bar — paragraph-level snapshot; rAF loop refines in real-time
+    _ttsTotal = paraEls.length;
+    setTTSProgress(idx, 0, null);
 
     const text = paraEls[idx].textContent || '';
     const gttsKey = (window.DRIFT_CONFIG || {}).googleTTSKey || '';
@@ -3628,6 +3631,7 @@ ${numbered}`;
         _vipAudio.onended = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
         _vipAudio.onerror = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
         await _vipAudio.play();
+        startTTSProgressLoop();
       } catch (e) {
         ttsState.loading = false;
         console.warn('[TTS] Prerendered audio playback error:', e.message);
@@ -3650,6 +3654,7 @@ ${numbered}`;
         _vipAudio.onended = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
         _vipAudio.onerror = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
         await _vipAudio.play();
+        startTTSProgressLoop();
         if (idx + 1 < paraEls.length) fetchElevenLabsAudio(paraEls[idx + 1].textContent || '').catch(() => {});
         return;
       } catch (e) {
@@ -3693,6 +3698,7 @@ ${numbered}`;
           if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1);
         };
         await _gttsAudio.play();
+        startTTSProgressLoop();
 
         // Pre-fetch next paragraph in background to eliminate gap between paragraphs
         if (idx + 1 < paraEls.length) {
@@ -3783,8 +3789,10 @@ ${numbered}`;
     if (stopBtn) stopBtn.classList.toggle('hidden', !ttsState.active);
 
     if (!ttsState.active) {
-      const bar = $('tts-progress-bar');
-      if (bar) bar.style.width = '0%';
+      setTTSProgress(0, 0, null);
+      _ttsTotal = 0;
+      const timeEl = $('tts-time');
+      if (timeEl) timeEl.textContent = '';
     }
   }
 
@@ -4838,6 +4846,119 @@ ${numbered}`;
       const next = TTS_SPEED_STEPS[(idx + 1) % TTS_SPEED_STEPS.length];
       applyTTSSpeed(next);
     });
+
+    // ── Progress bar helpers ──────────────────────────────────────
+    function fmtTime(secs) {
+      if (!isFinite(secs) || secs < 0) return '';
+      const m = Math.floor(secs / 60);
+      const s = Math.floor(secs % 60);
+      return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    // setTTSProgress(paragraphIdx, currentTime, audio?)
+    // Paints the bar + thumb + time label at an exact position.
+    function setTTSProgress(paraIdx, currentTime, audio) {
+      const total = _ttsTotal;
+      const bar   = $('tts-progress-bar');
+      const thumb = $('tts-thumb');
+      const track = $('tts-track');
+      const timeEl = $('tts-time');
+      if (!bar) return;
+
+      let fraction;
+      if (total <= 1) {
+        // Single paragraph — fill is driven purely by currentTime/duration
+        const dur = audio ? audio.duration : 0;
+        fraction = (dur > 0) ? Math.min(currentTime / dur, 1) : (ttsState.active ? 1 : 0);
+      } else {
+        const dur = audio ? audio.duration : 0;
+        const within = (dur > 0) ? Math.min(currentTime / dur, 1) : 0;
+        fraction = Math.min((paraIdx + within) / total, 1);
+      }
+
+      const pct = (fraction * 100).toFixed(2) + '%';
+      bar.style.width = pct;
+      if (thumb) thumb.style.left = pct;
+      if (track) track.setAttribute('aria-valuenow', Math.round(fraction * 100));
+
+      // Time label: show elapsed / total when audio duration is known
+      if (timeEl && audio && isFinite(audio.duration) && audio.duration > 0) {
+        // Approximate total duration as duration-per-para × total (rough but useful)
+        const elapsed = paraIdx * audio.duration + currentTime;
+        timeEl.textContent = fmtTime(currentTime) + ' / ' + fmtTime(audio.duration);
+      }
+    }
+
+    // rAF loop — runs while TTS is active, updates bar from live audio currentTime
+    let _ttsRafId = null;
+    function startTTSProgressLoop() {
+      if (_ttsRafId) return;
+      function tick() {
+        if (!ttsState.active) { _ttsRafId = null; return; }
+        const audio = _vipAudio || _gttsAudio;
+        if (audio && !audio.paused && !audio.ended && isFinite(audio.duration)) {
+          setTTSProgress(ttsState.idx, audio.currentTime, audio);
+        }
+        _ttsRafId = requestAnimationFrame(tick);
+      }
+      _ttsRafId = requestAnimationFrame(tick);
+    }
+    function stopTTSProgressLoop() {
+      if (_ttsRafId) { cancelAnimationFrame(_ttsRafId); _ttsRafId = null; }
+    }
+
+    // ── Seek on click / drag ──────────────────────────────────────
+    const _ttsTrack = $('tts-track');
+    if (_ttsTrack) {
+      function seekFromEvent(e) {
+        if (!ttsState.active) return;
+        const rect = _ttsTrack.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const fraction = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+        const total = _ttsTotal;
+        if (!total) return;
+
+        const targetParaIdx = Math.min(Math.floor(fraction * total), total - 1);
+        const withinFrac    = (fraction * total) - targetParaIdx;
+        const audio = _vipAudio || _gttsAudio;
+
+        if (targetParaIdx !== ttsState.idx) {
+          // Jump to a different paragraph
+          if (ttsState.paused) {
+            // Will resume at new paragraph
+            ttsState.paused = false;
+          }
+          speakParagraph(targetParaIdx);
+        } else if (audio && isFinite(audio.duration) && audio.duration > 0) {
+          // Same paragraph — seek within
+          audio.currentTime = withinFrac * audio.duration;
+          setTTSProgress(ttsState.idx, audio.currentTime, audio);
+        }
+      }
+
+      let _ttsPointerDown = false;
+      _ttsTrack.addEventListener('pointerdown', (e) => {
+        if (!ttsState.active) return;
+        _ttsPointerDown = true;
+        _ttsTrack.classList.add('tts-dragging');
+        _ttsTrack.setPointerCapture(e.pointerId);
+        seekFromEvent(e);
+      });
+      _ttsTrack.addEventListener('pointermove', (e) => {
+        if (!_ttsPointerDown) return;
+        seekFromEvent(e);
+      });
+      _ttsTrack.addEventListener('pointerup', (e) => {
+        if (!_ttsPointerDown) return;
+        _ttsPointerDown = false;
+        _ttsTrack.classList.remove('tts-dragging');
+        seekFromEvent(e);
+      });
+      _ttsTrack.addEventListener('pointercancel', () => {
+        _ttsPointerDown = false;
+        _ttsTrack.classList.remove('tts-dragging');
+      });
+    }
 
     $('tts-voice-btn').addEventListener('click', () => {
       const sheet = $('tts-voice-sheet');

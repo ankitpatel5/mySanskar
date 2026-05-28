@@ -2861,20 +2861,61 @@ body[data-story-size="xl"] .story-para { font-size: 24px; line-height: 1.85; }
   text-overflow: ellipsis;
 }
 
+/* TTS progress track — seekable */
+.tts-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.tts-time {
+  font-size: 10px;
+  color: var(--fg-3);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 60px;
+  text-align: right;
+}
 .tts-track {
   width: 100%;
   height: 4px;
   background: var(--bg-3);
   border-radius: 2px;
-  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  transition: height 0.15s ease;
+  /* no overflow:hidden — thumb needs to stick out */
 }
-
-.tts-progress-bar {
+.tts-track:hover,
+.tts-track.tts-dragging {
+  height: 6px;
+}
+.tts-progress-fill {
   height: 100%;
   width: 0%;
   background: var(--accent);
   border-radius: 2px;
-  transition: width 0.4s ease;
+  pointer-events: none;
+  /* no transition — updated in rAF loop for smoothness */
+}
+.tts-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.15s ease;
+  pointer-events: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+}
+.tts-track:hover .tts-thumb,
+.tts-track.tts-dragging .tts-thumb {
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .tts-stop-btn {

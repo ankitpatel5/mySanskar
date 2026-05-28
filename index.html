@@ -454,9 +454,13 @@
               <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
             </button>
             <div class="tts-center">
-              <div class="tts-label" id="tts-label">Read aloud</div>
-              <div class="tts-track">
-                <div class="tts-progress-bar" id="tts-progress-bar"></div>
+              <div class="tts-meta-row">
+                <div class="tts-label" id="tts-label">Read aloud</div>
+                <div class="tts-time" id="tts-time"></div>
+              </div>
+              <div class="tts-track" id="tts-track" role="slider" aria-label="Playback position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div class="tts-progress-fill" id="tts-progress-bar"></div>
+                <div class="tts-thumb" id="tts-thumb"></div>
               </div>
             </div>
             <button id="tts-stop-btn" class="tts-stop-btn hidden" aria-label="Stop reading">
