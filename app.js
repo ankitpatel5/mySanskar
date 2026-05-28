@@ -4556,7 +4556,21 @@ ${numbered}`;
   }
 
   // ============== EVENTS ==============
+  // Safe addEventListener helper — silently skips if the element doesn't exist
+  // so a single missing DOM node never crashes the entire boot sequence
+  function on(id, event, handler) {
+    const el = typeof id === 'string' ? $(id) : id;
+    if (el) el.addEventListener(event, handler);
+    else console.warn(`setupEventListeners: #${id} not found`);
+  }
+
   function setupEventListeners() {
+    try { _setupEventListenersInner(); } catch(e) {
+      console.error('setupEventListeners crashed — app may be partially wired:', e);
+    }
+  }
+
+  function _setupEventListenersInner() {
     // Main tabs
     document.querySelectorAll('.tab').forEach((t) => {
       t.addEventListener('click', () => switchTab(t.dataset.tab));
@@ -5179,7 +5193,7 @@ ${numbered}`;
 
     updateLoopUI();
     updateShuffleUI();
-  }
+  } // end _setupEventListenersInner
 
   function setupSheetSwipe() {
     const sheet = $('player-sheet');
