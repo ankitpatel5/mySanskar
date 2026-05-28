@@ -42,3 +42,6 @@ package.json
 
 # Claude session data
 .claude/
+
+# Local config — contains real API keys, never commit
+config.js
