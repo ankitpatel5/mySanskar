@@ -3653,10 +3653,10 @@ ${numbered}`;
             gujaratiText = tc?.gujarati?.[idx] || text;
           }
           const voiceId = getSarvamVoiceId();
-          // Try pre-rendered audio for this story/paragraph/voice
+          // Try pre-rendered audio first (voice match not required — use what we have)
           if (state.currentStory) {
             const prerendered = await loadPrerenderedTTS(state.currentStory.id);
-            if (prerendered && prerendered.voice === voiceId && prerendered.paragraphUrls?.[`p${idx}`]) {
+            if (prerendered && prerendered.paragraphUrls?.[`p${idx}`]) {
               audioUrl = prerendered.paragraphUrls[`p${idx}`];
               console.log(`[TTS] Using pre-rendered audio for ${state.currentStory.id} p${idx}`);
             }
@@ -3706,7 +3706,7 @@ ${numbered}`;
               let hasPrerendered = false;
               if (state.currentStory) {
                 const prerendered = await loadPrerenderedTTS(state.currentStory.id);
-                hasPrerendered = !!(prerendered && prerendered.voice === nextVoiceId && prerendered.paragraphUrls?.[`p${idx + 1}`]);
+                hasPrerendered = !!(prerendered && prerendered.paragraphUrls?.[`p${idx + 1}`]);
               }
               if (!hasPrerendered) {
                 fetchSarvamAudio(nextGujaratiText, 'gu-IN', nextVoiceId).catch(() => {});
