@@ -401,6 +401,38 @@ input { font-family: inherit; color: inherit; }
 }
 .content::-webkit-scrollbar { width: 0; }
 
+/* ── Pull-to-refresh indicator ──────────────────────────────── */
+.ptr-indicator {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--safe-top) + var(--topbar-h));
+  transform: translateX(-50%) translateY(-56px);
+  z-index: 100;
+  width: 40px; height: 40px;
+  background: var(--bg-2);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.35);
+  pointer-events: none;
+  will-change: transform;
+}
+.ptr-indicator svg {
+  transition: transform .2s ease, color .15s;
+  color: var(--fg-2);
+}
+.ptr-indicator.ptr-ready svg {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+.ptr-indicator.ptr-spinning svg {
+  animation: ptr-spin .7s linear infinite;
+  color: var(--accent);
+}
+@keyframes ptr-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 /* ── Music sub-navigation (Library / Playlists / Queue) ──────── */
 .music-subnav {
   position: sticky;
