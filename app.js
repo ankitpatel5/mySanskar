@@ -3618,6 +3618,7 @@ ${numbered}`;
 
         if (_vipAudio) { _vipAudio.pause(); _vipAudio.onended = null; _vipAudio.onerror = null; }
         _vipAudio = new Audio(audioUrl);
+        _vipAudio.playbackRate = _ttsSpeed;
         ttsState.loading = false;
         updateTTSUI();
         _vipAudio.onended = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
@@ -3639,6 +3640,7 @@ ${numbered}`;
         if (!ttsState.active || ttsState.paused) { ttsState.loading = false; return; }
         if (_vipAudio) { _vipAudio.pause(); _vipAudio.onended = null; _vipAudio.onerror = null; }
         _vipAudio = new Audio(audioUrl);
+        _vipAudio.playbackRate = _ttsSpeed;
         ttsState.loading = false;
         updateTTSUI();
         _vipAudio.onended = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
@@ -3675,6 +3677,7 @@ ${numbered}`;
         }
 
         _gttsAudio = new Audio(audioUrl);
+        _gttsAudio.playbackRate = _ttsSpeed;
         ttsState.loading = false;
         updateTTSUI();
 
@@ -3703,7 +3706,7 @@ ${numbered}`;
 
     // ── Web Speech fallback (English, Transliteration, or no Google key) ──
     const utter = new SpeechSynthesisUtterance(text);
-    utter.rate = 0.92;
+    utter.rate = _ttsSpeed;
 
     if (state.storyLang === 'gu') {
       // No Google TTS key — try OS Gujarati voice
@@ -4807,6 +4810,36 @@ ${numbered}`;
       else pauseTTS();
     });
     $('tts-stop-btn').addEventListener('click', stopTTS);
+
+    // ── Playback speed ────────────────────────────────────────────
+    const TTS_SPEED_KEY   = 'drift.ttsSpeed';
+    const TTS_SPEED_STEPS = [0.5, 0.75, 1, 1.5, 2];
+    let _ttsSpeed = parseFloat(localStorage.getItem(TTS_SPEED_KEY) || '1');
+    if (!TTS_SPEED_STEPS.includes(_ttsSpeed)) _ttsSpeed = 1;
+
+    function applyTTSSpeed(speed) {
+      _ttsSpeed = speed;
+      localStorage.setItem(TTS_SPEED_KEY, String(speed));
+      const label = speed === 1 ? '1x' : speed + 'x';
+      const btn = $('tts-speed-btn');
+      if (btn) {
+        btn.textContent = label;
+        btn.classList.toggle('speed-active', speed !== 1);
+      }
+      // Apply to any currently playing audio
+      if (_vipAudio) _vipAudio.playbackRate = speed;
+      if (_gttsAudio) _gttsAudio.playbackRate = speed;
+    }
+
+    // Restore persisted speed on boot
+    applyTTSSpeed(_ttsSpeed);
+
+    $('tts-speed-btn').addEventListener('click', () => {
+      const idx = TTS_SPEED_STEPS.indexOf(_ttsSpeed);
+      const next = TTS_SPEED_STEPS[(idx + 1) % TTS_SPEED_STEPS.length];
+      applyTTSSpeed(next);
+    });
+
     $('tts-voice-btn').addEventListener('click', () => {
       const sheet = $('tts-voice-sheet');
       if (sheet && !sheet.classList.contains('hidden')) closeVoicePicker();

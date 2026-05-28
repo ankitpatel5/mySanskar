@@ -2910,6 +2910,28 @@ body[data-story-size="xl"] .story-para { font-size: 24px; line-height: 1.85; }
 
 .tts-voice-btn:hover, .tts-voice-btn.active { background: var(--accent-soft); color: var(--accent); }
 
+/* Speed button */
+.tts-speed-btn {
+  background: var(--bg-3);
+  border: none;
+  color: var(--fg-2);
+  cursor: pointer;
+  height: 32px;
+  min-width: 36px;
+  padding: 0 6px;
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s;
+  flex-shrink: 0;
+}
+.tts-speed-btn:hover { background: var(--accent-soft); color: var(--accent); }
+.tts-speed-btn.speed-active { background: var(--accent-soft); color: var(--accent); }
+
 /* Voice picker sheet */
 .tts-voice-sheet {
   background: var(--bg-elev);
