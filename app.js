@@ -3717,7 +3717,35 @@ ${numbered}`;
       return;
     }
 
-    // ── English: ElevenLabs (VIP) or Web Speech / Google TTS ──
+    // ── English: prerendered Sarvam (sumit) if available, else ElevenLabs / Web Speech ──
+    // Check for prerendered English audio first
+    if (_ttsAudioLang === 'en' && state.currentStory) {
+      const prerendered = await loadPrerenderedTTS(state.currentStory.id);
+      const audioUrl = prerendered?.enParagraphUrls?.[`p${idx}`] || null;
+      if (!ttsState.active || ttsState.paused) { ttsState.loading = false; return; }
+      if (audioUrl) {
+        ttsState.loading = true;
+        updateTTSUI();
+        if (_vipAudio) { _vipAudio.pause(); _vipAudio.onended = null; _vipAudio.onerror = null; }
+        _vipAudio = new Audio(audioUrl);
+        _vipAudio.playbackRate = _ttsSpeed;
+        _vipAudio.onloadedmetadata = () => {
+          if (isFinite(_vipAudio.duration)) _ttsParaDurs[idx] = _vipAudio.duration / _ttsSpeed;
+        };
+        ttsState.loading = false;
+        updateTTSUI();
+        _vipAudio.onended = () => {
+          _ttsElapsedBefore += isFinite(_vipAudio.duration) ? _vipAudio.duration / _ttsSpeed : 0;
+          if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1);
+        };
+        _vipAudio.onerror = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
+        await _vipAudio.play();
+        startTTSProgressLoop();
+        return;
+      }
+      // No prerendered English audio — fall through to ElevenLabs / Web Speech
+    }
+
     if (state.isVIPTTS) {
       ttsState.loading = true;
       updateTTSUI();

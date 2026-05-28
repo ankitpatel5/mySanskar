@@ -6,7 +6,7 @@
  * the MP3 files in Firebase Storage, with URLs indexed in Firestore.
  *
  * Usage:
- *   node scripts/prerender-tts.js [--count 5] [--voice rohan] [--all] [--skip-existing] [--ids id1,id2,...]
+ *   node scripts/prerender-tts.js [--count 5] [--voice rohan] [--all] [--skip-existing] [--ids id1,id2,...] [--category satsang|hindu|moral]
  *
  * Defaults: first 5 non-video satsang stories, voice = rohan
  * --skip-existing  Skip stories that already have a complete Firestore doc
@@ -28,11 +28,16 @@ const args  = process.argv.slice(2);
 const _ci   = args.indexOf('--count');
 const _vi   = args.indexOf('--voice');
 const _idi  = args.indexOf('--ids');
+const _cati = args.indexOf('--category');
+const _langi = args.indexOf('--lang');
 const COUNT        = args.includes('--all') ? Infinity : parseInt(_ci >= 0 ? args[_ci + 1] : '5', 10);
-const VOICE        = _vi >= 0 ? args[_vi + 1] : 'rohan';
-const MODEL        = 'bulbul:v3';   // rohan is v3
+const LANG         = _langi >= 0 ? args[_langi + 1] : 'gu';   // 'gu' | 'en'
+const VOICE        = _vi >= 0 ? args[_vi + 1] : (LANG === 'en' ? 'sumit' : 'rohan');
+const LANG_CODE    = LANG === 'en' ? 'en-IN' : 'gu-IN';
+const MODEL        = 'bulbul:v3';
 const SKIP_EXISTING = args.includes('--skip-existing');  // skip stories already in Firestore
 const IDS_FILTER   = _idi >= 0 ? new Set(args[_idi + 1].split(',').map(s => s.trim())) : null;  // only these IDs
+const CATEGORY     = _cati >= 0 ? args[_cati + 1] : 'satsang';  // default to satsang
 
 // ── Project constants ─────────────────────────────────────────────
 const PROJECT    = 'baal-shravan';
@@ -59,7 +64,7 @@ function rotateKey()   {
   return true;
 }
 
-const STORIES    = g.STORIES_DATA.stories['satsang'] || [];
+const STORIES    = g.STORIES_DATA.stories[CATEGORY] || [];
 const TRANS      = g.STORY_TRANSLATIONS;
 
 // ── Auth: get fresh Google access token via firebase-tools ────────
@@ -136,10 +141,10 @@ function sarvamChunk(text) {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
       inputs: [text],
-      target_language_code: 'gu-IN',
+      target_language_code: LANG_CODE,
       speaker: VOICE,
       model: MODEL,
-      enable_preprocessing: true,
+      enable_preprocessing: LANG === 'gu',  // only preprocess Gujarati
     });
     const req = https.request({
       hostname: 'api.sarvam.ai', path: '/text-to-speech', method: 'POST',
@@ -339,8 +344,10 @@ function firestoreGet(token, storyId) {
           const r = JSON.parse(d);
           const fields = r.fields || {};
           resolve({
-            voice: fields.voice?.stringValue || '',
-            count: parseInt(fields.count?.integerValue || '0', 10),
+            voice:   fields.voice?.stringValue || '',
+            count:   parseInt(fields.count?.integerValue || '0', 10),
+            enVoice: fields.enVoice?.stringValue || '',
+            enCount: parseInt(fields.enCount?.integerValue || '0', 10),
           });
         } catch { resolve(null); }
       });
@@ -359,8 +366,14 @@ function firestoreSet(token, storyId, paragraphUrls) {
     paragraphUrls.forEach((url, i) => {
       urlFields[`p${i}`] = { stringValue: url };
     });
+    const isEn = LANG === 'en';
     const body = JSON.stringify({
-      fields: {
+      fields: isEn ? {
+        enVoice:          { stringValue: VOICE },
+        enParagraphUrls:  { mapValue: { fields: urlFields } },
+        enGeneratedAt:    { integerValue: String(Date.now()) },
+        enCount:          { integerValue: String(paragraphUrls.length) },
+      } : {
         voice:         { stringValue: VOICE },
         paragraphUrls: { mapValue: { fields: urlFields } },
         generatedAt:   { integerValue: String(Date.now()) },
@@ -390,18 +403,20 @@ function firestoreSet(token, storyId, paragraphUrls) {
 // ── Main ──────────────────────────────────────────────────────────
 async function main() {
   console.log(`\n🎙️  Sarvam TTS Pre-render Script`);
+  console.log(`   Lang:  ${LANG === 'en' ? 'English (en-IN)' : 'Gujarati (gu-IN)'}`);
   console.log(`   Voice: ${VOICE} (${MODEL})`);
   console.log(`   Limit: ${COUNT === Infinity ? 'ALL' : COUNT} stories\n`);
 
   // Filter eligible stories
-  const eligible = STORIES.filter(s =>
-    s.type !== 'youtube' &&
-    s.paragraphs && s.paragraphs.length > 0 &&
-    TRANS[s.id] && Array.isArray(TRANS[s.id].gujarati) && TRANS[s.id].gujarati.length > 0 &&
-    (!IDS_FILTER || IDS_FILTER.has(s.id.trim()))
-  ).slice(0, COUNT);
+  const eligible = STORIES.filter(s => {
+    if (s.type === 'youtube') return false;
+    if (!s.paragraphs || s.paragraphs.length === 0) return false;
+    if (LANG === 'gu' && !(TRANS[s.id] && Array.isArray(TRANS[s.id].gujarati) && TRANS[s.id].gujarati.length > 0)) return false;
+    if (IDS_FILTER && !IDS_FILTER.has(s.id.trim())) return false;
+    return true;
+  }).slice(0, COUNT);
 
-  console.log(`Found ${eligible.length} eligible satsang stories\n`);
+  console.log(`Found ${eligible.length} eligible stories\n`);
 
   // Get access token
   console.log('🔑 Getting Firebase access token…');
@@ -430,15 +445,18 @@ async function main() {
 
   for (const story of eligible) {
     const trans = TRANS[story.id];
-    const paragraphs = trans.gujarati;
+    // English: use original story paragraphs; Gujarati: use translations
+    const paragraphs = LANG === 'en' ? story.paragraphs : trans.gujarati;
     console.log(`📖 [${successCount + failCount + 1}/${eligible.length}] "${story.title}" (${story.id})`);
     console.log(`   ${paragraphs.length} paragraph(s), ${paragraphs.reduce((s, p) => s + p.length, 0)} total chars`);
 
     // --skip-existing: check Firestore for a complete, matching doc before doing any API work
     if (SKIP_EXISTING) {
       const existing = await firestoreGet(await freshToken(), story.id);
-      if (existing && existing.voice === VOICE && existing.count >= paragraphs.length) {
-        console.log(`   ⏭️  Already pre-rendered (${existing.count} paragraph(s), voice=${existing.voice}) — skipping\n`);
+      const existingCount = LANG === 'en' ? existing?.enCount : existing?.count;
+      const existingVoice = LANG === 'en' ? existing?.enVoice : existing?.voice;
+      if (existing && existingVoice === VOICE && existingCount >= paragraphs.length) {
+        console.log(`   ⏭️  Already pre-rendered (${existingCount} paragraph(s), voice=${VOICE}) — skipping\n`);
         successCount++;
         continue;
       }
@@ -448,7 +466,8 @@ async function main() {
     let storyFailed = false;
 
     for (let i = 0; i < paragraphs.length; i++) {
-      const para = preprocessGujaratiForTTS(paragraphs[i]);
+      const rawPara = paragraphs[i];
+      const para = LANG === 'gu' ? preprocessGujaratiForTTS(rawPara) : rawPara;
       const storagePath = `prerendered-tts/${VOICE}/${story.id.trim()}/p${i}.wav`;
       process.stdout.write(`   [p${i}] Generating audio (${para.length} chars)…\n`);
 
