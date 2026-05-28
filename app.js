@@ -2968,7 +2968,7 @@ ${numbered}`;
       if (story.id) {
         loadPrerenderedTTS(story.id).then((doc) => {
           if (_storyLangReqId !== myReqId) return;
-          if (doc && doc.paragraphUrls) {
+          if (doc && (doc.paragraphUrls || doc.enParagraphUrls)) {
             state.hasPrerenderedTTS = true;
             if (ttsBar) ttsBar.classList.remove('hidden');
           }

@@ -367,6 +367,11 @@ function firestoreSet(token, storyId, paragraphUrls) {
       urlFields[`p${i}`] = { stringValue: url };
     });
     const isEn = LANG === 'en';
+    // Use updateMask so we only overwrite OUR fields — never clobber GU fields when writing EN (or vice versa)
+    const fieldNames = isEn
+      ? ['enVoice', 'enParagraphUrls', 'enGeneratedAt', 'enCount']
+      : ['voice', 'paragraphUrls', 'generatedAt', 'count'];
+    const maskQuery = fieldNames.map(f => `updateMask.fieldPaths=${f}`).join('&');
     const body = JSON.stringify({
       fields: isEn ? {
         enVoice:          { stringValue: VOICE },
@@ -382,7 +387,7 @@ function firestoreSet(token, storyId, paragraphUrls) {
     });
     const req = https.request({
       hostname: 'firestore.googleapis.com',
-      path: `/v1/${docPath}`,
+      path: `/v1/${docPath}?${maskQuery}`,
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${token}`,
