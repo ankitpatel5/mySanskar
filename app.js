@@ -1595,7 +1595,7 @@
   }
 
   function openSOTDStory(story) {
-    state.currentStory = { ...story, type: 'text', photo: null };
+    state.currentStory = { ...story, type: 'text', photo: null, source: 'ai' };
     state.storyLang = 'en';
     stopTTS();
 
@@ -1829,7 +1829,7 @@
     // Language toggle — only for text (non-video) stories with paragraphs
     renderLangToggle(hasParagraphs && !isVideo);
 
-    // TTS: always for VIP users; English-only for non-VIP
+    // TTS bar: available to all users for library stories (prerendered audio)
     const defaultLang = getDefaultStoryLang();
     if (ttsBar) ttsBar.classList.toggle('hidden', !hasParagraphs || !isTTSAvailableForLang(defaultLang));
     if (voiceSheet) voiceSheet.classList.add('hidden');
@@ -2324,7 +2324,7 @@
   }
 
   function openAIStoryReader(story, savedIdx) {
-    state.currentStory = { ...story, type: 'text', photo: null };
+    state.currentStory = { ...story, type: 'text', photo: null, source: 'ai' };
     state.storyLang = 'en'; // always start as English so setStoryLang() below isn't a no-op
     stopTTS();
 
@@ -3076,10 +3076,18 @@ ${numbered}`;
 
   // ============== TEXT-TO-SPEECH ==============
 
+  // Returns true when the current story is AI-generated ("Make your own" / Story of the Day)
+  function isAIStory() {
+    return !!(state.currentStory && state.currentStory.source === 'ai');
+  }
+
   // Returns true when TTS should be visible for the given story language
   function isTTSAvailableForLang(lang) {
-    if (lang === 'en') return true;              // English always available (Web Speech / ElevenLabs)
-    return state.hasPrerenderedTTS;              // Gujarati/transliteration: only if Firebase has audio
+    // AI stories: VIP only — no TTS bar for regular users
+    if (isAIStory()) return state.isVIPTTS;
+    // Library stories (satsang/hindu/moral): always available via prerendered audio
+    if (lang === 'en') return true;
+    return state.hasPrerenderedTTS;    // GU/transliteration: only if Firebase has audio
   }
 
   const ttsState = { active: false, paused: false, idx: 0, voice: null, loading: false };
@@ -3093,8 +3101,7 @@ ${numbered}`;
   const TTS_SPEED_STEPS = [0.5, 0.75, 1, 1.5, 2];
   let _ttsSpeed = parseFloat(localStorage.getItem(TTS_SPEED_KEY) || '1');
   if (!TTS_SPEED_STEPS.includes(_ttsSpeed)) _ttsSpeed = 1;
-  let _gttsAudio  = null;                    // current Google TTS Audio element
-  const _gttsCache = new Map();              // 'text' -> blob URL (session memory)
+  // Google TTS removed — prerendered audio covers all library stories
   let _vipAudio   = null;                    // current VIP TTS Audio element (ElevenLabs / Sarvam)
   const _sarvamCache = new Map();            // 'model|speaker|langCode|text' -> blob URL
   const _elevenLabsCache = new Map();        // 'text' -> blob URL
@@ -3137,44 +3144,7 @@ ${numbered}`;
     _sarvamCache.clear();  // invalidate cache — different voice, different audio
   }
 
-  // ── Google Cloud TTS (Neural2 Gujarati) ───────────────────────────────────
-  async function fetchGTTSAudio(text) {
-    if (_gttsCache.has(text)) return _gttsCache.get(text);
-
-    const key = (window.DRIFT_CONFIG || {}).googleTTSKey || '';
-    if (!key) throw new Error('no-gtts-key');
-
-    const res = await fetch(
-      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${key}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          input: { text },
-          voice: {
-            languageCode: 'gu-IN',
-            name: 'gu-IN-Neural2-A',   // Female Neural2 — most natural
-          },
-          audioConfig: {
-            audioEncoding: 'MP3',
-            speakingRate: 0.9,         // slightly slower for clarity
-          },
-        }),
-      }
-    );
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
-
-    // Decode base64 → Blob → object URL (avoids 5 MB data: URL overhead)
-    const b64 = data.audioContent;
-    const binary = atob(b64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/mp3' }));
-
-    _gttsCache.set(text, url);
-    return url;
-  }
+  // Google Cloud TTS removed — all library stories use prerendered Sarvam audio
 
   // ── Sarvam API limit: 500 chars per request — split long text into chunks ──
   // Preprocess Gujarati text so Sarvam gu-IN TTS doesn't read English punctuation literally.
@@ -3431,20 +3401,6 @@ ${numbered}`;
       return;
     }
 
-    // If Gujarati + Google TTS key configured, show info instead of voice list
-    const gttsKey = (window.DRIFT_CONFIG || {}).googleTTSKey || '';
-    if (state.storyLang === 'gu' && gttsKey) {
-      list.innerHTML = `
-        <div style="padding:20px 16px;text-align:center;color:var(--fg-2);font-size:14px;line-height:1.6;">
-          <div style="font-size:22px;margin-bottom:8px;">🎙️</div>
-          <strong>Google Neural2 · gu-IN-Neural2-A</strong><br>
-          <span style="color:var(--fg-3);font-size:13px;">Natural Gujarati voice via Google Cloud TTS.<br>Voice picker only applies to English reading.</span>
-        </div>`;
-      sheet.classList.remove('hidden');
-      $('tts-voice-btn').classList.add('active');
-      return;
-    }
-
     if (_ttsVoices.length === 0) {
       toast('No voices found on this device');
       return;
@@ -3501,12 +3457,10 @@ ${numbered}`;
 
   function startTTS() {
     if (!state.currentStory) return;
-    if (!state.isVIPTTS) {
-      // Non-VIP: Google TTS doesn't need speechSynthesis; only check for Web Speech fallback
-      const gttsKey = (window.DRIFT_CONFIG || {}).googleTTSKey || '';
-      if (!gttsKey && !('speechSynthesis' in window)) {
-        toast('Text-to-speech not supported on this device'); return;
-      }
+    // AI stories: VIP only
+    if (isAIStory() && !state.isVIPTTS) return;
+    if (!state.isVIPTTS && !('speechSynthesis' in window)) {
+      toast('Text-to-speech not supported on this device'); return;
     }
     ttsState.active = true;
     ttsState.paused = false;
@@ -3520,8 +3474,6 @@ ${numbered}`;
     if (!ttsState.active || ttsState.paused) return;
     if (_vipAudio) {
       _vipAudio.pause();
-    } else if (_gttsAudio) {
-      _gttsAudio.pause();
     } else {
       window.speechSynthesis.pause();
     }
@@ -3535,9 +3487,6 @@ ${numbered}`;
     ttsState.paused = false;
     if (_vipAudio) {
       _vipAudio.play().catch(() => speakParagraph(ttsState.idx));
-      startTTSProgressLoop();
-    } else if (_gttsAudio) {
-      _gttsAudio.play().catch(() => speakParagraph(ttsState.idx));
       startTTSProgressLoop();
     } else {
       // Some browsers (Chrome Android) don't resume well — restart paragraph instead
@@ -3562,14 +3511,6 @@ ${numbered}`;
       _vipAudio.onerror = null;
       _vipAudio.src = '';
       _vipAudio = null;
-    }
-    // Stop Google TTS audio element
-    if (_gttsAudio) {
-      _gttsAudio.pause();
-      _gttsAudio.onended = null;
-      _gttsAudio.onerror = null;
-      _gttsAudio.src = '';
-      _gttsAudio = null;
     }
     // Stop Web Speech
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -3637,7 +3578,7 @@ ${numbered}`;
     if (_ttsRafId) return;
     function tick() {
       if (!ttsState.active) { _ttsRafId = null; return; }
-      const audio = _vipAudio || _gttsAudio;
+      const audio = _vipAudio;
       if (audio && !audio.paused && !audio.ended && isFinite(audio.duration)) {
         setTTSProgress(ttsState.idx, audio.currentTime, audio);
       }
@@ -3673,7 +3614,6 @@ ${numbered}`;
     setTTSProgress(idx, 0, null);
 
     const text = paraEls[idx].textContent || '';
-    const gttsKey = (window.DRIFT_CONFIG || {}).googleTTSKey || '';
 
     // ── Gujarati audio: use prerendered Firebase audio (driven by _ttsAudioLang, not text tab) ──
     if (_ttsAudioLang === 'gu') {
@@ -3772,70 +3712,16 @@ ${numbered}`;
       } catch (e) {
         ttsState.loading = false;
         console.warn('ElevenLabs TTS failed, falling back:', e.message);
-        // Fall through to Google TTS / Web Speech for English
+        // Fall through to Web Speech for English
       }
     }
 
-    // ── Google Cloud TTS path (Gujarati) ──────────────────────────────────
-    if (state.storyLang === 'gu' && gttsKey) {
-      ttsState.loading = true;
-      updateTTSUI();
-
-      try {
-        const audioUrl = await fetchGTTSAudio(text);
-
-        // Guard: user may have stopped/paused while we were fetching
-        if (!ttsState.active || ttsState.paused) {
-          ttsState.loading = false;
-          return;
-        }
-
-        // Stop any previously playing audio
-        if (_gttsAudio) {
-          _gttsAudio.pause();
-          _gttsAudio.onended = null;
-          _gttsAudio.onerror = null;
-        }
-
-        _gttsAudio = new Audio(audioUrl);
-        _gttsAudio.playbackRate = _ttsSpeed;
-        _gttsAudio.onloadedmetadata = () => {
-          if (isFinite(_gttsAudio.duration)) _ttsParaDurs[idx] = _gttsAudio.duration / _ttsSpeed;
-        };
-        ttsState.loading = false;
-        updateTTSUI();
-
-        _gttsAudio.onended = () => {
-          _ttsElapsedBefore += isFinite(_gttsAudio.duration) ? _gttsAudio.duration / _ttsSpeed : 0;
-          if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1);
-        };
-        _gttsAudio.onerror = () => {
-          console.warn('Google TTS audio playback error');
-          if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1);
-        };
-        await _gttsAudio.play();
-        startTTSProgressLoop();
-
-        // Pre-fetch next paragraph in background to eliminate gap between paragraphs
-        if (idx + 1 < paraEls.length) {
-          const nextText = paraEls[idx + 1].textContent || '';
-          fetchGTTSAudio(nextText).catch(() => {});
-        }
-        return;
-
-      } catch (e) {
-        ttsState.loading = false;
-        console.warn('Google TTS failed, falling back to Web Speech:', e.message);
-        // Fall through to Web Speech below
-      }
-    }
-
-    // ── Web Speech fallback (English, Transliteration, or no Google key) ──
+    // ── Web Speech fallback (English, Transliteration, or missing prerendered audio) ──
     const utter = new SpeechSynthesisUtterance(text);
     utter.rate = _ttsSpeed;
 
     if (state.storyLang === 'gu') {
-      // No Google TTS key — try OS Gujarati voice
+      // Try OS Gujarati voice
       const allVoices = window.speechSynthesis.getVoices();
       const guVoice = allVoices.find((v) => v.lang.startsWith('gu'));
       if (guVoice) { utter.voice = guVoice; utter.lang = 'gu-IN'; }
@@ -3864,9 +3750,6 @@ ${numbered}`;
     const isLoading = ttsState.active && ttsState.loading;
     const isPlaying = ttsState.active && !ttsState.paused && !ttsState.loading;
     const isPaused  = ttsState.active && ttsState.paused;
-    const gttsKey   = (window.DRIFT_CONFIG || {}).googleTTSKey || '';
-    const usingGTTS = !state.isVIPTTS && state.storyLang === 'gu' && !!gttsKey;
-
     // Loading spinner replaces the play icon while fetching first paragraph
     if (isLoading) {
       playBtn.innerHTML = `<div class="ai-spinner" style="width:18px;height:18px;border-width:2px;"></div>`;
@@ -3921,7 +3804,6 @@ ${numbered}`;
     // If TTS is currently playing, restart from current paragraph with new audio lang
     if (ttsState.active && !ttsState.paused) {
       if (_vipAudio) { _vipAudio.pause(); _vipAudio.onended = null; _vipAudio.onerror = null; _vipAudio = null; }
-      if (_gttsAudio) { _gttsAudio.pause(); _gttsAudio.onended = null; _gttsAudio.onerror = null; _gttsAudio = null; }
       window.speechSynthesis && window.speechSynthesis.cancel();
       _ttsParaDurs = [];
       _ttsElapsedBefore = 0;
@@ -4994,7 +4876,6 @@ ${numbered}`;
       }
       // Apply to any currently playing audio
       if (_vipAudio) _vipAudio.playbackRate = speed;
-      if (_gttsAudio) _gttsAudio.playbackRate = speed;
     }
 
     // Restore persisted speed on boot
@@ -5019,7 +4900,7 @@ ${numbered}`;
 
         const targetParaIdx = Math.min(Math.floor(fraction * total), total - 1);
         const withinFrac    = (fraction * total) - targetParaIdx;
-        const audio = _vipAudio || _gttsAudio;
+        const audio = _vipAudio;
 
         if (targetParaIdx !== ttsState.idx) {
           // Jump to a different paragraph
