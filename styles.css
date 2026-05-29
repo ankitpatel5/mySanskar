@@ -559,14 +559,57 @@ input { font-family: inherit; color: inherit; }
   color: #F2DDE4;
   cursor: pointer;
 }
+
+/* ── SOTD tile — taller, vertical layout, longer preview ── */
+.sotd-tile {
+  display: block;           /* override flex row */
+  padding: 20px 22px 22px;
+}
+.sotd-tile-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sotd-tile-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+.sotd-tile .home-tile-icon {
+  font-size: 1.4rem;
+  width: auto;
+}
+.sotd-tile .home-tile-label {
+  margin-bottom: 0;
+}
+.sotd-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  white-space: normal !important;   /* allow wrapping */
+  overflow: visible !important;
+  text-overflow: unset !important;
+  line-height: 1.35;
+}
+.sotd-sub {
+  font-size: 0.83rem;
+  opacity: 0.82;
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 0;
+}
+
 .sotd-loading-tile {
-  opacity: 0.72;
+  opacity: 0.78;
   animation: sotd-pulse 2s ease-in-out infinite;
   cursor: default;
 }
 @keyframes sotd-pulse {
-  0%, 100% { opacity: 0.72; }
-  50%       { opacity: 0.50; }
+  0%, 100% { opacity: 0.78; }
+  50%       { opacity: 0.52; }
 }
 .sotd-setup-tile {
   background: linear-gradient(135deg, #232327 0%, #2e2e34 100%);

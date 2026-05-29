@@ -1526,8 +1526,31 @@
 
     const dateStr = sotdDateStr();
 
-    // Show skeleton while loading
-    if (skeleton) skeleton.classList.remove('hidden');
+    // Show skeleton while loading — personalise with child's name
+    if (skeleton) {
+      const childName = profile?.name ? profile.name.split(' ')[0] : '';
+      const loadingTitle = $('sotd-loading-title');
+      const loadingSub   = $('sotd-loading-sub');
+      const funMessages  = childName ? [
+        `Writing ${childName}'s story for today…`,
+        `Crafting something special for ${childName}…`,
+        `A brand new story is on its way for ${childName}…`,
+        `Cooking up today's tale for ${childName}…`,
+      ] : [
+        'Writing today\'s story…',
+        'Crafting something special…',
+        'A brand new story is on its way…',
+      ];
+      const subs = [
+        'This one\'s going to be great 🌟',
+        'Jay Swaminarayan 🙏',
+        'Almost ready…',
+        'Weaving words with wisdom…',
+      ];
+      if (loadingTitle) loadingTitle.textContent = funMessages[Math.floor(Math.random() * funMessages.length)];
+      if (loadingSub)   loadingSub.textContent   = subs[Math.floor(Math.random() * subs.length)];
+      skeleton.classList.remove('hidden');
+    }
 
     try {
       // 1. Check Firestore for today's story
@@ -1587,8 +1610,9 @@
 
     if (titleEl) titleEl.textContent = story.title;
     if (subEl) {
+      // Show a longer preview — CSS clamps to 4 lines visually
       const preview = (story.paragraphs?.[0] || '').trim();
-      subEl.textContent = preview.length > 62 ? preview.slice(0, 59) + '…' : preview;
+      subEl.textContent = preview.length > 220 ? preview.slice(0, 217) + '…' : preview;
     }
 
     tile.classList.remove('hidden');

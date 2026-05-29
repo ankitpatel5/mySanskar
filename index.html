@@ -130,22 +130,26 @@
             </div>
 
             <!-- Story of the Day tile -->
-            <div class="home-tile story-tile hidden" id="sotd-tile">
-              <div class="home-tile-icon">📖</div>
-              <div class="home-tile-body">
-                <div class="home-tile-label">Today's Story</div>
-                <div class="home-tile-title" id="sotd-title">—</div>
-                <div class="home-tile-sub" id="sotd-sub"></div>
+            <div class="home-tile story-tile sotd-tile hidden" id="sotd-tile">
+              <div class="sotd-tile-inner">
+                <div class="sotd-tile-top">
+                  <div class="home-tile-icon">📖</div>
+                  <div class="home-tile-label">Today's Story</div>
+                </div>
+                <div class="home-tile-title sotd-title" id="sotd-title">—</div>
+                <div class="home-tile-sub sotd-sub" id="sotd-sub"></div>
               </div>
             </div>
 
-            <!-- Story of the Day skeleton — visible by default, hidden once story loads or no child -->
-            <div class="home-tile story-tile sotd-loading-tile hidden" id="sotd-skeleton">
-              <div class="home-tile-icon">📖</div>
-              <div class="home-tile-body">
-                <div class="home-tile-label">Today's Story</div>
-                <div class="home-tile-title">Crafting your story…</div>
-                <div class="home-tile-sub" id="sotd-loading-sub">Just a moment</div>
+            <!-- Story of the Day skeleton — visible while generating -->
+            <div class="home-tile story-tile sotd-tile sotd-loading-tile hidden" id="sotd-skeleton">
+              <div class="sotd-tile-inner">
+                <div class="sotd-tile-top">
+                  <div class="home-tile-icon">✨</div>
+                  <div class="home-tile-label">Today's Story</div>
+                </div>
+                <div class="home-tile-title sotd-title" id="sotd-loading-title">Writing a story…</div>
+                <div class="home-tile-sub sotd-sub" id="sotd-loading-sub">Just a moment…</div>
               </div>
             </div>
 
