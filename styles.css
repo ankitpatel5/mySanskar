@@ -406,8 +406,8 @@ input { font-family: inherit; color: inherit; }
   position: absolute;
   left: 50%;
   top: calc(var(--safe-top) + var(--topbar-h));
-  transform: translateX(-50%) translateY(-56px);
-  z-index: 100;
+  transform: translateX(-50%) translateY(-80px);
+  z-index: 3; /* below topbar (z-index: 4) so it slides out from under it */
   width: 40px; height: 40px;
   background: var(--bg-2);
   border-radius: 50%;

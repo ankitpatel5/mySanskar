@@ -5227,7 +5227,7 @@ ${numbered}`;
     const THRESHOLD = 72;   // px of raw drag needed to trigger
     const DAMP      = 0.42; // how much resistance to apply (< 1 = slower than finger)
     const MAX_PULL  = 100;  // cap how far indicator travels
-    const HIDE_Y    = -56;  // translateY when fully hidden (above topbar)
+    const HIDE_Y    = -80;  // translateY when fully hidden (slides under topbar)
     const HOLD_Y    = 12;   // translateY when spinning (held in view)
 
     let startY    = 0;
