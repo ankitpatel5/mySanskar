@@ -38,7 +38,7 @@
   --r-xl: 28px;
 
   --tabbar-h: 72px;
-  --mini-h: 178px;
+  --mini-h: 148px;
   --topbar-h: 56px;
   --safe-bot: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
@@ -1224,7 +1224,7 @@ body[data-story-size="xl"] .story-para { font-size: 24px; line-height: 1.85; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 20px 10px;
+  padding: 4px 20px 6px;
   flex-shrink: 0;
 }
 .mini-tog-btn {
