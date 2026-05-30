@@ -4557,6 +4557,7 @@ ${numbered}`;
       );
 
       showModal('settings-modal');
+      snapshotChildForm(); // capture state so Cancel can revert
 
       // Also pull fresh from Firestore in case localStorage is empty (e.g. new domain/device)
       if (state.user && !cp.name) {
@@ -4579,33 +4580,65 @@ ${numbered}`;
       }
     });
 
-    // Child profile — save on input change
-    const saveChildDebounced = (() => {
-      let t;
-      return () => {
-        clearTimeout(t);
-        t = setTimeout(() => {
-          const gender = document.querySelector('.child-gender-btn.active')?.dataset.gender || '';
-          saveChildProfile({
-            name:   ($('child-name-input').value || '').trim(),
-            gender,
-            dob:    ($('child-dob-input').value  || '').trim(),
-          });
-          refreshChildChip();
-        }, 400);
-      };
-    })();
-    $('child-name-input').addEventListener('input', saveChildDebounced);
-    $('child-dob-input').addEventListener('change', saveChildDebounced);
+    // Child profile — gender buttons (UI only, no auto-save)
     document.querySelectorAll('.child-gender-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.child-gender-btn').forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
-        saveChildDebounced();
       });
     });
-    $('settings-cancel').addEventListener('click', () => closeModal('settings-modal'));
-    document.querySelector('#settings-modal .modal-backdrop').addEventListener('click', () => closeModal('settings-modal'));
+
+    // Child profile — snapshot for cancel revert
+    let _childSnapshot = null;
+    function snapshotChildForm() {
+      _childSnapshot = {
+        name:   $('child-name-input').value,
+        gender: document.querySelector('.child-gender-btn.active')?.dataset.gender || '',
+        dob:    $('child-dob-input').value,
+      };
+    }
+    function revertChildForm() {
+      if (!_childSnapshot) return;
+      $('child-name-input').value = _childSnapshot.name;
+      $('child-dob-input').value  = _childSnapshot.dob;
+      document.querySelectorAll('.child-gender-btn').forEach((b) =>
+        b.classList.toggle('active', b.dataset.gender === _childSnapshot.gender)
+      );
+    }
+
+    // Save button — explicit commit
+    $('child-save-btn').addEventListener('click', () => {
+      const gender = document.querySelector('.child-gender-btn.active')?.dataset.gender || '';
+      saveChildProfile({
+        name:   ($('child-name-input').value || '').trim(),
+        gender,
+        dob:    ($('child-dob-input').value  || '').trim(),
+      });
+      refreshChildChip();
+      snapshotChildForm(); // update snapshot so next cancel doesn't revert saved data
+      toast('Child profile saved');
+    });
+
+    // Cancel inside child form — reverts unsaved changes, stays open
+    $('child-cancel-btn').addEventListener('click', () => {
+      revertChildForm();
+    });
+
+    // Close button (bottom of modal) — just closes, no revert
+    function closeSettings() {
+      revertChildForm(); // discard any unsaved edits on close too
+      closeModal('settings-modal');
+    }
+    $('settings-cancel').addEventListener('click', closeSettings);
+    document.querySelector('#settings-modal .modal-backdrop').addEventListener('click', closeSettings);
+
+    // Advanced section toggle
+    $('settings-advanced-toggle').addEventListener('click', () => {
+      const body = $('settings-advanced-body');
+      const btn  = $('settings-advanced-toggle');
+      const open = body.classList.toggle('hidden');
+      btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+    });
 
     // Story list language toggle (EN / ગુ)
     document.querySelectorAll('.story-list-lang-btn').forEach((btn) => {

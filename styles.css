@@ -2478,6 +2478,76 @@ body[data-story-size="xl"] .story-para { font-size: 24px; line-height: 1.85; }
   width: 100% !important;
 }
 
+/* ── Child profile Save / Cancel ─── */
+.child-profile-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.child-save-btn {
+  flex: 1;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: opacity .15s, transform .1s;
+}
+.child-save-btn:hover { opacity: 0.88; }
+.child-save-btn:active { transform: scale(0.97); }
+.child-cancel-btn {
+  height: 42px;
+  padding: 0 20px;
+  border-radius: 12px;
+  background: var(--bg-3);
+  color: var(--fg-1);
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background .15s;
+}
+.child-cancel-btn:hover { background: var(--bg-3); color: var(--fg-0); }
+
+/* ── Advanced settings section ─── */
+.settings-advanced-section {
+  padding: 0;
+  border-top: 1px solid var(--line-2);
+}
+.settings-advanced-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  background: none;
+  border: none;
+  color: var(--fg-2);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  cursor: pointer;
+  transition: color .15s;
+}
+.settings-advanced-toggle:hover { color: var(--fg-1); }
+.settings-advanced-toggle svg {
+  transition: transform .2s ease;
+  flex-shrink: 0;
+}
+.settings-advanced-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+.settings-advanced-body {
+  padding-bottom: 8px;
+}
+.settings-advanced-body.hidden {
+  display: none;
+}
+
 /* ── Story generator — child toggle ─────────────────────────── */
 /* Child profile quick-fill chip */
 .ai-child-chip {
