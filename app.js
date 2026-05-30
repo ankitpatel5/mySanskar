@@ -1396,13 +1396,8 @@
     }
     loadEkadashiTile();
 
-    // Show the SOTD skeleton immediately (synchronous) if we know a story
-    // will be needed — avoids a blank gap while the async load runs.
-    const skeleton = $('sotd-skeleton');
-    if (skeleton && state.user && buildChildCharacterString(getChildProfile())) {
-      skeleton.classList.remove('hidden');
-    }
-
+    // loadStoryOfDay() handles skeleton show/hide synchronously before its first
+    // await, so there is no blank gap or flash — no pre-show needed here.
     loadStoryOfDay();
   }
 
@@ -1500,11 +1495,18 @@
   }
 
   async function loadStoryOfDay() {
+    // Each call gets a unique ID. Any async step checks it before touching the DOM,
+    // so a newer concurrent call (e.g. from syncChildProfileFromFirestore) cleanly
+    // supersedes an older in-flight one — preventing two tiles showing at once.
+    const myReqId = ++_sotdReqId;
+
     const tile       = $('sotd-tile');
     const skeleton   = $('sotd-skeleton');
     const setupTile  = $('sotd-setup-tile');
 
-    // Reset all states
+    // Reset all SOTD tiles synchronously. The skeleton is immediately re-shown
+    // below (before the first await), so there is no visible flash — the browser
+    // doesn't repaint between synchronous statements in the same task.
     [tile, skeleton, setupTile].forEach((el) => el && el.classList.add('hidden'));
 
     if (!state.user) return;
@@ -1526,7 +1528,7 @@
 
     const dateStr = sotdDateStr();
 
-    // Show skeleton while loading — personalise with child's name
+    // Show skeleton immediately (synchronous — no repaint yet) with personalised text
     if (skeleton) {
       const childName = profile?.name ? profile.name.split(' ')[0] : '';
       const loadingTitle = $('sotd-loading-title');
@@ -1555,9 +1557,11 @@
     try {
       // 1. Check Firestore for today's story
       const doc = await sotdFirestoreRef(state.user.uid, dateStr).get();
-      if (skeleton) skeleton.classList.add('hidden');
+      if (_sotdReqId !== myReqId) return; // superseded by a newer call — bail out silently
 
       if (doc.exists) {
+        // Story already exists — swap skeleton → tile
+        if (skeleton) skeleton.classList.add('hidden');
         const sotdStory = doc.data();
         showSOTDTile(sotdStory);
         // Cross-save to "Your Stories" (no-op if already there)
@@ -1566,13 +1570,14 @@
         return;
       }
 
-      // 2. Not in Firestore — generate now
+      // 2. Not in Firestore — keep skeleton visible while Gemini generates
       const loadingSub = $('sotd-loading-sub');
       if (loadingSub) loadingSub.textContent = 'Writing today\'s story…';
 
       const topic  = RANDOM_TOPICS[Math.floor(Math.random() * RANDOM_TOPICS.length)];
       const prompt = buildStoryPrompt(topic, character, 'medium');
       const result = await callGemini(key, prompt);
+      if (_sotdReqId !== myReqId) return; // superseded while generating — bail out silently
       if (!result?.title || !result?.paragraphs?.length) throw new Error('bad response');
 
       const story = {
@@ -1593,9 +1598,12 @@
       saveAIStory(story);
       renderAISavedList();
 
+      // 5. Swap skeleton → tile
+      if (skeleton) skeleton.classList.add('hidden');
       showSOTDTile(story);
 
     } catch (e) {
+      if (_sotdReqId !== myReqId) return;
       console.warn('[SOTD] generation failed:', e.message);
       if (skeleton) skeleton.classList.add('hidden');
       // Fail silently — home feed stays clean
@@ -1866,6 +1874,10 @@
     if (hasParagraphs && !isVideo && defaultLang !== 'en') {
       setStoryLang(defaultLang);
     }
+
+    // Back → return to story list (clear any residual mode flags from previous readers)
+    $('story-reader-back')._sotdMode = false;
+    $('story-reader-back')._aiMode   = false;
 
     updateTTSUI();
     switchView('view-story-reader');
@@ -2392,7 +2404,8 @@
     }
 
     // Override back button to return to AI stories
-    $('story-reader-back')._aiMode = true;
+    $('story-reader-back')._aiMode   = true;
+    $('story-reader-back')._sotdMode = false;
 
     updateTTSUI();
     switchView('view-story-reader');
@@ -2967,6 +2980,7 @@ ${numbered}`;
 
   // Incremented on every setStoryLang call so stale async completions can self-abort.
   let _storyLangReqId = 0;
+  let _sotdReqId = 0; // incremented on each loadStoryOfDay() call so stale concurrent calls self-cancel
 
   async function setStoryLang(lang) {
     if (lang === state.storyLang) return;
@@ -2981,12 +2995,13 @@ ${numbered}`;
     stopTTS();
 
     // TTS bar visibility:
-    // - English: always show
-    // - Gujarati/Transliteration: hide immediately, then show only if Firebase has prerendered audio
+    // - AI stories (SOTD / Make your own): VIP users only, regardless of language
+    // - Library stories English: always show
+    // - Library stories Gujarati/Transliteration: hide immediately, show only if prerendered audio exists
     state.hasPrerenderedTTS = false;
     const ttsBar = $('story-tts-bar');
     if (lang === 'en') {
-      if (ttsBar) ttsBar.classList.remove('hidden');
+      if (ttsBar) ttsBar.classList.toggle('hidden', !isTTSAvailableForLang('en'));
     } else {
       // Hide by default — reveal async only if prerendered audio doc exists in Firestore
       if (ttsBar) ttsBar.classList.add('hidden');
@@ -2995,7 +3010,10 @@ ${numbered}`;
           if (_storyLangReqId !== myReqId) return;
           if (doc && (doc.paragraphUrls || doc.enParagraphUrls)) {
             state.hasPrerenderedTTS = true;
-            if (ttsBar) ttsBar.classList.remove('hidden');
+            // Only show bar if TTS is actually available (respects AI story VIP gate)
+            if (isTTSAvailableForLang(lang)) {
+              if (ttsBar) ttsBar.classList.remove('hidden');
+            }
           }
         }).catch(() => {});
       }
@@ -3123,7 +3141,7 @@ ${numbered}`;
   let _ttsParaDurs     = [];  // known audio durations per paragraph index
   let _ttsElapsedBefore = 0; // sum of durations of paragraphs before current one
   const TTS_SPEED_KEY   = 'drift.ttsSpeed';
-  const TTS_SPEED_STEPS = [0.5, 0.75, 1, 1.5, 2];
+  const TTS_SPEED_STEPS = [0.5, 0.75, 0.85, 1, 1.25, 1.5, 1.75, 2];
   let _ttsSpeed = parseFloat(localStorage.getItem(TTS_SPEED_KEY) || '1');
   if (!TTS_SPEED_STEPS.includes(_ttsSpeed)) _ttsSpeed = 1;
   // Google TTS removed — prerendered audio covers all library stories
@@ -4062,10 +4080,11 @@ ${numbered}`;
       const doc = await window.fbDb.collection('vipTTSUsers').doc(user.email).get();
       state.isVIPTTS = doc.exists;
       updateTTSUI();
-      // If the user is already on a story when VIP status resolves, show the TTS bar
-      if (state.isVIPTTS && state.currentStory) {
+      // If the user is already on a story when VIP status resolves, refresh TTS bar visibility
+      if (state.currentStory) {
         const ttsBar = $('story-tts-bar');
-        if (ttsBar) ttsBar.classList.remove('hidden');
+        const lang = state.storyLang || 'en';
+        if (ttsBar) ttsBar.classList.toggle('hidden', !isTTSAvailableForLang(lang));
       }
     } catch (e) {
       console.warn('VIP TTS check failed — defaulting to standard TTS', e);
@@ -4906,11 +4925,75 @@ ${numbered}`;
     // Restore persisted speed on boot
     applyTTSSpeed(_ttsSpeed);
 
-    $('tts-speed-btn').addEventListener('click', () => {
-      const idx = TTS_SPEED_STEPS.indexOf(_ttsSpeed);
-      const next = TTS_SPEED_STEPS[(idx + 1) % TTS_SPEED_STEPS.length];
-      applyTTSSpeed(next);
-    });
+    // ── Speed picker popup ────────────────────────────────────────
+    (function () {
+      const btn = $('tts-speed-btn');
+      if (!btn) return;
+
+      // Build the popup once and append to body
+      const menu = document.createElement('div');
+      menu.id = 'tts-speed-menu';
+      menu.className = 'tts-speed-menu hidden';
+      menu.setAttribute('role', 'listbox');
+      menu.setAttribute('aria-label', 'Playback speed');
+
+      TTS_SPEED_STEPS.forEach((s) => {
+        const opt = document.createElement('button');
+        opt.className = 'tts-speed-option';
+        opt.setAttribute('role', 'option');
+        opt.setAttribute('data-speed', String(s));
+        opt.textContent = s === 1 ? '1x  Normal' : s + 'x';
+        opt.addEventListener('click', (e) => {
+          e.stopPropagation();
+          applyTTSSpeed(s);
+          closeSpeedMenu();
+        });
+        menu.appendChild(opt);
+      });
+
+      document.body.appendChild(menu);
+
+      function updateMenuSelection() {
+        menu.querySelectorAll('.tts-speed-option').forEach((o) => {
+          o.classList.toggle('selected', parseFloat(o.dataset.speed) === _ttsSpeed);
+        });
+      }
+
+      function openSpeedMenu() {
+        updateMenuSelection();
+        menu.classList.remove('hidden');
+        // Position above the button
+        const rect = btn.getBoundingClientRect();
+        menu.style.left = (rect.left + rect.width / 2 - menu.offsetWidth / 2) + 'px';
+        menu.style.top  = (rect.top - menu.offsetHeight - 8) + 'px';
+        // Re-position after paint in case offsetWidth/Height was 0
+        requestAnimationFrame(() => {
+          const r = btn.getBoundingClientRect();
+          menu.style.left = (r.left + r.width / 2 - menu.offsetWidth / 2) + 'px';
+          menu.style.top  = (r.top - menu.offsetHeight - 8) + 'px';
+        });
+        btn.setAttribute('aria-expanded', 'true');
+      }
+
+      function closeSpeedMenu() {
+        menu.classList.add('hidden');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+
+      btn.setAttribute('aria-haspopup', 'listbox');
+      btn.setAttribute('aria-expanded', 'false');
+
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menu.classList.contains('hidden') ? openSpeedMenu() : closeSpeedMenu();
+      });
+
+      // Close when clicking outside
+      document.addEventListener('click', () => closeSpeedMenu());
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeSpeedMenu();
+      });
+    })();
 
     // ── Seek on click / drag ──────────────────────────────────────
     const _ttsTrack = $('tts-track');
