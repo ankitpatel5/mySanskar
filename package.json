@@ -5,6 +5,8 @@
   "main": "app.js",
   "scripts": {
     "build": "node scripts/generate-config.js",
+    "deploy:staging": "npx vercel && npx vercel alias mysanskar-staging.vercel.app",
+    "deploy:prod": "npx vercel --prod",
     "test": "vitest run",
     "test:watch": "vitest",
     "build:ios": "bash scripts/build-www.sh && npx cap sync ios",
