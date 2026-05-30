@@ -41,6 +41,8 @@
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
+	<key>UIRequiresFullScreen</key>
+	<true/>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 	<!-- Google Sign-In: iOS client ID from GoogleService-Info.plist -->
@@ -66,5 +68,7 @@
 	<!-- Privacy descriptions shown to user when app first requests permissions -->
 	<key>NSMicrophoneUsageDescription</key>
 	<string>mySanskar does not use the microphone.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20250528" />
+  <link rel="stylesheet" href="styles.css?v=20250528b" />
   <!-- Apply saved theme before first paint to avoid flash -->
   <script>(function(){var t=localStorage.getItem('drift.theme');if(t)document.documentElement.setAttribute('data-theme',t);else document.documentElement.setAttribute('data-theme','dark');})()</script>
   <link rel="icon" href="baal.png" type="image/png" />
@@ -456,6 +456,10 @@
             <div id="story-reader-img-wrap" class="story-reader-img-wrap hidden">
               <div id="story-reader-img-blur" class="story-reader-img-blur"></div>
               <img id="story-reader-img" class="story-reader-img" src="" alt="" loading="lazy" />
+              <div class="story-img-loading-label" aria-live="polite">
+                <span class="story-img-loading-icon">🎨</span>
+                <span class="story-img-loading-text">Painting your illustration…</span>
+              </div>
             </div>
             <h2 class="story-reader-title" id="story-reader-title">—</h2>
             <p class="story-reader-title-sub hidden" id="story-reader-title-sub"></p>
@@ -823,7 +827,8 @@
   <script src="translations-data.js"></script>
   <script src="title-translations.js"></script>
   <script src="conversation-starters.js"></script>
-  <script src="app.js?v=20250528"></script>
+  <script src="utils.js"></script>
+  <script src="app.js?v=20250528b"></script>
   <script>
     // Skip service worker in native Capacitor app — WKWebView doesn't support it.
     if ('serviceWorker' in navigator && !window.Capacitor) {

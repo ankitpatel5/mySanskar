@@ -32,10 +32,10 @@ android/app/google-services.json
 .DS_Store
 **/.DS_Store
 
-# Node dependencies (only needed for generate-translations script)
+# Node dependencies
 node_modules/
 package-lock.json
-package.json
+# package.json is committed — Vercel needs it to run npm run build
 
 # Translation generation progress checkpoint
 .translation-progress.json

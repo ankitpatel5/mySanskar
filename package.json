@@ -1,0 +1,35 @@
+{
+  "name": "drift",
+  "version": "1.0.0",
+  "description": "A static, mobile-first web app that streams MP3s from a public Google Drive folder organized into sub-folders (each sub-folder becomes an \"album\"). Dark Spotify-inspired UI. Playlists persist in `localStorage`. Always pulls the latest folder contents on load.",
+  "main": "app.js",
+  "scripts": {
+    "build": "node scripts/generate-config.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build:ios": "bash scripts/build-www.sh && npx cap sync ios",
+    "open:ios": "npx cap open ios"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ankitpatel5/baal-shravan.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ankitpatel5/baal-shravan/issues"
+  },
+  "homepage": "https://github.com/ankitpatel5/baal-shravan#readme",
+  "dependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
+    "@capacitor/ios": "^8.3.4",
+    "cheerio": "^1.2.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.7"
+  }
+}
