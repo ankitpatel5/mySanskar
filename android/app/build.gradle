@@ -16,10 +16,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            def props = new Properties()
+            def propsFile = rootProject.file('keystore.properties')
+            if (propsFile.exists()) props.load(propsFile.newDataInputStream())
+            storeFile file(System.getProperty("user.home") + "/mysanskar-release.jks")
+            storePassword props.getProperty("storePassword", "")
+            keyAlias "mysanskar"
+            keyPassword props.getProperty("keyPassword", "")
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
 }

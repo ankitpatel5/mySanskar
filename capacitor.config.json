@@ -1,11 +1,7 @@
 {
-  "appId": "com.ankit.mysanskar",
+  "appId": "com.ankitpatel5.mysanskar",
   "appName": "mySanskar",
   "webDir": "www",
-  "server": {
-    "url": "https://mysanskar.vercel.app",
-    "cleartext": false
-  },
   "ios": {
     "backgroundColor": "#000000",
     "contentInset": "always"

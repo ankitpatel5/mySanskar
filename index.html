@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20250528b" />
+  <link rel="stylesheet" href="styles.css?v=20250601u" />
   <!-- Apply saved theme before first paint to avoid flash -->
   <script>(function(){var t=localStorage.getItem('drift.theme');if(t)document.documentElement.setAttribute('data-theme',t);else document.documentElement.setAttribute('data-theme','dark');})()</script>
   <link rel="icon" href="baal.png" type="image/png" />
@@ -26,7 +26,7 @@
           <img src="baal.png" alt="mySanskar" class="setup-mark-img" />
         </div>
         <h1 class="setup-title">mySanskar</h1>
-        <p class="setup-tagline">Rooted in Bhakti</p>
+        <p class="setup-tagline">Raising little ones with faith & values</p>
         <p id="blocked-msg" class="blocked-msg hidden">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
           Your account has been blocked. Contact the admin for help.
@@ -43,6 +43,16 @@
             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
           </svg>
           Continue with Google
+        </button>
+        <button id="apple-signin-btn" class="apple-signin-btn">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+            <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+          </svg>
+          Sign in with Apple
+        </button>
+        <div class="signin-divider"><span>or</span></div>
+        <button id="guest-signin-btn" class="guest-signin-btn">
+          Continue as Guest
         </button>
       </div>
     </section>
@@ -651,6 +661,238 @@
       </nav>
     </main>
 
+    <!-- ── Onboarding overlay ──────────────────────────────────── -->
+    <div id="onboarding-overlay" class="onboarding-overlay hidden" aria-modal="true" role="dialog">
+      <div class="onboarding-track" id="onboarding-track">
+
+        <!-- Screen 2: What's inside -->
+        <div class="ob-screen" id="ob-screen-2">
+          <div class="ob-tour">
+            <div class="ob-tour-body">
+              <div class="ob-tour-top">
+                <div class="ob-wordmark">mySanskar</div>
+                <div class="ob-wordmark-sub">Raising little ones with faith &amp; values</div>
+              </div>
+              <div class="ob-cards">
+              <div class="ob-card">
+                <div class="ob-card-icon ob-icon-music">
+                  <!-- Musical eighth notes beamed together -->
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 18V5l12-2v13"/>
+                    <circle cx="6" cy="18" r="3" fill="#4ade80" stroke="none"/>
+                    <circle cx="18" cy="16" r="3" fill="#4ade80" stroke="none"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="ob-card-title">Music Library</div>
+                  <div class="ob-card-desc">Devotional songs, raags &amp; lullabies</div>
+                </div>
+              </div>
+              <div class="ob-card">
+                <div class="ob-card-icon ob-icon-stories">
+                  <!-- Diya oil lamp -->
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+                    <path d="M12 3c-1 1.8-2.5 4-2.5 5.5a2.5 2.5 0 0 0 5 0C14.5 7 13 4.8 12 3z" fill="#fb923c"/>
+                    <line x1="12" y1="11" x2="12" y2="15" stroke="#fb923c" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M7 15c0-1 2.2-1.8 5-1.8s5 .8 5 1.8l-1.2 5H8.2L7 15z" fill="#fb923c" opacity="0.85"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="ob-card-title">Satsang &amp; Moral Stories</div>
+                  <div class="ob-card-desc">Classic stories in English &amp; Gujarati</div>
+                </div>
+              </div>
+              <div class="ob-card">
+                <div class="ob-card-icon ob-icon-custom">
+                  <!-- Magic wand with sparkles -->
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#a78bfa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 4 19 8 7 20H3v-4L15 4z"/>
+                    <path d="M19 2v3M20.5 3.5h-3"/>
+                    <path d="M5 4v2M6 5H4"/>
+                    <path d="M20 11v2M21 12h-2"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="ob-card-title">Custom Stories</div>
+                  <div class="ob-card-desc">AI-written stories personalised for your child</div>
+                </div>
+              </div>
+              <div class="ob-card">
+                <div class="ob-card-icon ob-icon-convo">
+                  <!-- Speech bubble with bidirectional arrows -->
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#34d399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    <path d="M8 10l2.5-1.5L8 7"/>
+                    <path d="M16 14l-2.5 1.5L16 17"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="ob-card-title">Conversation Starters</div>
+                  <div class="ob-card-desc">Thoughtful prompts to spark meaningful talks</div>
+                </div>
+              </div>
+            </div>
+            </div><!-- /ob-tour-body -->
+            <div class="ob-tour-footer">
+              <div class="ob-dots">
+                <div class="ob-dot ob-dot-active"></div>
+                <div class="ob-dot"></div>
+                <div class="ob-dot"></div>
+              </div>
+              <button class="ob-btn-primary" id="ob-next-2">Next</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Screen 3 (guest only): Limited features info -->
+        <div class="ob-screen ob-screen-guest hidden" id="ob-screen-guest">
+          <div class="ob-guest-limit">
+            <div class="ob-guest-limit-body">
+              <div class="ob-guest-hero">
+                <div class="ob-guest-icon">🔓</div>
+                <div class="ob-heading">Explore mySanskar</div>
+                <div class="ob-subheading">You're in guest mode. Here's what you get:</div>
+              </div>
+              <div class="ob-guest-features">
+                <div class="ob-guest-feature ob-guest-feature--free">
+                  <div class="ob-guest-feature-icon">✅</div>
+                  <div>
+                    <div class="ob-guest-feature-title">Full Music Library</div>
+                    <div class="ob-guest-feature-desc">All devotional kirtans, arti, and lullabies</div>
+                  </div>
+                </div>
+                <div class="ob-guest-feature ob-guest-feature--free">
+                  <div class="ob-guest-feature-icon">✅</div>
+                  <div>
+                    <div class="ob-guest-feature-title">10 Sample Stories</div>
+                    <div class="ob-guest-feature-desc">From each of Satsang, Hindu &amp; Moral categories</div>
+                  </div>
+                </div>
+                <div class="ob-guest-feature ob-guest-feature--free">
+                  <div class="ob-guest-feature-icon">✅</div>
+                  <div>
+                    <div class="ob-guest-feature-title">Ekadashi Calendar</div>
+                    <div class="ob-guest-feature-desc">Upcoming fasts and dates</div>
+                  </div>
+                </div>
+                <div class="ob-guest-feature ob-guest-feature--locked">
+                  <div class="ob-guest-feature-icon">🔒</div>
+                  <div>
+                    <div class="ob-guest-feature-title">Story of the Day</div>
+                    <div class="ob-guest-feature-desc">AI story personalised for your child</div>
+                  </div>
+                </div>
+                <div class="ob-guest-feature ob-guest-feature--locked">
+                  <div class="ob-guest-feature-icon">🔒</div>
+                  <div>
+                    <div class="ob-guest-feature-title">Custom AI Stories</div>
+                    <div class="ob-guest-feature-desc">Generate any story, any theme</div>
+                  </div>
+                </div>
+                <div class="ob-guest-feature ob-guest-feature--locked">
+                  <div class="ob-guest-feature-icon">🔒</div>
+                  <div>
+                    <div class="ob-guest-feature-title">Conversation Starters</div>
+                    <div class="ob-guest-feature-desc">Faith-based prompts for your family</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="ob-guest-limit-footer">
+              <div class="ob-dots">
+                <div class="ob-dot"></div>
+                <div class="ob-dot"></div>
+                <div class="ob-dot ob-dot-active"></div>
+              </div>
+              <button class="ob-btn-primary" id="ob-guest-enter">Explore the app</button>
+              <button class="ob-btn-skip" id="ob-guest-signup">Create a free account instead →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Screen 3: Child profile -->
+        <div class="ob-screen" id="ob-screen-3">
+          <div class="ob-profile">
+            <div class="ob-profile-body">
+            <div class="ob-profile-top">
+              <div class="ob-heading">Tell us about<br>your child.</div>
+              <div class="ob-subheading">We'll use this to personalise their daily story. You can always update it in Settings</div>
+            </div>
+            <div class="ob-form">
+              <div class="ob-field">
+                <label class="ob-label" for="ob-name-input">Name</label>
+                <input id="ob-name-input" class="ob-input" type="text" placeholder="Child's name" maxlength="40" autocomplete="off" />
+              </div>
+              <div class="ob-field">
+                <label class="ob-label">Gender</label>
+                <div class="ob-gender-row">
+                  <button class="ob-gender-btn" data-gender="girl">Girl</button>
+                  <button class="ob-gender-btn" data-gender="boy">Boy</button>
+                </div>
+              </div>
+              <div class="ob-field">
+                <label class="ob-label" for="ob-dob-input">Date of Birth <span class="ob-optional">(optional)</span></label>
+                <input id="ob-dob-input" class="ob-input" type="date" />
+              </div>
+            </div>
+            </div><!-- /ob-profile-body -->
+            <div class="ob-profile-footer">
+              <div class="ob-dots">
+                <div class="ob-dot"></div>
+                <div class="ob-dot"></div>
+                <div class="ob-dot ob-dot-active"></div>
+                <div class="ob-dot"></div>
+              </div>
+              <button class="ob-btn-primary" id="ob-next-3">Save &amp; Continue</button>
+              <button class="ob-btn-skip" id="ob-skip-3">Skip for now</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Screen 4: All set -->
+        <div class="ob-screen" id="ob-screen-4">
+          <div id="ob-confetti" class="ob-confetti" aria-hidden="true"></div>
+          <div class="ob-done">
+            <div class="ob-done-top">
+              <div class="ob-done-circle">
+                <svg viewBox="0 0 32 32" width="40" height="40" fill="none" stroke="#1db954" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 16 13 22 25 10"/></svg>
+              </div>
+              <div class="ob-heading" style="margin-top:20px;">You're all set,<br>let's begin!</div>
+              <div class="ob-subheading">A few things to try first</div>
+            </div>
+            <div class="ob-hints">
+              <div class="ob-hint">
+                <div class="ob-hint-icon">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#f5c842" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                </div>
+                <div class="ob-hint-text" id="ob-hint-sotd"><strong>Check the Home tab</strong> for today's personalised story</div>
+              </div>
+              <div class="ob-hint">
+                <div class="ob-hint-icon">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#f5c842" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                </div>
+                <div class="ob-hint-text"><strong>Browse the Music library</strong> filled with arti, thaal, chesta, kirtans, and more</div>
+              </div>
+              <div class="ob-hint">
+                <div class="ob-hint-icon">✨</div>
+                <div class="ob-hint-text"><strong>Generate a story</strong> — pick any theme and character you like</div>
+              </div>
+            </div>
+            <div class="ob-done-footer">
+              <div class="ob-dots">
+                <div class="ob-dot"></div>
+                <div class="ob-dot"></div>
+                <div class="ob-dot"></div>
+                <div class="ob-dot ob-dot-active"></div>
+              </div>
+              <button class="ob-btn-primary" id="ob-finish">Open mySanskar</button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /onboarding-track -->
+    </div><!-- /onboarding-overlay -->
+
     <div id="settings-modal" class="modal hidden">
       <div class="modal-backdrop"></div>
       <div class="modal-sheet">
@@ -677,10 +919,6 @@
             </div>
           </div>
           <div class="settings-section-hint">Used to personalise generated stories.</div>
-          <div class="child-profile-actions">
-            <button class="child-save-btn" id="child-save-btn">Save</button>
-            <button class="child-cancel-btn" id="child-cancel-btn">Cancel</button>
-          </div>
         </div>
         <div class="settings-section">
           <div class="settings-section-label">Default Story Language</div>
@@ -697,14 +935,20 @@
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <div class="settings-advanced-body hidden" id="settings-advanced-body">
-            <div class="settings-section-hint" style="margin:0 0 10px">Re-fetches your music library from Google Drive. Use if newly added albums or songs aren't showing up.</div>
             <button class="modal-item" id="settings-refresh">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
               Resync Music Library
             </button>
           </div>
         </div>
-        <button class="modal-item cancel" id="settings-cancel">Close</button>
+        <button class="settings-save-btn" id="settings-save-btn" disabled>Save</button>
+        <button class="modal-item cancel" id="settings-cancel">Cancel</button>
+        <div class="settings-danger-zone" id="settings-danger-zone">
+          <button class="settings-delete-account-btn" id="delete-account-btn">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            Delete Account
+          </button>
+        </div>
       </div>
     </div>
 
@@ -719,6 +963,10 @@
             <div class="user-menu-email" id="user-menu-email">—</div>
           </div>
         </div>
+        <button class="modal-item primary" id="guest-create-account-btn" style="display:none">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+          Create a free account
+        </button>
         <button class="modal-item danger" id="signout-btn">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           Sign out
@@ -832,11 +1080,12 @@
   <script src="firebase-config.js"></script>
   <script src="config.js"></script>
   <script src="stories-data.js"></script>
+  <script src="lottie.min.js"></script>
   <script src="translations-data.js"></script>
   <script src="title-translations.js"></script>
   <script src="conversation-starters.js"></script>
   <script src="utils.js"></script>
-  <script src="app.js?v=20250528b"></script>
+  <script src="app.js?v=20250601u"></script>
   <script>
     // Skip service worker in native Capacitor app — WKWebView doesn't support it.
     if ('serviceWorker' in navigator && !window.Capacitor) {

@@ -70,12 +70,31 @@
     playCounts: {},
     libraryView: 'list',
     user: null,
+    isGuest: false,
     currentStory: null,
     currentCatId: null,
     storyListLang: localStorage.getItem('drift.storyListLang') || 'en',
     isVIPTTS: false,
     hasPrerenderedTTS: false,  // true when prerenderedTTS/{storyId} exists for the current story
   };
+
+  // ── Guest mode helpers ──────────────────────────────────────────
+  const GUEST_STORY_LIMIT = 10;
+  const GUEST_STORY_CATS  = ['satsang', 'hindu', 'moral']; // categories that get the 10-story cap
+
+  function isGuestMode() { return state.isGuest === true; }
+
+  // Called from any "Create a free account" CTA in guest mode — sends user back to sign-in screen
+  function promptGuestSignIn() {
+    ['user-menu', 'settings-modal', 'confirm-modal'].forEach((id) => {
+      const el = $(id); if (el) el.classList.add('hidden');
+    });
+    state.isGuest = false;
+    state.user    = null;
+    _appBooted    = false;
+    $('main-screen').classList.add('hidden');
+    $('signin-screen').classList.remove('hidden');
+  }
 
   // ============== DOM ==============
   const $ = (id) => document.getElementById(id);
@@ -113,9 +132,31 @@
   // ============== INIT ==============
   let _appBooted = false; // guard: only run full setup once
 
+  // Clear user-specific localStorage keys when a different user signs in.
+  // Prevents child profile, onboarding state, playlists, and play counts
+  // from leaking between accounts on the same device.
+  function clearPerUserLocalStorage() {
+    const USER_KEYS = [
+      'drift.childName', 'drift.childGender', 'drift.childDob',
+      'drift.onboardingDone',
+      LS.playlists, LS.playCounts, LS.lastTrack,
+      LS.queue, LS.library,
+    ];
+    USER_KEYS.forEach((k) => localStorage.removeItem(k));
+  }
+
   async function proceedAsUser(user) {
     if (_appBooted) { hideLoading(); return; } // already running
     _appBooted = true;
+
+    // If a different user was previously signed in on this device, wipe their
+    // user-specific localStorage so their child profile / onboarding state
+    // don't bleed into the new account.
+    const prevUid = localStorage.getItem('drift.lastUserId');
+    if (prevUid && prevUid !== user.uid) {
+      clearPerUserLocalStorage();
+    }
+    localStorage.setItem('drift.lastUserId', user.uid);
 
     // Show UI immediately — don't block on any network call
     state.user = user;
@@ -132,6 +173,7 @@
     // Restore the tab the user was on — must happen after setupEventListeners
     // so tab buttons and sub-nav exist in the DOM.
     switchTab(state.currentTab, state.musicSubTab);
+    checkOnboarding();
     loadVoices();
     setupAudio();
     bootstrapLibrary();
@@ -201,6 +243,79 @@
       if (inAppName$) inAppName$.textContent = inAppName;
     }
 
+    // Wire Apple sign-in button (only once)
+    // Apple Sign-In only works on native iOS — hide the button on web browsers
+    const appleBtn = $('apple-signin-btn');
+    const _isNativeForApple = !!(window.Capacitor &&
+      (window.Capacitor.isNativePlatform
+        ? window.Capacitor.isNativePlatform()
+        : true));
+    if (appleBtn && !_isNativeForApple) {
+      // On web: hide Apple button, its divider, and the guest option — iOS-only features
+      appleBtn.style.display = 'none';
+      const divider = appleBtn.previousElementSibling;
+      if (divider && divider.classList.contains('signin-divider')) divider.style.display = 'none';
+      const guestDivider = appleBtn.nextElementSibling;
+      if (guestDivider && guestDivider.classList.contains('signin-divider')) guestDivider.style.display = 'none';
+      const guestBtn2 = $('guest-signin-btn');
+      if (guestBtn2) guestBtn2.style.display = 'none';
+    }
+    if (appleBtn && !appleBtn.dataset.wired) {
+      appleBtn.dataset.wired = '1';
+      appleBtn.addEventListener('click', () => {
+        const isNative = !!(window.Capacitor &&
+          (window.Capacitor.isNativePlatform
+            ? window.Capacitor.isNativePlatform()
+            : true));
+        if (isNative) {
+          // Native iOS — use Capacitor Sign-in with Apple plugin
+          const nativeAppleSignIn = window.Capacitor?.Plugins?.SignInWithApple;
+          if (!nativeAppleSignIn) {
+            toast('Apple Sign-in plugin not available');
+            return;
+          }
+          (async () => {
+            try {
+              appleBtn.disabled = true;
+              const result = await nativeAppleSignIn.authorize();
+              const idToken = result?.response?.identityToken;
+              if (!idToken) throw new Error('No identity token from Apple');
+              const provider = new firebase.auth.OAuthProvider('apple.com');
+              const credential = provider.credential({ idToken });
+              await window.fbAuth.signInWithCredential(credential);
+              // onAuthStateChanged fires and handles the rest
+            } catch (e) {
+              const errMsg = e.message || e.code || '';
+              if (errMsg !== 'SIGN_IN_CANCELLED') {
+                console.error('Apple sign-in error:', errMsg);
+                toast('Apple sign-in failed — try again');
+              }
+              appleBtn.disabled = false;
+            }
+          })();
+        } else {
+          // Web — use Firebase popup with Apple provider
+          appleBtn.disabled = true;
+          const provider = new firebase.auth.OAuthProvider('apple.com');
+          provider.addScope('email');
+          provider.addScope('name');
+          window.fbAuth.signInWithPopup(provider)
+            .catch((e) => {
+              console.error('Apple sign-in error:', e.code, e.message);
+              toast('Apple sign-in failed — try again');
+              appleBtn.disabled = false;
+            });
+        }
+      });
+    }
+
+    // Wire "Continue as Guest" button (only once)
+    const guestBtn = $('guest-signin-btn');
+    if (guestBtn && !guestBtn.dataset.wired) {
+      guestBtn.dataset.wired = '1';
+      guestBtn.addEventListener('click', () => enterGuestMode());
+    }
+
     // Wire sign-in button (only once)
     const btn = $('google-signin-btn');
     if (btn && !btn.dataset.wired) {
@@ -259,6 +374,32 @@
         }
       });
     }
+  }
+
+  // ── Guest mode entry — called when user taps "Continue as Guest" ───
+  function enterGuestMode() {
+    if (_appBooted) return;
+    _appBooted    = true;
+    state.isGuest = true;
+    state.user    = null;
+
+    loadPersistedState();
+    updateUserUI();
+
+    if (!API_KEY || !ROOT_FOLDER_ID) {
+      hideLoading();
+      showSetup();
+      return;
+    }
+
+    showMain();
+    setupEventListeners();
+    switchTab(state.currentTab, state.musicSubTab);
+    showOnboarding(true); // guest mode = skip child profile screens
+    loadVoices();
+    setupAudio();
+    bootstrapLibrary();
+    // No Firestore calls — guests have no account
   }
 
   function init() {
@@ -514,7 +655,33 @@
   // ============== USER UI ==============
   function updateUserUI() {
     const u = state.user;
+
+    // Guest mode: show a "G" avatar and guest info
+    if (isGuestMode()) {
+      const el = $('user-avatar-el');
+      const menuAvatar = $('user-menu-avatar');
+      if (el) el.textContent = 'G';
+      if (menuAvatar) menuAvatar.textContent = 'G';
+      const nameEl = $('user-menu-name');
+      const emailEl = $('user-menu-email');
+      if (nameEl) nameEl.textContent = 'Guest';
+      if (emailEl) emailEl.textContent = 'Not signed in';
+      // Show "Create a free account" button, hide sign-out
+      const createBtn = $('guest-create-account-btn');
+      const signoutBtn = $('signout-btn');
+      if (createBtn) createBtn.style.display = '';
+      if (signoutBtn) signoutBtn.textContent = 'Sign in';
+      return;
+    }
+
     if (!u) return;
+
+    // Always reset guest-specific elements for signed-in users
+    const createBtn = $('guest-create-account-btn');
+    const signoutBtn = $('signout-btn');
+    if (createBtn) createBtn.style.display = 'none';
+    if (signoutBtn) signoutBtn.textContent = 'Sign out';
+
     const el = $('user-avatar-el');
     const menuAvatar = $('user-menu-avatar');
     if (u.photoURL) {
@@ -1419,9 +1586,13 @@
       }
     } catch {}
 
-    // Fetch from API
+    // Fetch from API — use absolute URL on native (Capacitor serves files locally,
+    // so relative /api/* paths don't resolve to Vercel)
+    const _ekadashiBase = (window.Capacitor && window.Capacitor.isNativePlatform?.())
+      ? 'https://mysanskar.vercel.app'
+      : '';
     try {
-      const resp = await fetch('/api/ekadashi');
+      const resp = await fetch(`${_ekadashiBase}/api/ekadashi`);
       if (!resp.ok) throw new Error(resp.status);
       const data = await resp.json();
       try { localStorage.setItem(EKADASHI_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch {}
@@ -1503,6 +1674,33 @@
     const tile       = $('sotd-tile');
     const skeleton   = $('sotd-skeleton');
     const setupTile  = $('sotd-setup-tile');
+
+    // Guest mode: show a locked tile instead of generating a story
+    if (isGuestMode()) {
+      [tile, skeleton, setupTile].forEach((el) => el && el.classList.add('hidden'));
+      const homeTiles = $('home-tiles');
+      if (homeTiles && !$('sotd-guest-tile')) {
+        const guestTile = document.createElement('div');
+        guestTile.id        = 'sotd-guest-tile';
+        guestTile.className = 'home-tile sotd-guest-tile';
+        guestTile.innerHTML = `
+          <div class="sotd-guest-tile-icon">📖</div>
+          <div class="sotd-guest-tile-body">
+            <div class="sotd-guest-tile-label">Today's Story</div>
+            <div class="sotd-guest-tile-title">Story of the Day</div>
+            <div class="sotd-guest-tile-sub">Create a free account to unlock →</div>
+          </div>`;
+        guestTile.addEventListener('click', () => promptGuestSignIn());
+        // Insert after ekadashi tile
+        const ekadashi = $('ekadashi-tile') || $('ekadashi-skeleton');
+        if (ekadashi && ekadashi.nextSibling) {
+          homeTiles.insertBefore(guestTile, ekadashi.nextSibling);
+        } else {
+          homeTiles.appendChild(guestTile);
+        }
+      }
+      return;
+    }
 
     // Reset all SOTD tiles synchronously. The skeleton is immediately re-shown
     // below (before the first await), so there is no visible flash — the browser
@@ -1720,8 +1918,16 @@
         <div class="story-cat-icon">💬</div>
         <div class="story-cat-name">Conversation Starters</div>
         <div class="story-cat-count">${totalCount} prompts · 4 age groups</div>
+        ${isGuestMode() ? '<div class="story-cat-lock-badge"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>' : ''}
       `;
-      convCard.addEventListener('click', openConversationAges);
+      if (isGuestMode()) convCard.classList.add('story-cat-card--locked');
+      convCard.addEventListener('click', () => {
+        if (isGuestMode()) {
+          toast('Sign up free to unlock Conversation Starters');
+          return;
+        }
+        openConversationAges();
+      });
       container.appendChild(convCard);
     }
 
@@ -1733,8 +1939,16 @@
       <div class="story-cat-icon">✨</div>
       <div class="story-cat-name">Make Your Own</div>
       <div class="story-cat-count">${aiSaved.length ? aiSaved.length + ' saved' : 'Generate new'}</div>
+      ${isGuestMode() ? '<div class="story-cat-lock-badge"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>' : ''}
     `;
-    aiCard.addEventListener('click', openAIStories);
+    if (isGuestMode()) aiCard.classList.add('story-cat-card--locked');
+    aiCard.addEventListener('click', () => {
+      if (isGuestMode()) {
+        toast('Create a free account to make your own stories');
+        return;
+      }
+      openAIStories();
+    });
     container.appendChild(aiCard);
   }
 
@@ -1747,6 +1961,9 @@
     $('story-list-title').textContent = cat.name;
     $('story-search-input').value = '';
     $('story-search-clear').classList.add('hidden');
+    // Hide search bar for guests — they only see the first 10 stories, no need to search
+    const searchWrap = $('story-search-wrap');
+    if (searchWrap) searchWrap.style.display = isGuestMode() ? 'none' : '';
     renderStoryList(catId, '');
     switchView('view-story-list');
     $('content').scrollTo({ top: 0, behavior: 'instant' });
@@ -1773,6 +1990,25 @@
       container.innerHTML = `<div class="empty-state"><h3>No stories found</h3><p>Try a different search.</p></div>`;
       return;
     }
+
+    // Guest mode: show upsell banner + cap to GUEST_STORY_LIMIT for gated categories
+    const isGuestCapped = isGuestMode() && GUEST_STORY_CATS.includes(catId) && !filter;
+    const totalCount    = stories.length;
+    if (isGuestCapped) {
+      const bannerWrap = document.createElement('div');
+      bannerWrap.className = 'guest-story-banner';
+      bannerWrap.innerHTML = `
+        <div class="guest-story-banner-text">
+          Showing <strong>${Math.min(GUEST_STORY_LIMIT, totalCount)} of ${totalCount} stories</strong>.
+          Create a free account to unlock all.
+        </div>
+        <button class="guest-story-banner-btn" id="guest-story-banner-cta">Sign up free</button>`;
+      container.appendChild(bannerWrap);
+      const ctaBtn = bannerWrap.querySelector('#guest-story-banner-cta');
+      if (ctaBtn) ctaBtn.addEventListener('click', () => promptGuestSignIn());
+      stories = stories.slice(0, GUEST_STORY_LIMIT);
+    }
+
     stories.forEach((story) => {
       const row = document.createElement('div');
       row.className = 'story-row' + (isStoryCompleted(story.id) ? ' done' : '');
@@ -1837,12 +2073,28 @@
     if (isVideo) {
       const wrap = document.createElement('div');
       wrap.className = 'story-youtube-wrap';
-      wrap.innerHTML = `<iframe
-        src="https://www.youtube.com/embed/${story.youtubeId}?rel=0&modestbranding=1"
-        title="${story.title}"
-        frameborder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowfullscreen></iframe>`;
+      const _isNativeForYT = !!(window.Capacitor && window.Capacitor.isNativePlatform?.());
+      if (_isNativeForYT) {
+        // WKWebView blocks YouTube iframes (Error 153) — show a tap-to-open button instead
+        const ytUrl = `https://www.youtube.com/watch?v=${story.youtubeId}`;
+        wrap.innerHTML = `
+          <div class="story-youtube-native" onclick="window.open('${ytUrl}','_system')">
+            <img class="story-youtube-thumb"
+              src="https://img.youtube.com/vi/${story.youtubeId}/mqdefault.jpg"
+              alt="${escapeHtml(story.title)}" />
+            <div class="story-youtube-play-overlay">
+              <div class="story-youtube-play-btn">▶</div>
+              <div class="story-youtube-play-label">Watch on YouTube</div>
+            </div>
+          </div>`;
+      } else {
+        wrap.innerHTML = `<iframe
+          src="https://www.youtube.com/embed/${story.youtubeId}?rel=0&modestbranding=1"
+          title="${escapeHtml(story.title)}"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen></iframe>`;
+      }
       body.appendChild(wrap);
     }
 
@@ -2728,11 +2980,12 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
         .get();
 
       if (!doc.exists) {
-        // Firestore has no record — if localStorage has data, push it up now.
-        // This fixes the case where the profile was saved before auth resolved
-        // and the Firestore write was silently skipped.
+        // Firestore has no record for this user.
+        // Only push localStorage data if it was written by THIS user (same UID).
+        // Never upload another user's locally-cached profile to a new account.
         const local = getChildProfile();
-        if (local.name) {
+        const localUid = localStorage.getItem('drift.lastUserId');
+        if (local.name && localUid === state.user.uid) {
           window.fbDb.doc(`users/${state.user.uid}/settings/childProfile`)
             .set(local)
             .catch((e) => console.warn('childProfile Firestore upload failed:', e));
@@ -3098,9 +3351,23 @@ ${numbered}`;
     const existing = body.querySelector('.story-mark-complete-wrap');
     if (existing) existing.remove();
 
-    const done = isStoryCompleted(storyId);
     const wrap = document.createElement('div');
     wrap.className = 'story-mark-complete-wrap';
+
+    // Guest mode: show a prompt to sign in instead of actually marking read
+    if (isGuestMode()) {
+      const btn = document.createElement('button');
+      btn.className = 'story-mark-guest-btn';
+      btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16 8 10 14 7 11"/></svg> Sign in to track read stories`;
+      btn.addEventListener('click', () => {
+        toast('Create a free account to track your reading progress 📚');
+      });
+      wrap.appendChild(btn);
+      body.appendChild(wrap);
+      return;
+    }
+
+    const done = isStoryCompleted(storyId);
     const btn = document.createElement('button');
     btn.className = 'story-mark-complete-btn' + (done ? ' completed' : '');
     btn.innerHTML = done
@@ -4130,6 +4397,72 @@ ${numbered}`;
       .catch((e) => console.warn('syncPlayCount (global) failed', e));
   }
 
+  // ============== ACCOUNT DELETION ==============
+  async function deleteAccount() {
+    if (!state.user) return;
+
+    openConfirm(
+      'Delete your account?',
+      'This permanently deletes all your playlists, stories, and saved data. This cannot be undone.',
+      async () => {
+        const uid = state.user.uid;
+        const db  = window.fbDb;
+
+        // Show a blocking progress toast
+        const progressEl = document.createElement('div');
+        progressEl.className = 'toast toast-visible';
+        progressEl.textContent = 'Deleting account…';
+        document.body.appendChild(progressEl);
+
+        try {
+          // Delete all Firestore subcollections in batches
+          const subcols = ['playlists', 'playCounts', 'storyOfDay', 'aiStories', 'storyProgress'];
+          for (const sub of subcols) {
+            try {
+              const snap = await db.collection(`users/${uid}/${sub}`).get();
+              if (!snap.empty) {
+                const batch = db.batch();
+                snap.docs.forEach((d) => batch.delete(d.ref));
+                await batch.commit();
+              }
+            } catch (e) { /* best-effort */ }
+          }
+
+          // Delete settings doc
+          try { await db.doc(`users/${uid}/settings/childProfile`).delete(); } catch (e) {}
+
+          // Delete top-level user doc
+          try { await db.collection('users').doc(uid).delete(); } catch (e) {}
+
+          // Delete Firebase Auth user (requires recent sign-in)
+          await window.fbAuth.currentUser.delete();
+
+          // Clear all local state
+          Object.values(LS).forEach((k) => localStorage.removeItem(k));
+
+          // Return to sign-in
+          progressEl.remove();
+          window.location.reload();
+
+        } catch (e) {
+          progressEl.remove();
+          if (e.code === 'auth/requires-recent-login') {
+            openConfirm(
+              'Re-authentication required',
+              'For security, please sign out and sign back in, then delete your account.',
+              () => { window.fbAuth.signOut().then(() => window.location.reload()); },
+              { confirmLabel: 'Sign out now', danger: false }
+            );
+          } else {
+            toast('Could not delete account. Please try again.');
+            console.error('deleteAccount failed:', e);
+          }
+        }
+      },
+      { confirmLabel: 'Delete Account', danger: true }
+    );
+  }
+
   let _adminStatsLoaded = false;
 
   function openAdminDashboard() {
@@ -4521,6 +4854,11 @@ ${numbered}`;
     });
     $('signout-btn').addEventListener('click', () => {
       closeModal('user-menu');
+      if (isGuestMode() || !state.user) {
+        // Guests (or double-tap after guest redirect) → back to sign-in screen
+        promptGuestSignIn();
+        return;
+      }
       openConfirm(
         'Sign out?',
         'You can sign back in at any time. Your playlists are saved to the cloud.',
@@ -4528,8 +4866,25 @@ ${numbered}`;
         { confirmLabel: 'Sign out', danger: false }
       );
     });
+    // "Create a free account" button in user menu (visible only for guests)
+    const guestCreateBtn = $('guest-create-account-btn');
+    if (guestCreateBtn) {
+      guestCreateBtn.addEventListener('click', () => {
+        closeModal('user-menu');
+        promptGuestSignIn();
+      });
+    }
     $('user-menu-cancel').addEventListener('click', () => closeModal('user-menu'));
     document.querySelector('#user-menu .modal-backdrop').addEventListener('click', () => closeModal('user-menu'));
+
+    // Delete account button (in Settings)
+    const deleteAccountBtn = $('delete-account-btn');
+    if (deleteAccountBtn) {
+      deleteAccountBtn.addEventListener('click', () => {
+        closeModal('settings-modal');
+        deleteAccount();
+      });
+    }
 
     // Admin dashboard
     const adminBtn = $('admin-btn');
@@ -4542,6 +4897,51 @@ ${numbered}`;
 
     // Settings modal
     $('settings-btn').addEventListener('click', () => {
+      // Guest mode: show locked child profile section
+      const guestLockEl = $('settings-guest-lock');
+      const childProfileForm = document.querySelector('.child-profile-form');
+      const settingsSaveBtn  = $('settings-save-btn');
+      const settingsHint     = document.querySelector('.settings-section-hint');
+
+      if (isGuestMode()) {
+        if (!guestLockEl && childProfileForm) {
+          const lockBanner = document.createElement('div');
+          lockBanner.id        = 'settings-guest-lock';
+          lockBanner.className = 'settings-guest-lock';
+          lockBanner.innerHTML = `
+            <div class="settings-guest-lock-icon">🔒</div>
+            <div class="settings-guest-lock-text">
+              <div class="settings-guest-lock-title">Child Profile</div>
+              <div class="settings-guest-lock-sub">Sign in to personalise stories for your child</div>
+            </div>
+            <button class="settings-guest-lock-btn" id="settings-guest-cta">Sign up free</button>`;
+          childProfileForm.parentNode.insertBefore(lockBanner, childProfileForm);
+        }
+        if (childProfileForm) childProfileForm.style.display = 'none';
+        if (settingsSaveBtn) settingsSaveBtn.style.display   = 'none';
+        if (settingsHint)    settingsHint.style.display      = 'none';
+        // Hide delete account button for guests (no account to delete)
+        const dangerZone = $('settings-danger-zone');
+        if (dangerZone) dangerZone.style.display = 'none';
+        showModal('settings-modal');
+        // Wire CTA button
+        const ctaBtn = $('settings-guest-cta');
+        if (ctaBtn && !ctaBtn.dataset.wired) {
+          ctaBtn.dataset.wired = '1';
+          ctaBtn.addEventListener('click', () => promptGuestSignIn());
+        }
+        return;
+      }
+
+      // Restore hidden elements if switching from guest to account (shouldn't happen
+      // in one session, but guard for safety)
+      if (guestLockEl) guestLockEl.style.display = 'none';
+      if (childProfileForm) childProfileForm.style.display = '';
+      if (settingsSaveBtn) settingsSaveBtn.style.display   = '';
+      if (settingsHint)    settingsHint.style.display      = '';
+      const dangerZone = $('settings-danger-zone');
+      if (dangerZone) dangerZone.style.display = '';
+
       // Reflect current default lang selection before opening
       const curLang = getDefaultStoryLang();
       document.querySelectorAll('.settings-lang-btn').forEach((b) => {
@@ -4557,7 +4957,7 @@ ${numbered}`;
       );
 
       showModal('settings-modal');
-      snapshotChildForm(); // capture state so Cancel can revert
+      snapshotSettings(); // capture state so Cancel can revert
 
       // Also pull fresh from Firestore in case localStorage is empty (e.g. new domain/device)
       if (state.user && !cp.name) {
@@ -4585,29 +4985,57 @@ ${numbered}`;
       btn.addEventListener('click', () => {
         document.querySelectorAll('.child-gender-btn').forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
+        checkSettingsDirty();
       });
     });
 
-    // Child profile — snapshot for cancel revert
-    let _childSnapshot = null;
-    function snapshotChildForm() {
-      _childSnapshot = {
+    // Settings — snapshot for cancel revert (child profile + story language)
+    let _settingsSnapshot = null;
+    function snapshotSettings() {
+      _settingsSnapshot = {
         name:   $('child-name-input').value,
         gender: document.querySelector('.child-gender-btn.active')?.dataset.gender || '',
         dob:    $('child-dob-input').value,
+        lang:   document.querySelector('.settings-lang-btn.active')?.dataset.lang || getDefaultStoryLang(),
       };
+      // Reset Save button to disabled after snapshot (fresh save or modal open)
+      const saveBtn = $('settings-save-btn');
+      if (saveBtn) { saveBtn.disabled = true; }
     }
-    function revertChildForm() {
-      if (!_childSnapshot) return;
-      $('child-name-input').value = _childSnapshot.name;
-      $('child-dob-input').value  = _childSnapshot.dob;
+    function revertSettings() {
+      if (!_settingsSnapshot) return;
+      $('child-name-input').value = _settingsSnapshot.name;
+      $('child-dob-input').value  = _settingsSnapshot.dob;
       document.querySelectorAll('.child-gender-btn').forEach((b) =>
-        b.classList.toggle('active', b.dataset.gender === _childSnapshot.gender)
+        b.classList.toggle('active', b.dataset.gender === _settingsSnapshot.gender)
       );
+      document.querySelectorAll('.settings-lang-btn').forEach((b) =>
+        b.classList.toggle('active', b.dataset.lang === _settingsSnapshot.lang)
+      );
+      const saveBtn = $('settings-save-btn');
+      if (saveBtn) { saveBtn.disabled = true; }
+    }
+    function checkSettingsDirty() {
+      if (!_settingsSnapshot) return;
+      const name   = $('child-name-input').value;
+      const dob    = $('child-dob-input').value;
+      const gender = document.querySelector('.child-gender-btn.active')?.dataset.gender || '';
+      const lang   = document.querySelector('.settings-lang-btn.active')?.dataset.lang || '';
+      const dirty  = name   !== _settingsSnapshot.name   ||
+                     dob    !== _settingsSnapshot.dob    ||
+                     gender !== _settingsSnapshot.gender ||
+                     lang   !== _settingsSnapshot.lang;
+      const saveBtn = $('settings-save-btn');
+      if (saveBtn) { saveBtn.disabled = !dirty; }
     }
 
-    // Save button — explicit commit
-    $('child-save-btn').addEventListener('click', () => {
+    // Wire dirty-check to name and dob inputs
+    $('child-name-input').addEventListener('input', checkSettingsDirty);
+    $('child-dob-input').addEventListener('change', checkSettingsDirty);
+
+    // Settings Save button — commits child profile + story language
+    $('settings-save-btn').addEventListener('click', () => {
+      if ($('settings-save-btn').disabled) return;
       const gender = document.querySelector('.child-gender-btn.active')?.dataset.gender || '';
       saveChildProfile({
         name:   ($('child-name-input').value || '').trim(),
@@ -4615,18 +5043,26 @@ ${numbered}`;
         dob:    ($('child-dob-input').value  || '').trim(),
       });
       refreshChildChip();
-      snapshotChildForm(); // update snapshot so next cancel doesn't revert saved data
-      toast('Child profile saved');
+
+      // Commit story language
+      const lang = document.querySelector('.settings-lang-btn.active')?.dataset.lang || 'en';
+      setDefaultStoryLang(lang);
+      // Sync story list lang toggle
+      const listLang = (lang === 'gu') ? 'gu' : 'en';
+      state.storyListLang = listLang;
+      try { localStorage.setItem('drift.storyListLang', listLang); } catch {}
+      document.querySelectorAll('.story-list-lang-btn').forEach((b) =>
+        b.classList.toggle('active', b.dataset.lang === listLang)
+      );
+      if (state.currentCatId) renderStoryList(state.currentCatId, $('story-search-input')?.value || '');
+
+      closeModal('settings-modal');
+      toast('Settings saved');
     });
 
-    // Cancel inside child form — reverts unsaved changes, stays open
-    $('child-cancel-btn').addEventListener('click', () => {
-      revertChildForm();
-    });
-
-    // Close button (bottom of modal) — just closes, no revert
+    // Cancel / close — revert unsaved changes and close modal
     function closeSettings() {
-      revertChildForm(); // discard any unsaved edits on close too
+      revertSettings(); // discard any unsaved edits
       closeModal('settings-modal');
     }
     $('settings-cancel').addEventListener('click', closeSettings);
@@ -4652,24 +5088,12 @@ ${numbered}`;
       });
     });
 
-    // Default story language picker inside settings
+    // Default story language picker inside settings (UI-only — committed on Save)
     document.querySelectorAll('.settings-lang-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const lang = btn.dataset.lang;
-        setDefaultStoryLang(lang);
         document.querySelectorAll('.settings-lang-btn').forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
-
-        // Sync story list toggle: EN → 'en', Gujarati → 'gu', Transliteration → 'en' (no trans option in list)
-        const listLang = (lang === 'gu') ? 'gu' : 'en';
-        state.storyListLang = listLang;
-        try { localStorage.setItem('drift.storyListLang', listLang); } catch {}
-        document.querySelectorAll('.story-list-lang-btn').forEach((b) =>
-          b.classList.toggle('active', b.dataset.lang === listLang)
-        );
-        if (state.currentCatId) renderStoryList(state.currentCatId, $('story-search-input')?.value || '');
-
-        toast(`Default story language set to ${btn.textContent.trim()}`);
+        checkSettingsDirty();
       });
     });
     $('settings-refresh').addEventListener('click', async () => {
@@ -4744,6 +5168,10 @@ ${numbered}`;
 
     // New playlist
     $('new-playlist-btn').addEventListener('click', () => {
+      if (isGuestMode()) {
+        toast('Create a free account to build playlists');
+        return;
+      }
       openPrompt('New playlist', 'My playlist', '', (v) => {
         const p = createPlaylist(v);
         renderPlaylists();
@@ -5329,6 +5757,179 @@ ${numbered}`;
     content.addEventListener('touchcancel', () => {
       if (pulling && !triggered) snapBack();
     });
+  }
+
+  // ============== ONBOARDING ==============
+  function checkOnboarding() {
+    try {
+      if (localStorage.getItem('drift.onboardingDone')) return;
+    } catch { return; }
+    showOnboarding(false);
+  }
+
+  function showOnboarding(guestMode) {
+    const overlay = $('onboarding-overlay');
+    const track   = $('onboarding-track');
+    if (!overlay || !track) return;
+
+    overlay.classList.remove('hidden');
+    let currentScreen = 2;
+
+    // ── Confetti burst on "You're all set" screen ─────────────
+    // Loaded lazily the first time screen-4 is shown. Playing it
+    // on overlay-open caused a top→bottom positioning flip because
+    // the Lottie SVG was sized against a hidden container.
+    let confettiAnim = null;
+    function fireConfetti() {
+      const container = $('ob-confetti');
+      if (!container || typeof lottie === 'undefined') return;
+      if (confettiAnim) {
+        confettiAnim.stop();
+        confettiAnim.play();
+        return;
+      }
+      confettiAnim = lottie.loadAnimation({
+        container,
+        renderer: 'svg',
+        loop: false,
+        autoplay: false,
+        path: 'confetti.json',
+      });
+      confettiAnim.addEventListener('data_ready', function onReady() {
+        confettiAnim.removeEventListener('data_ready', onReady);
+        confettiAnim.setSpeed(0.75);
+        confettiAnim.play();
+      });
+    }
+
+    if (guestMode) {
+      // 2-screen guest flow: Welcome → Limited features
+      overlay.classList.add('ob-guest-mode');
+      const s3 = $('ob-screen-3');
+      const s4 = $('ob-screen-4');
+      const sg = $('ob-screen-guest');
+      if (s3) s3.style.display = 'none';
+      if (s4) s4.style.display = 'none';
+      if (sg) sg.classList.remove('hidden');
+    }
+
+    // Update dots: screen 2 has 3 hardcoded dots — drop the 3rd in guest mode (2-screen flow)
+    if (guestMode) {
+      const scr2 = $('ob-screen-2');
+      if (scr2) {
+        const dots = scr2.querySelectorAll('.ob-dot');
+        if (dots.length >= 3) dots[2].remove();
+      }
+    }
+
+    function goTo(n) {
+      currentScreen = n;
+      // Screen 2 is first in track (offset 0), screen 3 is second, etc.
+      const screenW = overlay.clientWidth || window.innerWidth;
+      track.style.transform = `translateX(-${(n - 2) * screenW}px)`;
+      if (n === 4) fireConfetti();
+    }
+
+    function completeOnboarding() {
+      try { localStorage.setItem('drift.onboardingDone', '1'); } catch {}
+      overlay.classList.add('ob-fade-out');
+      overlay.addEventListener('animationend', () => {
+        overlay.classList.add('hidden');
+        overlay.classList.remove('ob-fade-out');
+      }, { once: true });
+    }
+
+    // Pre-populate from existing profile (returning user on a new device/domain)
+    const existingProfile = getChildProfile();
+    let _obGender = existingProfile.gender || '';
+
+    function prefillObProfile(cp) {
+      if (cp.name)   $('ob-name-input').value = cp.name;
+      if (cp.dob)    $('ob-dob-input').value  = cp.dob;
+      if (cp.gender) {
+        _obGender = cp.gender;
+        overlay.querySelectorAll('.ob-gender-btn').forEach((b) =>
+          b.classList.toggle('active', b.dataset.gender === cp.gender)
+        );
+      }
+    }
+    if (existingProfile.name) prefillObProfile(existingProfile);
+
+    // Also try Firestore in background (handles cross-device case)
+    if (state.user) {
+      window.fbDb.doc(`users/${state.user.uid}/settings/childProfile`).get()
+        .then((doc) => {
+          if (!doc.exists) return;
+          const { name = '', gender = '', dob = '' } = doc.data();
+          if (name) prefillObProfile({ name, gender, dob });
+        })
+        .catch(() => {});
+    }
+
+    // Gender selection
+    overlay.querySelectorAll('.ob-gender-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        overlay.querySelectorAll('.ob-gender-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        _obGender = btn.dataset.gender;
+      });
+    });
+
+    // Screen 2 → 3 (goes to guest screen in guest mode, child profile otherwise)
+    $('ob-next-2').addEventListener('click', () => goTo(3));
+
+    if (guestMode) {
+      // Guest screen: "Explore the app" → dismiss onboarding
+      const guestEnterBtn = $('ob-guest-enter');
+      if (guestEnterBtn) {
+        guestEnterBtn.addEventListener('click', () => {
+          completeOnboarding();
+        });
+      }
+      // Guest screen: "Create a free account" → go back to sign-in screen
+      const guestSignupBtn = $('ob-guest-signup');
+      if (guestSignupBtn) {
+        guestSignupBtn.addEventListener('click', () => {
+          overlay.classList.add('hidden');
+          promptGuestSignIn();
+        });
+      }
+    } else {
+      // Screen 3 → 4: save profile
+      $('ob-next-3').addEventListener('click', () => {
+        const name = ($('ob-name-input').value || '').trim();
+        const dob  = ($('ob-dob-input').value  || '').trim();
+        if (name) {
+          saveChildProfile({ name, gender: _obGender, dob });
+          refreshChildChip();
+          // Pre-fill settings modal fields so they feel consistent on first open
+          if ($('child-name-input')) $('child-name-input').value = name;
+          if ($('child-dob-input'))  $('child-dob-input').value  = dob;
+          document.querySelectorAll('.child-gender-btn').forEach((b) =>
+            b.classList.toggle('active', b.dataset.gender === _obGender)
+          );
+          // Personalise the SOTD hint on screen 4
+          const hintEl = $('ob-hint-sotd');
+          if (hintEl) {
+            const firstName = name.split(' ')[0];
+            hintEl.innerHTML = `<strong>Check the Home tab</strong> for today's personalised story for ${firstName}`;
+          }
+        }
+        goTo(4);
+      });
+
+      // Screen 3 skip
+      $('ob-skip-3').addEventListener('click', () => goTo(4));
+
+      // Screen 4 finish
+      $('ob-finish').addEventListener('click', () => {
+        completeOnboarding();
+        // If profile was saved, kick off SOTD now that we have data
+        if (getChildProfile().name) loadStoryOfDay();
+      });
+    }
+
+    goTo(2);
   }
 
   // ============== GO ==============
