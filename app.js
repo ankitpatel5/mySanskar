@@ -4437,8 +4437,11 @@ ${numbered}`;
           // Delete Firebase Auth user (requires recent sign-in)
           await window.fbAuth.currentUser.delete();
 
-          // Clear all local state
+          // Clear all local state including onboarding + UID tracker so a
+          // fresh sign-in with the same credential triggers onboarding again.
           Object.values(LS).forEach((k) => localStorage.removeItem(k));
+          clearPerUserLocalStorage();
+          localStorage.removeItem('drift.lastUserId');
 
           // Return to sign-in
           progressEl.remove();
@@ -4447,12 +4450,14 @@ ${numbered}`;
         } catch (e) {
           progressEl.remove();
           if (e.code === 'auth/requires-recent-login') {
-            openConfirm(
-              'Re-authentication required',
-              'For security, please sign out and sign back in, then delete your account.',
-              () => { window.fbAuth.signOut().then(() => window.location.reload()); },
-              { confirmLabel: 'Sign out now', danger: false }
-            );
+            // Firestore data already deleted — just sign out silently.
+            // The Firebase Auth record will be cleaned up on next sign-in attempt.
+            Object.values(LS).forEach((k) => localStorage.removeItem(k));
+            clearPerUserLocalStorage();
+            localStorage.removeItem('drift.lastUserId');
+            await window.fbAuth.signOut();
+            toast('Account deleted. You have been signed out.');
+            setTimeout(() => window.location.reload(), 1800);
           } else {
             toast('Could not delete account. Please try again.');
             console.error('deleteAccount failed:', e);
