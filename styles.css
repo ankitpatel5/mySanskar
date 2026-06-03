@@ -3749,8 +3749,10 @@ body[data-story-size="xl"] .story-para { font-size: 24px; line-height: 1.85; }
   color: var(--fg-0);
   letter-spacing: -0.03em;
   margin-bottom: 10px;
+  text-align: center;
 }
 .ob-wordmark span { color: var(--accent); }
+.ob-wordmark-sub { text-align: center; }
 .ob-tagline {
   font-size: 16px;
   color: var(--fg-2);
