@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>mySanskar — Architecture</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #CDD5E0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 40px;
+  }
+</style>
+</head>
+<body>
+<svg width="1100" height="580" viewBox="0 0 1100 580"
+     xmlns="http://www.w3.org/2000/svg"
+     style="max-width:100%;filter:drop-shadow(0 4px 24px rgba(0,0,0,0.10));">
+
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7"
+            refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7A8FA6"/>
+    </marker>
+    <filter id="box-shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="5" flood-color="rgba(0,0,0,0.10)"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1100" height="580" rx="20" fill="#D6DCE8"/>
+
+  <!-- ─────────────────────────────────────────── -->
+  <!-- CONNECTOR LINES (drawn before boxes so they -->
+  <!-- appear behind)                              -->
+  <!-- ─────────────────────────────────────────── -->
+
+  <!-- iOS → PWA -->
+  <path d="M 210,175 C 262,175 262,278 314,278"
+        fill="none" stroke="#7A8FA6" stroke-width="2"
+        marker-end="url(#arrow)"/>
+
+  <!-- Browser → PWA -->
+  <path d="M 210,390 C 262,390 262,298 314,298"
+        fill="none" stroke="#7A8FA6" stroke-width="2"
+        marker-end="url(#arrow)"/>
+
+  <!-- PWA → Firebase -->
+  <path d="M 504,268 C 554,268 554,125 604,125"
+        fill="none" stroke="#7A8FA6" stroke-width="2"
+        marker-end="url(#arrow)"/>
+
+  <!-- PWA → Google Drive -->
+  <path d="M 504,288 C 554,288 554,288 604,288"
+        fill="none" stroke="#7A8FA6" stroke-width="2"
+        marker-end="url(#arrow)"/>
+
+  <!-- PWA → Gemini -->
+  <path d="M 504,308 C 554,308 554,455 604,455"
+        fill="none" stroke="#7A8FA6" stroke-width="2"
+        marker-end="url(#arrow)"/>
+
+  <!-- Firebase → Firestore DB -->
+  <path d="M 804,125 C 850,125 850,205 886,205"
+        fill="none" stroke="#7A8FA6" stroke-width="2"
+        marker-end="url(#arrow)"/>
+
+  <!-- Google Drive → Firestore DB -->
+  <path d="M 804,288 C 850,288 850,240 886,240"
+        fill="none" stroke="#7A8FA6" stroke-width="2"
+        marker-end="url(#arrow)"/>
+
+  <!-- ─────────────────────────────────────────── -->
+  <!-- BOX: iOS Home Screen                        -->
+  <!-- ─────────────────────────────────────────── -->
+  <rect x="40" y="120" width="170" height="110" rx="10"
+        fill="white" filter="url(#box-shadow)"/>
+  <text x="125" y="165" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="14" font-weight="500" fill="#2D3748">iOS Home Screen</text>
+  <text x="125" y="185" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="12" fill="#90A0B0">PWA · Installed</text>
+
+  <!-- ─────────────────────────────────────────── -->
+  <!-- BOX: Browser / Android                      -->
+  <!-- ─────────────────────────────────────────── -->
+  <rect x="40" y="340" width="170" height="110" rx="10"
+        fill="white" filter="url(#box-shadow)"/>
+  <text x="125" y="385" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="14" font-weight="500" fill="#2D3748">Browser</text>
+  <text x="125" y="405" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="12" fill="#90A0B0">Android · Desktop</text>
+
+  <!-- ─────────────────────────────────────────── -->
+  <!-- BOX: mySanskar PWA (center hub)             -->
+  <!-- ─────────────────────────────────────────── -->
+  <rect x="314" y="220" width="190" height="140" rx="10"
+        fill="white" filter="url(#box-shadow)"/>
+  <text x="409" y="270" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="16" font-weight="600" fill="#1A202C">mySanskar</text>
+  <text x="409" y="292" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="12" fill="#90A0B0">Vanilla JS · No backend</text>
+  <!-- divider -->
+  <line x1="334" y1="305" x2="484" y2="305"
+        stroke="#EDF0F5" stroke-width="1"/>
+  <text x="409" y="323" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="11" fill="#A0B0C0">Served by Vercel CDN</text>
+  <text x="409" y="341" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="11" fill="#A0B0C0">Service Worker cached</text>
+
+  <!-- ─────────────────────────────────────────── -->
+  <!-- BOX: Firebase                               -->
+  <!-- ─────────────────────────────────────────── -->
+  <rect x="604" y="76" width="200" height="100" rx="10"
+        fill="white" filter="url(#box-shadow)"/>
+  <text x="704" y="118" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="14" font-weight="500" fill="#2D3748">Firebase</text>
+  <text x="704" y="140" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="12" fill="#90A0B0">Auth · Firestore</text>
+
+  <!-- ─────────────────────────────────────────── -->
+  <!-- BOX: Google Drive                           -->
+  <!-- ─────────────────────────────────────────── -->
+  <rect x="604" y="240" width="200" height="100" rx="10"
+        fill="white" filter="url(#box-shadow)"/>
+  <text x="704" y="282" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="14" font-weight="500" fill="#2D3748">Google Drive</text>
+  <text x="704" y="304" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="12" fill="#90A0B0">Music library · Streamed</text>
+
+  <!-- ─────────────────────────────────────────── -->
+  <!-- BOX: Gemini AI                              -->
+  <!-- ─────────────────────────────────────────── -->
+  <rect x="604" y="408" width="200" height="100" rx="10"
+        fill="white" filter="url(#box-shadow)"/>
+  <text x="704" y="450" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="14" font-weight="500" fill="#2D3748">Gemini 2.5 Flash</text>
+  <text x="704" y="472" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="12" fill="#90A0B0">AI story generation</text>
+
+  <!-- ─────────────────────────────────────────── -->
+  <!-- CYLINDER: Firestore / Storage               -->
+  <!-- ─────────────────────────────────────────── -->
+  <!-- cylinder body -->
+  <rect x="886" y="168" width="154" height="130" rx="0"
+        fill="white" filter="url(#box-shadow)"/>
+  <!-- top ellipse -->
+  <ellipse cx="963" cy="168" rx="77" ry="18"
+           fill="white" stroke="#E2E8F0" stroke-width="1"/>
+  <!-- bottom ellipse -->
+  <ellipse cx="963" cy="298" rx="77" ry="18"
+           fill="white" stroke="#E2E8F0" stroke-width="1"/>
+  <!-- sides (overdraw) -->
+  <rect x="886" y="168" width="154" height="130"
+        fill="white"/>
+  <!-- redraw ellipses on top -->
+  <ellipse cx="963" cy="168" rx="77" ry="18"
+           fill="#F7F9FC" stroke="#E2E8F0" stroke-width="1"/>
+  <ellipse cx="963" cy="298" rx="77" ry="18"
+           fill="#F7F9FC" stroke="#E2E8F0" stroke-width="1"/>
+  <!-- side lines -->
+  <line x1="886" y1="168" x2="886" y2="298" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="1040" y1="168" x2="1040" y2="298" stroke="#E2E8F0" stroke-width="1"/>
+
+  <text x="963" y="226" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="14" font-weight="500" fill="#2D3748">Firestore DB</text>
+  <text x="963" y="248" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="12" fill="#90A0B0">Playlists · Progress</text>
+  <text x="963" y="266" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="12" fill="#90A0B0">AI stories · Users</text>
+
+  <!-- ─────────────────────────────────────────── -->
+  <!-- Footer                                      -->
+  <!-- ─────────────────────────────────────────── -->
+  <text x="550" y="558" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="11" fill="#9AA8BA" letter-spacing="0.5">
+    mySanskar · baal-shravan.vercel.app
+  </text>
+
+</svg>
+</body>
+</html>

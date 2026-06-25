@@ -18,7 +18,14 @@ www/
 ios/App/App.xcworkspace/xcuserdata/
 ios/App/Pods/
 ios/App/.build/
+ios/App/build/
 ios/DerivedData/
+
+# Capacitor Android build output (Gradle generates these)
+android/app/build/
+android/app/release/
+android/build/
+android/.gradle/
 
 # Android signing password — never commit
 android/keystore.properties

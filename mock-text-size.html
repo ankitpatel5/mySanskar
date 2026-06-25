@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Text Size Mock</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0f0f0f;
+    color: #f0f0f0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    max-width: 420px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+
+  /* ── Reader header ── */
+  .reader-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    position: sticky;
+    top: 0;
+    background: #0f0f0f;
+    z-index: 10;
+  }
+
+  .back-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: #1e1e1e;
+    border: none;
+    color: #f0f0f0;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+  }
+
+  .aa-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: #1e1e1e;
+    border: none;
+    color: #f0f0f0;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    position: relative;
+    transition: background 0.15s;
+  }
+  .aa-btn:hover { background: #2a2a2a; }
+  .aa-btn.active { background: #1a3a1a; color: #4caf50; }
+
+  /* ── Hero image ── */
+  .hero-wrap {
+    margin: 0 16px 16px;
+    height: 220px;
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+    background: #1e1e1e;
+  }
+  .hero-blur {
+    position: absolute;
+    inset: -20px;
+    background: url('https://i.imgur.com/example.jpg') center/cover;
+    background-image: linear-gradient(135deg, #2d4a2d 0%, #1a3a4a 50%, #3a2d1a 100%);
+    filter: blur(18px);
+    transform: scale(1.05);
+    opacity: 0.85;
+  }
+  .hero-img {
+    position: relative;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    z-index: 1;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 80px;
+  }
+
+  /* ── Title ── */
+  .story-title {
+    font-size: 24px;
+    font-weight: 700;
+    padding: 0 16px 4px;
+    line-height: 1.2;
+  }
+  .story-subtitle {
+    font-size: 13px;
+    color: #888;
+    padding: 0 16px 16px;
+  }
+
+  /* ── TTS bar ── */
+  .tts-bar {
+    margin: 0 16px 16px;
+    background: #1e1e1e;
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .tts-play {
+    width: 32px; height: 32px;
+    background: #4caf50;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+  .tts-label { font-size: 13px; color: #aaa; flex: 1; }
+
+  /* ── Language tabs ── */
+  .lang-tabs {
+    display: flex;
+    margin: 0 16px 20px;
+    background: #1e1e1e;
+    border-radius: 10px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .lang-tab {
+    flex: 1;
+    padding: 8px 4px;
+    border: none;
+    background: transparent;
+    color: #888;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .lang-tab.active {
+    background: #4caf50;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  /* ── Story body ── */
+  .story-body {
+    padding: 0 16px 40px;
+    transition: font-size 0.2s ease;
+  }
+  .story-body p {
+    font-size: var(--story-font-size, 16px);
+    line-height: 1.75;
+    color: #e0e0e0;
+    margin-bottom: 1.4em;
+  }
+
+  /* ── Size popover ── */
+  .size-popover {
+    position: fixed;
+    top: 62px;
+    right: 16px;
+    background: #1e1e1e;
+    border: 1px solid #2e2e2e;
+    border-radius: 14px;
+    padding: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    z-index: 100;
+    width: 220px;
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+  .size-popover.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: all;
+  }
+
+  .size-popover-label {
+    font-size: 11px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+    padding: 0 2px;
+  }
+
+  .size-options {
+    display: flex;
+    gap: 6px;
+  }
+
+  .size-opt {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 10px 4px 8px;
+    border-radius: 10px;
+    border: 1.5px solid #2e2e2e;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: #ccc;
+  }
+  .size-opt:hover { background: #2a2a2a; }
+  .size-opt.selected {
+    border-color: #4caf50;
+    background: #1a2e1a;
+    color: #4caf50;
+  }
+  .size-opt .aa-sample {
+    font-weight: 700;
+    line-height: 1;
+  }
+  .size-opt[data-size="sm"] .aa-sample { font-size: 13px; }
+  .size-opt[data-size="md"] .aa-sample { font-size: 16px; }
+  .size-opt[data-size="lg"] .aa-sample { font-size: 20px; }
+  .size-opt[data-size="xl"] .aa-sample { font-size: 24px; }
+
+  .size-opt .aa-name {
+    font-size: 10px;
+    color: inherit;
+    opacity: 0.8;
+  }
+
+  /* overlay to close popover */
+  .popover-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 99;
+  }
+  .popover-overlay.visible { display: block; }
+</style>
+</head>
+<body>
+
+<!-- Reader header -->
+<div class="reader-header">
+  <button class="back-btn">‹</button>
+  <button class="aa-btn" id="aa-btn" onclick="togglePopover()">Aa</button>
+</div>
+
+<!-- Hero -->
+<div class="hero-wrap">
+  <div class="hero-blur"></div>
+  <div class="hero-img">🕊️</div>
+</div>
+
+<!-- Title -->
+<div class="story-title">Nilkanth Curses His Own Words</div>
+<div class="story-subtitle">નીલકંઠ પોતાના વચનોને શાપ આપે છે</div>
+
+<!-- TTS bar -->
+<div class="tts-bar">
+  <div class="tts-play">▶</div>
+  <div class="tts-label">Samantha</div>
+  <div style="font-size:18px; color:#555;">🎙</div>
+</div>
+
+<!-- Lang tabs -->
+<div class="lang-tabs">
+  <button class="lang-tab active">English</button>
+  <button class="lang-tab">ગુજરાતી</button>
+  <button class="lang-tab">Transliteration</button>
+</div>
+
+<!-- Story body -->
+<div class="story-body" id="story-body">
+  <p>Only ten months had passed since Nilkanth had left home. As he passed through the dense jungles in the north eastern Himalayas, Nilkanth arrived in the town of Bansi. There was a beautiful garden on the banks of the river which flowed a short distance from the town.</p>
+  <p>Nilkanth decided to rest in the garden. He would bathe in the river every morning and enjoy the peace and quiet of the garden. There were many beautiful birds that would chirp and sing in the garden.</p>
+  <p>One day, two of the king's servants came into the garden and did not notice Nilkanth sitting nearby. They pointed their rifles in the air and pulled their triggers. The bullets hit two of the birds and they fell to the ground, wounded and bleeding.</p>
+</div>
+
+<!-- Text size popover -->
+<div class="popover-overlay" id="overlay" onclick="closePopover()"></div>
+<div class="size-popover" id="size-popover">
+  <div class="size-popover-label">Text Size</div>
+  <div class="size-options">
+    <button class="size-opt" data-size="sm" onclick="setSize('sm')">
+      <span class="aa-sample">A</span>
+      <span class="aa-name">Small</span>
+    </button>
+    <button class="size-opt selected" data-size="md" onclick="setSize('md')">
+      <span class="aa-sample">A</span>
+      <span class="aa-name">Default</span>
+    </button>
+    <button class="size-opt" data-size="lg" onclick="setSize('lg')">
+      <span class="aa-sample">A</span>
+      <span class="aa-name">Large</span>
+    </button>
+    <button class="size-opt" data-size="xl" onclick="setSize('xl')">
+      <span class="aa-sample">A</span>
+      <span class="aa-name">XL</span>
+    </button>
+  </div>
+</div>
+
+<script>
+  const sizes = { sm: '13px', md: '16px', lg: '20px', xl: '24px' };
+  let current = 'md';
+
+  function togglePopover() {
+    const pop = document.getElementById('size-popover');
+    const ov  = document.getElementById('overlay');
+    const isOpen = pop.classList.contains('visible');
+    if (isOpen) {
+      pop.classList.remove('visible');
+      ov.classList.remove('visible');
+    } else {
+      pop.classList.add('visible');
+      ov.classList.add('visible');
+    }
+  }
+
+  function closePopover() {
+    document.getElementById('size-popover').classList.remove('visible');
+    document.getElementById('overlay').classList.remove('visible');
+  }
+
+  function setSize(size) {
+    current = size;
+    document.body.style.setProperty('--story-font-size', sizes[size]);
+
+    document.querySelectorAll('.size-opt').forEach(el => {
+      el.classList.toggle('selected', el.dataset.size === size);
+    });
+
+    const btn = document.getElementById('aa-btn');
+    btn.classList.toggle('active', size !== 'md');
+
+    // auto-close after a beat
+    setTimeout(closePopover, 600);
+  }
+</script>
+</body>
+</html>

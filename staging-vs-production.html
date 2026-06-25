@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Staging vs Production — 4 Changes</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --accent: #e8a030;
+  --bg-0: #0a0a0a;
+  --bg-1: #111;
+  --bg-2: #181818;
+  --bg-3: #222;
+  --fg-0: #fff;
+  --fg-1: #aaa;
+  --fg-2: #666;
+  --line-2: #2a2a2a;
+  --play-btn-color: #111;
+}
+body {
+  background: #0a0a0a;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  color: #fff;
+  padding: 32px 20px 80px;
+}
+
+/* ── Page header ── */
+h1 { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+.page-sub { font-size: 13px; color: #666; margin-bottom: 48px; }
+.badge-prod { background: #333; color: #999; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.badge-staging { background: #1a3a1a; color: #4caf50; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+
+/* ── Section wrapper ── */
+.change-block {
+  margin-bottom: 60px;
+}
+.change-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.change-num {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #000;
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.change-title { font-size: 17px; font-weight: 700; }
+.change-commit { font-size: 11px; color: #555; font-family: monospace; }
+.change-desc { font-size: 13px; color: #666; margin-top: 3px; }
+
+/* ── Comparison grid ── */
+.compare-row {
+  display: flex;
+  gap: 16px;
+}
+.compare-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.compare-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.phone-frame {
+  width: 280px;
+  background: var(--bg-1);
+  border-radius: 28px;
+  overflow: hidden;
+  border: 1.5px solid #2a2a2a;
+  position: relative;
+}
+
+/* ══════════════════════════════════════
+   CHANGE 1 — Controls redesign + mini height
+   ══════════════════════════════════════ */
+
+/* Shared mini player shell */
+.mini-shell {
+  background: #1c1c1c;
+  border-top: 1px solid #2a2a2a;
+  padding: 10px 0 0;
+  display: flex;
+  flex-direction: column;
+}
+.mini-track-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px 8px;
+}
+.mini-thumb {
+  width: 40px; height: 40px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #2a1a0a, #e8a030);
+  flex-shrink: 0;
+}
+.mini-title { font-size: 13px; font-weight: 600; color: #fff; }
+.mini-sub   { font-size: 11px; color: #888; margin-top: 2px; }
+
+/* PROD: skip row above seek */
+.mini-skip-row-prod {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 2px 16px 8px;
+}
+.mini-skip-btn-prod {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 20px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  color: #aaa;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Shared seek bar */
+.mini-seek-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px 2px;
+}
+.mini-seek-track {
+  flex: 1; height: 3px;
+  background: #333;
+  border-radius: 2px;
+  position: relative;
+}
+.mini-seek-fill {
+  width: 35%;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+}
+.mini-time { font-size: 10px; color: #666; }
+
+/* PROD controls row — all 44px */
+.mini-ctrl-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 20px 10px;
+}
+.mini-ctrl-prod {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  font-size: 10px;
+}
+.mini-ctrl-prod.play-prod {
+  width: 52px; height: 52px;
+  background: #fff;
+  color: #111;
+}
+.mini-tog { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: #666; }
+
+/* STAGING controls — sized hierarchy */
+.mini-ctrl-stg {
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  color: #fff;
+}
+.mini-ctrl-stg.prev-next  { width: 36px; height: 36px; }
+.mini-ctrl-stg.skip15     { width: 44px; height: 44px; flex-direction: column; gap: 1px; }
+.mini-ctrl-stg.play-stg   { width: 52px; height: 52px; background: #fff; color: #111; }
+.skip15-num { font-size: 10px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
+
+/* PTR indicator placeholder */
+.ptr-area {
+  height: 24px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #555;
+  letter-spacing: 0.05em;
+}
+
+/* topbar */
+.topbar {
+  height: 48px;
+  background: var(--bg-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid #1f1f1f;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  position: relative;
+  z-index: 4;
+}
+
+/* content filler */
+.content-filler {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  font-size: 12px;
+}
+
+/* diff annotation */
+.diff-pill {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  display: inline-block;
+  margin-bottom: 6px;
+}
+.diff-pill.removed { background: #3a1515; color: #f87171; }
+.diff-pill.added   { background: #1a3a1a; color: #4ade80; }
+.diff-pill.changed { background: #1a2a3a; color: #60a5fa; }
+
+.annotation {
+  width: 280px;
+  margin-top: 12px;
+  font-size: 11px;
+  color: #555;
+  line-height: 1.5;
+}
+.annotation li { margin-left: 14px; }
+
+/* ══════════════════════════════════════
+   CHANGE 2 — PTR indicator fix
+   ══════════════════════════════════════ */
+.ptr-demo-outer {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-1);
+  border-radius: 16px;
+  width: 280px;
+  height: 160px;
+  border: 1.5px solid #2a2a2a;
+}
+.ptr-topbar {
+  height: 48px;
+  background: var(--bg-1);
+  border-bottom: 1px solid #2a2a2a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  position: relative;
+  z-index: 4;
+}
+.ptr-spinner {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: #222;
+  display: flex; align-items: center; justify-content: center;
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
+  transition: top .3s;
+}
+/* PROD: spinner starts at top:56px (topbar height) so it bleeds into topbar */
+.ptr-spinner-prod {
+  top: 28px; /* partially inside topbar */
+  z-index: 100;
+}
+/* STAGING: spinner starts at top:56px but translateY positions it under topbar properly */
+.ptr-spinner-stg {
+  top: 48px;
+  z-index: 3; /* below topbar z-index:4 */
+}
+.ptr-content-bg {
+  position: absolute;
+  top: 48px;
+  left: 0; right: 0; bottom: 0;
+  background: var(--bg-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  font-size: 11px;
+}
+
+/* ══════════════════════════════════════
+   CHANGE 3 — Mini player height 178→148px
+   ══════════════════════════════════════ */
+.height-bar-wrap {
+  width: 280px;
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  justify-content: center;
+  height: 220px;
+  position: relative;
+}
+.height-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+.height-bar-inner {
+  background: #1c1c1c;
+  border: 1.5px solid #2a2a2a;
+  border-radius: 12px 12px 0 0;
+  width: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 11px;
+  position: relative;
+}
+.height-bar-label {
+  font-size: 11px;
+  color: #555;
+  margin-top: 8px;
+  font-weight: 600;
+  text-align: center;
+}
+.height-px {
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+  display: block;
+  margin-bottom: 4px;
+}
+.height-sub {
+  font-size: 10px;
+  color: #666;
+}
+.height-delta {
+  font-size: 11px;
+  font-weight: 700;
+  color: #4ade80;
+  background: #1a3a1a;
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-top: 10px;
+}
+
+/* ══════════════════════════════════════
+   CHANGE 4 — Settings modal
+   ══════════════════════════════════════ */
+.modal-shell {
+  width: 280px;
+  background: var(--bg-1);
+  border-radius: 20px;
+  border: 1.5px solid #2a2a2a;
+  overflow: hidden;
+  padding: 16px 0;
+}
+.modal-section {
+  padding: 0 16px;
+  margin-bottom: 4px;
+}
+.modal-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #555;
+  margin-bottom: 8px;
+}
+.child-field {
+  background: #1a1a1a;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #888;
+}
+.gender-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.gender-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: #1a1a1a;
+  color: #888;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+}
+.gender-btn.active {
+  background: var(--accent);
+  color: #000;
+}
+
+/* PROD: auto-save, no buttons, Resync exposed */
+.modal-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid #1a1a1a;
+  font-size: 14px;
+  color: #888;
+  font-weight: 500;
+}
+.modal-item-cancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 16px;
+  border-top: 1px solid #1a1a1a;
+  font-size: 14px;
+  color: #888;
+  font-weight: 500;
+}
+.modal-item-cancel.close-btn { color: #e8a030; font-weight: 600; }
+
+/* STAGING: explicit Save / Cancel buttons */
+.child-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  padding: 0 16px;
+}
+.child-save {
+  flex: 1;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #000;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.child-cancel-sm {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  background: #222;
+  color: #888;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Advanced collapsible */
+.adv-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid #1a1a1a;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #555;
+}
+.adv-chevron { color: #444; font-size: 12px; }
+
+/* ── divider between changes ── */
+.section-divider {
+  height: 1px;
+  background: #1a1a1a;
+  margin: 56px 0;
+}
+
+/* ── SVG icons placeholder ── */
+svg.ico { color: currentColor; }
+</style>
+</head>
+<body>
+
+<h1>Staging vs Production</h1>
+<p class="page-sub">4 commits on <span class="badge-staging">staging</span> not yet on <span class="badge-prod">main (production)</span></p>
+
+<!-- ══════════════════════════════════════════════════════
+     CHANGE 1 — Controls redesign (skip buttons move + sizing)
+     ══════════════════════════════════════════════════════ -->
+<div class="change-block">
+  <div class="change-header">
+    <div class="change-num">1</div>
+    <div>
+      <div class="change-title">Controls redesign — skip buttons move into control row</div>
+      <div class="change-commit">eea985e · Redesign controls: Option A hierarchy with Option 2 skip icons</div>
+      <div class="change-desc">Skip buttons removed from their own row above seek; integrated into the playback controls row with a 3-tier sizing hierarchy.</div>
+    </div>
+  </div>
+
+  <div class="compare-row">
+    <!-- PRODUCTION -->
+    <div class="compare-col">
+      <div class="compare-label" style="color:#888">⬡ Production (main)</div>
+      <div class="phone-frame">
+        <!-- Mini player - production: 178px, skip row above seek -->
+        <div class="mini-shell" style="height:178px">
+          <div class="mini-track-row">
+            <div class="mini-thumb"></div>
+            <div>
+              <div class="mini-title">Hanuman Chalisa</div>
+              <div class="mini-sub">Devotional</div>
+            </div>
+          </div>
+          <!-- Skip row ABOVE seek -->
+          <div class="mini-skip-row-prod">
+            <div class="mini-skip-btn-prod">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+              −15s
+            </div>
+            <div class="mini-skip-btn-prod">
+              +15s
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-3.51"/></svg>
+            </div>
+          </div>
+          <!-- Seek -->
+          <div class="mini-seek-row">
+            <span class="mini-time">1:14</span>
+            <div class="mini-seek-track"><div class="mini-seek-fill"></div></div>
+            <span class="mini-time">3:45</span>
+          </div>
+          <!-- Controls — all same size 44px -->
+          <div class="mini-ctrl-row">
+            <div class="mini-tog">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+            </div>
+            <div class="mini-ctrl-prod" style="color:#aaa">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"/><rect x="4" y="5" width="2" height="14"/></svg>
+            </div>
+            <div class="mini-ctrl-prod play-prod">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+            </div>
+            <div class="mini-ctrl-prod" style="color:#aaa">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"/><rect x="18" y="5" width="2" height="14"/></svg>
+            </div>
+            <div class="mini-tog">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <div class="diff-pill removed">Removed in staging</div>
+        <ul>
+          <li>Separate pill-style "−15s / +15s" row above seek bar</li>
+          <li>All control icons same 44px size (flat hierarchy)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- STAGING -->
+    <div class="compare-col">
+      <div class="compare-label" style="color:#4ade80">✦ Staging (new)</div>
+      <div class="phone-frame">
+        <!-- Mini player - staging: 148px, no skip row, icons in control row -->
+        <div class="mini-shell" style="height:148px">
+          <div class="mini-track-row">
+            <div class="mini-thumb"></div>
+            <div>
+              <div class="mini-title">Hanuman Chalisa</div>
+              <div class="mini-sub">Devotional</div>
+            </div>
+          </div>
+          <!-- Seek — no skip row above -->
+          <div class="mini-seek-row">
+            <span class="mini-time">1:14</span>
+            <div class="mini-seek-track"><div class="mini-seek-fill"></div></div>
+            <span class="mini-time">3:45</span>
+          </div>
+          <!-- Controls — 3-tier: prev/next 36px, skip15 44px, play 52px -->
+          <div class="mini-ctrl-row" style="padding:4px 12px 6px">
+            <div class="mini-tog">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+            </div>
+            <!-- prev — smallest (36px) -->
+            <div class="mini-ctrl-stg prev-next" style="color:#aaa">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"/><rect x="4" y="5" width="2" height="14"/></svg>
+            </div>
+            <!-- back15 — medium (44px) -->
+            <div class="mini-ctrl-stg skip15">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V2L7 7l5 5V9c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+              <span class="skip15-num">15</span>
+            </div>
+            <!-- play — largest (52px) -->
+            <div class="mini-ctrl-stg play-stg">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+            </div>
+            <!-- fwd15 — medium (44px) -->
+            <div class="mini-ctrl-stg skip15">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><g transform="scale(-1,1) translate(-24,0)"><path d="M12 5V2L7 7l5 5V9c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></g></svg>
+              <span class="skip15-num">15</span>
+            </div>
+            <!-- next — smallest (36px) -->
+            <div class="mini-ctrl-stg prev-next" style="color:#aaa">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"/><rect x="18" y="5" width="2" height="14"/></svg>
+            </div>
+            <div class="mini-tog">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <div class="diff-pill added">Added in staging</div>
+        <ul>
+          <li>Skip icons (⟲15 / ⟳15) moved INTO control row</li>
+          <li>3-tier sizing: prev/next 36px · skip15 44px · play 52px</li>
+          <li>Mini player height shrinks 178→148px (saves 30px)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section-divider"></div>
+
+<!-- ══════════════════════════════════════════════════════
+     CHANGE 2 — PTR indicator bleed fix
+     ══════════════════════════════════════════════════════ -->
+<div class="change-block">
+  <div class="change-header">
+    <div class="change-num">2</div>
+    <div>
+      <div class="change-title">Pull-to-refresh indicator bleeding into topbar</div>
+      <div class="change-commit">322916d · Fix PTR indicator bleeding into topbar</div>
+      <div class="change-desc">PTR spinner z-index lowered from 100→3 and hide offset changed from −56px→−80px so it slides under the topbar instead of overlapping it.</div>
+    </div>
+  </div>
+
+  <div class="compare-row">
+    <!-- PRODUCTION -->
+    <div class="compare-col">
+      <div class="compare-label" style="color:#888">⬡ Production — spinner overlaps topbar</div>
+      <div class="ptr-demo-outer">
+        <div class="ptr-topbar" style="position:relative; z-index:4">mySanskar</div>
+        <div class="ptr-content-bg">Content area</div>
+        <!-- Spinner at z-index:100, partially inside topbar area -->
+        <div class="ptr-spinner ptr-spinner-prod" style="z-index:100">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e8a030" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
+        </div>
+      </div>
+      <div class="annotation">
+        <div class="diff-pill removed">Bug: spinner at z-index 100</div>
+        <ul>
+          <li>hideY = −56px (same as topbar height)</li>
+          <li>Spinner visually bleeds into / on top of topbar</li>
+          <li>z-index: 100 renders above everything</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- STAGING -->
+    <div class="compare-col">
+      <div class="compare-label" style="color:#4ade80">✦ Staging — spinner hides under topbar</div>
+      <div class="ptr-demo-outer">
+        <div class="ptr-topbar" style="position:relative; z-index:4">mySanskar</div>
+        <div class="ptr-content-bg">Content area</div>
+        <!-- Spinner at z-index:3, hidden below topbar -->
+        <div class="ptr-spinner ptr-spinner-stg" style="z-index:3; top:60px; opacity:0.3">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e8a030" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
+        </div>
+        <!-- Topbar covers it -->
+        <div style="position:absolute;top:0;left:0;right:0;height:48px;background:var(--bg-1);z-index:4;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;border-bottom:1px solid #2a2a2a;">mySanskar</div>
+      </div>
+      <div class="annotation">
+        <div class="diff-pill added">Fixed in staging</div>
+        <ul>
+          <li>hideY = −80px (slides further under topbar)</li>
+          <li>z-index: 3 — topbar (z-index: 4) now covers it cleanly</li>
+          <li>Spinner appears from under topbar on pull</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section-divider"></div>
+
+<!-- ══════════════════════════════════════════════════════
+     CHANGE 3 — Mini player height 178→148px
+     ══════════════════════════════════════════════════════ -->
+<div class="change-block">
+  <div class="change-header">
+    <div class="change-num">3</div>
+    <div>
+      <div class="change-title">Mini player height reduced 178 → 148 px</div>
+      <div class="change-commit">8df4338 · Mini player: reduce height 178→148px, trim bottom padding</div>
+      <div class="change-desc">Removes 30px from the persistent mini player, reclaiming vertical space for content. Bottom padding on the controls row also trimmed (10px→6px).</div>
+    </div>
+  </div>
+
+  <div class="compare-row">
+    <!-- Production -->
+    <div class="compare-col">
+      <div class="compare-label" style="color:#888">⬡ Production</div>
+      <div class="height-bar-wrap">
+        <div class="height-bar">
+          <!-- To-scale: 178px → show at 178px tall visual bar -->
+          <div class="height-bar-inner" style="height:178px">
+            <span class="height-px">178px</span>
+            <span class="height-sub">mini player</span>
+          </div>
+          <div class="height-bar-label">Production</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Staging -->
+    <div class="compare-col">
+      <div class="compare-label" style="color:#4ade80">✦ Staging</div>
+      <div class="height-bar-wrap">
+        <div class="height-bar">
+          <div class="height-bar-inner" style="height:148px; border-color: #4ade80;">
+            <span class="height-px" style="color:#4ade80">148px</span>
+            <span class="height-sub">mini player</span>
+          </div>
+          <div class="height-bar-label" style="color:#4ade80">Staging <span class="height-delta">−30px</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center; margin-top: 16px; color: #555; font-size: 12px;">
+    Bars are drawn to scale. The mini player sits above the tab bar and consumes this much vertical space.
+  </div>
+</div>
+
+<div class="section-divider"></div>
+
+<!-- ══════════════════════════════════════════════════════
+     CHANGE 4 — Settings modal: Save/Cancel + Advanced
+     ══════════════════════════════════════════════════════ -->
+<div class="change-block">
+  <div class="change-header">
+    <div class="change-num">4</div>
+    <div>
+      <div class="change-title">Settings: explicit Save/Cancel + Advanced section</div>
+      <div class="change-commit">b89969b · Settings: explicit Save/Cancel for child profile + Advanced section</div>
+      <div class="change-desc">Child profile switches from auto-save-on-input to explicit Save / Cancel. "Resync Data" moved into a collapsible "Advanced" section. Close button renamed.</div>
+    </div>
+  </div>
+
+  <div class="compare-row">
+    <!-- PRODUCTION -->
+    <div class="compare-col">
+      <div class="compare-label" style="color:#888">⬡ Production</div>
+      <div class="modal-shell">
+        <div class="modal-section">
+          <div class="modal-label">Child Profile</div>
+          <div class="child-field">Aryan</div>
+          <div class="gender-row">
+            <div class="gender-btn active">Boy</div>
+            <div class="gender-btn">Girl</div>
+          </div>
+          <div class="child-field" style="color:#555">Date of birth…</div>
+          <!-- NO save/cancel buttons -->
+          <div style="font-size:10px;color:#555;margin-top:8px;padding:6px;background:#1a1a1a;border-radius:8px;text-align:center">
+            ⚡ Auto-saves on every keystroke
+          </div>
+        </div>
+        <!-- Language section -->
+        <div class="modal-section" style="margin-top:10px">
+          <div class="modal-label">Default Story Language</div>
+          <div class="gender-row">
+            <div class="gender-btn active">English</div>
+            <div class="gender-btn">ગુ Gujarati</div>
+          </div>
+        </div>
+        <!-- Resync exposed at top level -->
+        <div class="modal-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
+          Resync Data
+        </div>
+        <div class="modal-item-cancel">Cancel</div>
+      </div>
+      <div class="annotation">
+        <div class="diff-pill removed">Removed in staging</div>
+        <ul>
+          <li>Auto-saves on every input change (debounced 400ms)</li>
+          <li>"Resync Data" always visible at bottom</li>
+          <li>No way to discard edits — close = save</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- STAGING -->
+    <div class="compare-col">
+      <div class="compare-label" style="color:#4ade80">✦ Staging</div>
+      <div class="modal-shell">
+        <div class="modal-section">
+          <div class="modal-label">Child Profile</div>
+          <div class="child-field">Aryan</div>
+          <div class="gender-row">
+            <div class="gender-btn active">Boy</div>
+            <div class="gender-btn">Girl</div>
+          </div>
+          <div class="child-field" style="color:#555">Date of birth…</div>
+        </div>
+        <!-- Explicit Save / Cancel buttons -->
+        <div class="child-actions">
+          <div class="child-save">Save</div>
+          <div class="child-cancel-sm">Cancel</div>
+        </div>
+        <!-- Language section -->
+        <div class="modal-section" style="margin-top:6px">
+          <div class="modal-label">Default Story Language</div>
+          <div class="gender-row">
+            <div class="gender-btn active">English</div>
+            <div class="gender-btn">ગુ Gujarati</div>
+          </div>
+        </div>
+        <!-- Advanced collapsible (Resync hidden inside) -->
+        <div class="adv-toggle">
+          <span>Advanced</span>
+          <span class="adv-chevron">›</span>
+        </div>
+        <div class="modal-item-cancel close-btn">Close</div>
+      </div>
+      <div class="annotation">
+        <div class="diff-pill added">Added in staging</div>
+        <ul>
+          <li>Explicit <strong>Save</strong> button (accent) + <strong>Cancel</strong> (reverts edits)</li>
+          <li>"Resync Music Library" hidden inside collapsible <strong>Advanced</strong></li>
+          <li>"Cancel" renamed to <strong>"Close"</strong> — no revert behavior implied</li>
+          <li>Snapshot/revert logic prevents accidental data loss</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

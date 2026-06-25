@@ -24,6 +24,7 @@
     storyLangDefault: 'drift.storyLangDefault',
     activeTab: 'drift.activeTab',
     activeMusicSubTab: 'drift.activeMusicSubTab',
+    audiobooksEnabled: 'drift.audiobooksEnabled',
   };
 
   // ============== THEME ==============
@@ -76,6 +77,7 @@
     storyListLang: localStorage.getItem('drift.storyListLang') || 'en',
     isVIPTTS: false,
     hasPrerenderedTTS: false,  // true when prerenderedTTS/{storyId} exists for the current story
+    audiobooksEnabled: false,
   };
 
   // ── Guest mode helpers ──────────────────────────────────────────
@@ -180,6 +182,10 @@
     loadFirestorePlaylists();
     syncCompletedStoriesFromFirestore();
     syncChildProfileFromFirestore();
+    loadConvTalked();
+    syncAudiobooksSettingFromFirestore();
+    syncAudiobookProgressFromFirestore();
+    initDownloads();
     checkShareParam();
 
     // Skip auth-dependent setup when booting from the localStorage cache snapshot.
@@ -247,9 +253,8 @@
     // Apple Sign-In only works on native iOS — hide the button on web browsers
     const appleBtn = $('apple-signin-btn');
     const _isNativeForApple = !!(window.Capacitor &&
-      (window.Capacitor.isNativePlatform
-        ? window.Capacitor.isNativePlatform()
-        : true));
+      (window.Capacitor.isNativePlatform ? window.Capacitor.isNativePlatform() : false) &&
+      window.Capacitor.getPlatform?.() === 'ios');
     if (appleBtn && !_isNativeForApple) {
       // On web: hide Apple button, its divider, and the guest option — iOS-only features
       appleBtn.style.display = 'none';
@@ -461,6 +466,9 @@
           syncCompletedStoriesFromFirestore();
           syncChildProfileFromFirestore();
           syncAIStoriesFromFirestore();
+          loadConvTalked();
+          syncAudiobooksSettingFromFirestore();
+          syncAudiobookProgressFromFirestore();
         } else {
           proceedAsUser(user);
         }
@@ -513,8 +521,11 @@
       state.playCounts = (pc && typeof pc === 'object') ? pc : {};
     } catch { state.playCounts = {}; }
     state.libraryView = localStorage.getItem(LS.libraryView) || 'list';
+    state.audiobooksEnabled = localStorage.getItem(LS.audiobooksEnabled) === '1';
+    applyAudiobooksTab();
     const savedTab = localStorage.getItem(LS.activeTab);
-    if (savedTab === 'music' || savedTab === 'stories' || savedTab === 'home') {
+    const validTabs = ['music', 'stories', 'home', ...(state.audiobooksEnabled ? ['audiobooks'] : [])];
+    if (validTabs.includes(savedTab)) {
       state.currentTab = savedTab;
     }
     const savedSubTab = localStorage.getItem(LS.activeMusicSubTab);
@@ -765,8 +776,9 @@
   function isAudio(file) {
     if (file.mimeType && file.mimeType.startsWith('audio/')) return true;
     const name = (file.name || '').toLowerCase();
-    return name.endsWith('.mp3') || name.endsWith('.m4a') || name.endsWith('.wav')
-        || name.endsWith('.ogg') || name.endsWith('.flac') || name.endsWith('.aac');
+    return name.endsWith('.mp3') || name.endsWith('.m4a') || name.endsWith('.m4b')
+        || name.endsWith('.wav') || name.endsWith('.ogg') || name.endsWith('.flac')
+        || name.endsWith('.aac');
   }
   function isFolder(file) {
     return file.mimeType === 'application/vnd.google-apps.folder';
@@ -855,6 +867,198 @@
     // supports HTTP Range requests for seeking, returns proper CORS headers,
     // and bypasses the virus-scan interstitial entirely.
     return `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${encodeURIComponent(API_KEY)}`;
+  }
+
+  // ============== OFFLINE DOWNLOADS ==============
+  // Available on iOS & Android only (hidden on web). Uses IndexedDB to store
+  // audio blobs locally so playback works without a network connection.
+
+  const _DL_DB   = 'mysanskar-dl';
+  const _DL_STORE = 'blobs';
+  let   _dlDb     = null;
+  const _dlState  = {};    // fileId → 'downloading' | 'done'
+  const _dlUrls   = {};    // fileId → blob URL (session-scoped)
+  const _dlCbs    = {};    // fileId → [callback] waiting for blob URL
+
+  function isNative() {
+    return !!(window.Capacitor?.isNativePlatform?.());
+  }
+
+  function openDlDb() {
+    if (_dlDb) return Promise.resolve(_dlDb);
+    return new Promise((res, rej) => {
+      const req = indexedDB.open(_DL_DB, 1);
+      req.onupgradeneeded = e => {
+        if (!e.target.result.objectStoreNames.contains(_DL_STORE))
+          e.target.result.createObjectStore(_DL_STORE);
+      };
+      req.onsuccess = e => { _dlDb = e.target.result; res(_dlDb); };
+      req.onerror   = () => rej(req.error);
+    });
+  }
+
+  async function dlGet(fileId) {
+    const db = await openDlDb();
+    return new Promise(res => {
+      const tx = db.transaction(_DL_STORE, 'readonly');
+      const r  = tx.objectStore(_DL_STORE).get(fileId);
+      r.onsuccess = () => res(r.result || null);
+      r.onerror   = () => res(null);
+    });
+  }
+
+  async function dlPut(fileId, blob) {
+    const db = await openDlDb();
+    return new Promise((res, rej) => {
+      const tx = db.transaction(_DL_STORE, 'readwrite');
+      tx.objectStore(_DL_STORE).put(blob, fileId);
+      tx.oncomplete = res;
+      tx.onerror    = () => rej(tx.error);
+    });
+  }
+
+  async function dlRemove(fileId) {
+    const db = await openDlDb();
+    return new Promise(res => {
+      const tx = db.transaction(_DL_STORE, 'readwrite');
+      tx.objectStore(_DL_STORE).delete(fileId);
+      tx.oncomplete = res;
+      tx.onerror    = res;
+    });
+  }
+
+  async function dlKeys() {
+    const db = await openDlDb();
+    return new Promise(res => {
+      const tx = db.transaction(_DL_STORE, 'readonly');
+      const r  = tx.objectStore(_DL_STORE).getAllKeys();
+      r.onsuccess = () => res(r.result || []);
+      r.onerror   = () => res([]);
+    });
+  }
+
+  // Called at startup — restores blob URLs for previously downloaded files.
+  async function initDownloads() {
+    if (!isNative()) return;
+    try {
+      const keys = await dlKeys();
+      for (const k of keys) {
+        _dlState[k] = 'done';
+        // Create blob URLs eagerly so audioSrc() is synchronous at play time
+        dlGet(k).then(blob => {
+          if (blob) _dlUrls[k] = URL.createObjectURL(blob);
+        });
+      }
+    } catch {}
+  }
+
+  function isDownloaded(fileId) { return _dlState[fileId] === 'done'; }
+
+  // Synchronous — returns blob URL if ready, stream URL as fallback.
+  function audioSrc(fileId) {
+    return _dlUrls[fileId] || streamUrl(fileId);
+  }
+
+  // Download a file with progress callback (0–1). Resolves to blob URL.
+  async function downloadFile(fileId, onProgress) {
+    if (_dlState[fileId] === 'done') return _dlUrls[fileId] || streamUrl(fileId);
+    if (_dlState[fileId] === 'downloading') {
+      return new Promise((res, rej) => {
+        (_dlCbs[fileId] = _dlCbs[fileId] || []).push({ res, rej });
+      });
+    }
+    _dlState[fileId] = 'downloading';
+    try {
+      const resp = await fetch(streamUrl(fileId));
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const total  = parseInt(resp.headers.get('content-length') || '0');
+      const reader = resp.body.getReader();
+      const chunks = [];
+      let loaded = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        loaded += value.length;
+        if (total && onProgress) onProgress(loaded / total);
+      }
+      const blob   = new Blob(chunks, { type: 'audio/mpeg' });
+      await dlPut(fileId, blob);
+      const url    = URL.createObjectURL(blob);
+      _dlUrls[fileId]  = url;
+      _dlState[fileId] = 'done';
+      (_dlCbs[fileId] || []).forEach(c => c.res(url));
+      delete _dlCbs[fileId];
+      return url;
+    } catch (e) {
+      delete _dlState[fileId];
+      (_dlCbs[fileId] || []).forEach(c => c.rej(e));
+      delete _dlCbs[fileId];
+      throw e;
+    }
+  }
+
+  async function removeDownload(fileId) {
+    await dlRemove(fileId);
+    delete _dlState[fileId];
+    if (_dlUrls[fileId]) { URL.revokeObjectURL(_dlUrls[fileId]); delete _dlUrls[fileId]; }
+  }
+
+  // Resolve a human-friendly name for a downloaded fileId. Downloads can be either
+  // music tracks (keyed in state.trackById) or audiobook chapters (a chapter id
+  // inside _abLibrary). Falls back to the raw id only if nothing matches.
+  function dlDisplayName(fileId) {
+    const track = state.trackById[fileId];
+    if (track) {
+      return track.albumName ? `${track.name} · ${track.albumName}` : track.name;
+    }
+    if (_abLibrary && _abLibrary.books) {
+      for (const book of _abLibrary.books) {
+        const ch = book.chapters.find(c => c.id === fileId);
+        if (ch) {
+          // Single-file books: the chapter IS the book — just show the book name.
+          return book.chapters.length === 1 ? book.name : `${book.name} · ${ch.name}`;
+        }
+      }
+    }
+    return fileId;
+  }
+
+  function renderDlSettingsSection() {
+    const list    = $('settings-dl-list');
+    const clearBtn = $('settings-dl-clear-btn');
+    if (!list) return;
+    const downloaded = Object.keys(_dlState).filter(k => _dlState[k] === 'done');
+    if (!downloaded.length) {
+      list.innerHTML = '<div class="settings-dl-empty">No offline downloads yet. Use the ⋯ menu on any track to download it.</div>';
+      if (clearBtn) clearBtn.classList.add('hidden');
+      return;
+    }
+    if (clearBtn) clearBtn.classList.remove('hidden');
+
+    // Ensure the audiobook library is loaded so chapter ids resolve to book names,
+    // then re-render once it arrives.
+    if (!_abLibrary) {
+      loadAudiobookLibrary().then(() => renderDlSettingsSection()).catch(() => {});
+    }
+
+    list.innerHTML = '';
+    downloaded.forEach(fileId => {
+      const name = dlDisplayName(fileId);
+      const row = document.createElement('div');
+      row.className = 'settings-dl-row';
+      row.innerHTML = `
+        <span class="dl-dot"></span>
+        <span class="settings-dl-name">${escapeHtml(name)}</span>
+        <button class="settings-dl-remove" aria-label="Remove">✕</button>`;
+      row.querySelector('.settings-dl-remove').addEventListener('click', async () => {
+        await removeDownload(fileId);
+        renderDlSettingsSection();
+        renderLibrary();
+        toast('Download removed');
+      });
+      list.appendChild(row);
+    });
   }
 
   // ============== LIBRARY BOOTSTRAP ==============
@@ -963,6 +1167,26 @@
       list.innerHTML = `<div class="empty-state"><h3>No music found</h3><p>Drop MP3s into your Drive folder and hit refresh.</p></div>`;
       return;
     }
+    // Pinned "Downloaded" collection — gathers every offline track in one place
+    // so it's easy to see and manage what's saved. Native only, shown when there's
+    // at least one download.
+    if (isNative()) {
+      const dlTracks = downloadedTracks();
+      if (dlTracks.length) {
+        const dlCard = document.createElement('div');
+        dlCard.className = 'folder-card folder-card-downloads';
+        dlCard.innerHTML = `
+          <div class="folder-art folder-art-downloads">
+            <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </div>
+          <p class="folder-name">Downloaded</p>
+          <p class="folder-meta">${dlTracks.length} song${dlTracks.length === 1 ? '' : 's'} · offline</p>
+        `;
+        dlCard.addEventListener('click', openDownloadsAlbum);
+        list.appendChild(dlCard);
+      }
+    }
+
     for (const a of state.library.albums) {
       const card = document.createElement('div');
       card.className = 'folder-card';
@@ -994,6 +1218,35 @@
     $('content').scrollTo({ top: 0, behavior: 'instant' });
   }
 
+  // Every music track currently saved offline, in library order.
+  function downloadedTracks() {
+    if (!state.library) return [];
+    const out = [];
+    for (const a of state.library.albums) {
+      for (const t of a.tracks) {
+        if (isDownloaded(t.id)) out.push(t);
+      }
+    }
+    return out;
+  }
+
+  // Virtual "Downloaded" album listing all offline tracks. Reuses the album view.
+  function openDownloadsAlbum() {
+    const tracks = downloadedTracks();
+    state.activeAlbum = { id: '__downloads__', name: 'Downloaded', tracks };
+    switchView('view-album');
+    $('album-title').textContent = 'Downloaded';
+    $('album-count').textContent = `${tracks.length} song${tracks.length === 1 ? '' : 's'} · available offline`;
+    const list = $('album-tracks');
+    list.innerHTML = '';
+    if (!tracks.length) {
+      list.innerHTML = `<div class="empty-state"><h3>No downloads</h3><p>Use the ⋯ menu on any song to save it for offline.</p></div>`;
+    } else {
+      tracks.forEach((t, idx) => list.appendChild(renderTrackRow(t, idx + 1, 'downloads')));
+    }
+    $('content').scrollTo({ top: 0, behavior: 'instant' });
+  }
+
   function renderTrackRow(track, num, context) {
     const row = document.createElement('div');
     row.className = 'track-row';
@@ -1022,6 +1275,7 @@
       </div>
       <div class="track-actions">
         ${countHtml}
+        ${isNative() && isDownloaded(track.id) ? `<span class="dl-dot" title="Downloaded"></span>` : ''}
         <button class="track-more" aria-label="More options">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
             <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
@@ -1042,7 +1296,12 @@
 
   // ============== AUDIO SETUP ==============
   function setupAudio() {
-    audio.addEventListener('play', () => { state.playing = true; updatePlayIcon(); updateMediaSession(); refreshPlayingIndicators(); });
+    audio.addEventListener('play', () => {
+      state.playing = true;
+      updatePlayIcon(); updateMediaSession(); refreshPlayingIndicators();
+      // Pause audiobook when music starts
+      if (_abAudio && !_abAudio.paused) abPause();
+    });
     audio.addEventListener('pause', () => { state.playing = false; updatePlayIcon(); updateMediaSession(); refreshPlayingIndicators(); });
     audio.addEventListener('ended', handleTrackEnded);
     audio.addEventListener('timeupdate', updateProgress);
@@ -1074,14 +1333,16 @@
     state.playCounts[trackId] = (state.playCounts[trackId] || 0) + 1;
     persist('playCounts');
     syncPlayCountToFirestore(trackId);
-    audio.src = streamUrl(trackId);
+    audio.src = audioSrc(trackId);
     audio.play().catch((e) => { console.warn('play() rejected', e); });
     updateNowPlayingUI(t, true);
     refreshPlayingIndicators();
   }
 
   function playFromContext(trackId, context) {
-    if (context === 'album' && state.activeAlbum) {
+    if (context === 'downloads') {
+      state.currentSource = { kind: 'downloads', payload: null };
+    } else if (context === 'album' && state.activeAlbum) {
       state.currentSource = { kind: 'album', payload: state.activeAlbum.id };
     } else if (context === 'playlist' && state.activePlaylist) {
       state.currentSource = { kind: 'playlist', payload: state.activePlaylist.id };
@@ -1101,6 +1362,9 @@
   function getSourceTracks() {
     const src = state.currentSource;
     if (!src || src.kind === 'none' || src.kind === 'single' || src.kind === 'queue') return null;
+    if (src.kind === 'downloads') {
+      return downloadedTracks().map((t) => t.id);
+    }
     if (src.kind === 'album') {
       const a = state.library?.albums.find((al) => al.id === src.payload);
       return a ? a.tracks.map((t) => t.id) : null;
@@ -1223,12 +1487,77 @@
   }
 
   // ============== NOW PLAYING UI ==============
+  // ── Lyrics sheet ──────────────────────────────────────
+  // ── Lyrics (Firestore-backed) ──────────────────────────
+  const _lyricsCache = {};  // normalizedKey → data object | null
+
+  function normalizeLyricsKey(name) {
+    return name.replace(/\.[^.]+$/, '').toLowerCase().trim().replace(/\s+/g, ' ');
+  }
+
+  async function fetchLyricsForTrack(trackName) {
+    const key = normalizeLyricsKey(trackName);
+    if (key in _lyricsCache) return _lyricsCache[key];
+    try {
+      const doc = await window.fbDb.collection('songLyrics').doc(key).get();
+      _lyricsCache[key] = doc.exists ? doc.data() : null;
+    } catch (e) {
+      _lyricsCache[key] = null;
+    }
+    return _lyricsCache[key];
+  }
+
+  async function openLyricsSheet(track) {
+    const lyrics = await fetchLyricsForTrack(track.name);
+    if (!lyrics) return;
+
+    $('lyrics-sheet-title').textContent = lyrics.songName || track.name.replace(/\.[^.]+$/, '');
+    $('lyrics-sheet-lang').textContent = lyrics.language || '';
+
+    const body = $('lyrics-sheet-body');
+    body.innerHTML = '';
+    const rawLines = (lyrics.lines || '').split('\n');
+    rawLines.forEach(line => {
+      if (line.trim() === '') {
+        const spacer = document.createElement('div');
+        spacer.style.height = '14px';
+        body.appendChild(spacer);
+        return;
+      }
+      const p = document.createElement('p');
+      p.className = 'lyrics-line';
+      p.textContent = line;
+      body.appendChild(p);
+    });
+
+    $('lyrics-sheet').classList.remove('hidden');
+    body.scrollTop = 0;
+  }
+
+  function closeLyricsSheet() {
+    $('lyrics-sheet').classList.add('hidden');
+  }
+
   function updateNowPlayingUI(track, resetTime = false) {
     if (!track) return;
     $('mini-title').textContent = track.name;
     $('mini-sub').textContent = track.albumName;
     $('sheet-title').textContent = track.name;
     $('sheet-sub').textContent = track.albumName;
+
+    // Always hide lyrics btns first, then async-check Firestore
+    const lyricsBtn     = $('sheet-lyrics-btn');
+    const miniLyricsBtn = $('mini-lyrics-btn');
+    if (lyricsBtn)     lyricsBtn.classList.add('hidden');
+    if (miniLyricsBtn) miniLyricsBtn.classList.add('hidden');
+    const trackIdAtLoad = track.id;
+    fetchLyricsForTrack(track.name).then(lyrics => {
+      // Only update if the same track is still active
+      if (state.currentTrackId === trackIdAtLoad) {
+        if (lyricsBtn)     lyricsBtn.classList.toggle('hidden', !lyrics);
+        if (miniLyricsBtn) miniLyricsBtn.classList.toggle('hidden', !lyrics);
+      }
+    });
     const initial = (track.albumName || '?').charAt(0).toUpperCase();
     applyArt($('mini-art'), track.albumName);
     applyArt($('sheet-art'), track.albumName);
@@ -1544,6 +1873,13 @@
       switchView('view-stories');
       renderStoryCategories();
       content.scrollTo({ top: 0, behavior: 'instant' });
+    } else if (tab === 'audiobooks') {
+      if (musicSubnav) musicSubnav.classList.add('hidden');
+      if (miniPlayer)  miniPlayer.classList.add('hidden');
+      content.classList.remove('mini-visible');
+      switchView('view-audiobooks');
+      renderAudiobookLibrary();
+      content.scrollTo({ top: 0, behavior: 'instant' });
     }
   }
 
@@ -1701,6 +2037,10 @@
       }
       return;
     }
+
+    // Remove the guest-mode locked tile if the user is now signed in
+    const guestTile = $('sotd-guest-tile');
+    if (guestTile) guestTile.remove();
 
     // Reset all SOTD tiles synchronously. The skeleton is immediately re-shown
     // below (before the first await), so there is no visible flash — the browser
@@ -2170,12 +2510,75 @@
 
   let _convActiveAge = null;
   let _convActiveCat = 'all';
+  let _convHideTalked = false;
+  let _convTalkedSet = new Set();
+  let _convTalkedSaveTimer = null;
+
+  function convTalkedRef() {
+    if (!state.user) return null;
+    return window.fbDb.doc(`users/${state.user.uid}/settings/convStartersTalked`);
+  }
+
+  async function loadConvTalked() {
+    if (!state.user) return;
+    try {
+      const doc = await convTalkedRef().get();
+      if (doc.exists) {
+        const { talked = [] } = doc.data();
+        _convTalkedSet = new Set(talked);
+      } else {
+        _convTalkedSet = new Set();
+      }
+      // Refresh if the conv-starters view is currently open
+      if ($('view-conv-starters') && !$('view-conv-starters').classList.contains('hidden') && _convActiveAge) {
+        const group = window.CONVERSATION_STARTERS[_convActiveAge];
+        if (group) {
+          renderConvStarters(group, _convActiveCat);
+          updateConvProgress(group);
+        }
+      }
+    } catch (e) {
+      console.warn('convTalked load failed', e);
+    }
+  }
+
+  function saveConvTalked() {
+    if (!state.user) return;
+    clearTimeout(_convTalkedSaveTimer);
+    _convTalkedSaveTimer = setTimeout(() => {
+      convTalkedRef().set({ talked: [..._convTalkedSet] })
+        .catch(e => console.warn('convTalked save failed', e));
+    }, 600);
+  }
+
+  function convItemId(ageKey, catId, idx) {
+    return `${ageKey}::${catId}::${idx}`;
+  }
+
+  function updateConvProgress(group) {
+    const badge = $('conv-starters-progress');
+    if (!badge || !group) return;
+    let total = 0, done = 0;
+    group.categories.forEach(cat => {
+      cat.items.forEach((_, i) => {
+        total++;
+        if (_convTalkedSet.has(convItemId(_convActiveAge, cat.id, i))) done++;
+      });
+    });
+    if (done === 0) {
+      badge.classList.add('hidden');
+    } else {
+      badge.textContent = done === total ? `All ${total} done ✓` : `${done} / ${total} done`;
+      badge.classList.remove('hidden');
+    }
+  }
 
   function openConversationStarters(ageKey) {
     const data = window.CONVERSATION_STARTERS;
     if (!data || !data[ageKey]) return;
     _convActiveAge = ageKey;
     _convActiveCat = 'all';
+    _convHideTalked = false;
     const group = data[ageKey];
     $('conv-starters-title').textContent = `${group.emoji} ${group.label}`;
     $('conv-starters-sub').textContent = group.ageRange;
@@ -2183,6 +2586,7 @@
     if (tipBar) tipBar.textContent = group.tip;
     renderConvCatPills(group);
     renderConvStarters(group, 'all');
+    updateConvProgress(group);
     switchView('view-conv-starters');
     $('content').scrollTo({ top: 0, behavior: 'instant' });
   }
@@ -2191,17 +2595,32 @@
     const scroll = $('conv-cat-scroll');
     if (!scroll) return;
     scroll.innerHTML = '';
+
+    // Hide-done toggle pill (always first)
+    const hideDoneBtn = document.createElement('button');
+    hideDoneBtn.className = 'conv-cat-pill hide-done-pill' + (_convHideTalked ? ' active' : '');
+    hideDoneBtn.textContent = _convHideTalked ? '✓ Hiding done' : '✓ Hide done';
+    hideDoneBtn.addEventListener('click', () => {
+      _convHideTalked = !_convHideTalked;
+      hideDoneBtn.textContent = _convHideTalked ? '✓ Hiding done' : '✓ Hide done';
+      hideDoneBtn.classList.toggle('active', _convHideTalked);
+      renderConvStarters(group, _convActiveCat);
+      $('content').scrollTo({ top: 0, behavior: 'instant' });
+    });
+    scroll.appendChild(hideDoneBtn);
+
     const allBtn = document.createElement('button');
     allBtn.className = 'conv-cat-pill active';
     allBtn.textContent = '✨ All';
     allBtn.addEventListener('click', () => {
       _convActiveCat = 'all';
-      document.querySelectorAll('.conv-cat-pill').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.conv-cat-pill:not(.hide-done-pill)').forEach(p => p.classList.remove('active'));
       allBtn.classList.add('active');
       renderConvStarters(group, 'all');
       $('content').scrollTo({ top: 0, behavior: 'instant' });
     });
     scroll.appendChild(allBtn);
+
     group.categories.forEach(cat => {
       const btn = document.createElement('button');
       btn.className = 'conv-cat-pill';
@@ -2209,7 +2628,7 @@
       btn.dataset.catId = cat.id;
       btn.addEventListener('click', () => {
         _convActiveCat = cat.id;
-        document.querySelectorAll('.conv-cat-pill').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.conv-cat-pill:not(.hide-done-pill)').forEach(p => p.classList.remove('active'));
         btn.classList.add('active');
         renderConvStarters(group, cat.id);
         $('content').scrollTo({ top: 0, behavior: 'instant' });
@@ -2224,19 +2643,99 @@
     list.innerHTML = '';
     const cats = catFilter === 'all' ? group.categories : group.categories.filter(c => c.id === catFilter);
     cats.forEach(cat => {
+      // Count talked in this category
+      const talkedCount = cat.items.filter((_, i) =>
+        _convTalkedSet.has(convItemId(_convActiveAge, cat.id, i))
+      ).length;
+
       if (catFilter === 'all') {
         const heading = document.createElement('div');
         heading.className = 'conv-cat-heading';
-        heading.textContent = `${cat.emoji} ${cat.title}`;
+        const badgeHtml = talkedCount > 0
+          ? `<span class="conv-cat-badge">${talkedCount === cat.items.length ? 'All done ✓' : `${talkedCount}/${cat.items.length}`}</span>`
+          : '';
+        heading.innerHTML = `${cat.emoji} ${cat.title}${badgeHtml}`;
         list.appendChild(heading);
       }
-      cat.items.forEach(item => {
+
+      // If hiding talked items and all are talked, show a soft empty state
+      if (_convHideTalked && talkedCount === cat.items.length) {
+        const done = document.createElement('div');
+        done.className = 'conv-cat-all-done';
+        done.textContent = 'All done! 🎉';
+        list.appendChild(done);
+        return;
+      }
+
+      cat.items.forEach((item, idx) => {
+        const id = convItemId(_convActiveAge, cat.id, idx);
+        const talked = _convTalkedSet.has(id);
+
+        // Skip talked items when hide filter is on
+        if (_convHideTalked && talked) return;
+
         const card = document.createElement('div');
-        card.className = 'conv-starter-card';
-        card.textContent = item;
+        card.className = 'conv-starter-card' + (talked ? ' talked' : '');
+        card.dataset.itemId = id;
+
+        const enText = (item && typeof item === 'object') ? item.en : item;
+        const translitText = (item && typeof item === 'object') ? item.translit : '';
+        const translitHtml = translitText
+          ? `<div class="conv-starter-translit">${translitText}</div>`
+          : '';
+        const checkMark = talked ? '✓' : '';
+
+        card.innerHTML =
+          `<div class="conv-starter-body">` +
+            `<div class="conv-starter-en">${enText}</div>` +
+            translitHtml +
+          `</div>` +
+          `<div class="conv-starter-check">${checkMark}</div>`;
+
         card.addEventListener('click', () => {
-          card.classList.toggle('highlighted');
+          const wasTalked = _convTalkedSet.has(id);
+          if (wasTalked) {
+            _convTalkedSet.delete(id);
+          } else {
+            _convTalkedSet.add(id);
+          }
+          saveConvTalked();
+          updateConvProgress(group);
+
+          if (_convHideTalked && !wasTalked) {
+            // Item just got marked done — remove it with a quick fade
+            card.style.transition = 'opacity 0.2s';
+            card.style.opacity = '0';
+            setTimeout(() => {
+              renderConvStarters(group, catFilter);
+            }, 200);
+            return;
+          }
+
+          // Just toggle classes in-place (no full re-render)
+          card.classList.toggle('talked', !wasTalked);
+          const checkEl = card.querySelector('.conv-starter-check');
+          if (checkEl) checkEl.textContent = wasTalked ? '' : '✓';
+
+          // Update the heading badge without full re-render
+          const newTalked = !wasTalked;
+          if (catFilter === 'all') {
+            const headings = list.querySelectorAll('.conv-cat-heading');
+            headings.forEach(h => {
+              // Find the heading for this category
+              if (h.textContent.includes(cat.title)) {
+                const newCount = cat.items.filter((_, i) =>
+                  _convTalkedSet.has(convItemId(_convActiveAge, cat.id, i))
+                ).length;
+                const badgeHtml = newCount > 0
+                  ? `<span class="conv-cat-badge">${newCount === cat.items.length ? 'All done ✓' : `${newCount}/${cat.items.length}`}</span>`
+                  : '';
+                h.innerHTML = `${cat.emoji} ${cat.title}${badgeHtml}`;
+              }
+            });
+          }
         });
+
         list.appendChild(card);
       });
     });
@@ -2830,17 +3329,26 @@
         ? 'Make the story laugh-out-loud funny with silly mix-ups, slapstick moments, and playful wordplay.'
         : 'Make the story joyful and adventurous — full of wonder, surprises, and playful energy.';
 
-      return `You are a playful children's storyteller. Create a delightful, ${isFunny ? 'funny' : 'fun'} story for young children (ages 2 to 8).
+      return `You are a playful children's storyteller for a BAPS Swaminarayan family app.
+
+HARD RULES — non-negotiable:
+1. Do NOT force family members into the story. Characters should arise naturally from the topic and setting.
+2. If and only if a family member appears naturally, use these terms: "Mummy" (mother), "Pappa" (father), "Baa" (grandmother), "Dada" (grandfather). Never use Mom, Dad, Mama, Papa, Grandma, Grandpa, or any other variant.
+3. NEVER use "Bapa" to refer to a parent or any family member. In the BAPS Swaminarayan community "Bapa" is a sacred title reserved exclusively for the spiritual Guru, Mahant Swami Maharaj. Using it for a parent is deeply disrespectful and incorrect.
+4. Keep all content joyful and age-appropriate — no fear, no violence.
+
+TASK: Create a delightful, ${isFunny ? 'funny' : 'fun'} story for young children (ages 2 to 8).
 
 ${characterLine}
 
-Guidelines:
+Story guidelines:
 - Write ${lengthGuide}
 - ${toneGuide}
 - Use simple, bouncy language a parent can read aloud with expression
-- No religious or cultural angle needed — just pure, wholesome fun
+- No religious angle needed — just pure, wholesome fun
 - Age-appropriate humor: silly sounds, funny mistakes, unexpected twists, happy endings
-- Keep it light, joyful, and absolutely kid-friendly — no fear or violence
+
+Before outputting, silently check: Did family members appear naturally, or did I force them in? If they appear, did I use only "Mummy", "Pappa", "Baa", "Dada"? Did I avoid "Bapa" for any family member?
 
 Return a JSON object with exactly this structure (no markdown, no extra text):
 {
@@ -2851,20 +3359,30 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
 
     const characterLine = character
       ? `The main character is: ${character}.`
-      : 'Choose a fitting main character — a curious child, a devoted saint, or a humble animal.';
+      : 'Choose a fitting main character — a curious child, a kind animal, a wise elder, or a young friend.';
 
-    return `You are a loving storyteller for BAPS Swaminarayan families. Create a warm, engaging story for young children (ages 2 to 8) that teaches the value of "${topic}".
+    return `You are a warm, imaginative storyteller for an Indian-American family app.
+
+HARD RULES — non-negotiable:
+1. Do NOT force family members into the story. Characters should arise naturally from the topic and setting.
+2. If and only if a family member appears naturally, use these terms: "Mummy" (mother), "Pappa" (father), "Baa" (grandmother), "Dada" (grandfather). Never use Mom, Dad, Mama, Papa, Grandma, Grandpa, or any other variant.
+3. NEVER use "Bapa" to refer to a parent or any family member. In this community "Bapa" is a sacred title reserved exclusively for the spiritual Guru. Using it for a parent is deeply disrespectful and incorrect.
+4. Keep all content joyful, peaceful, and age-appropriate — no fear, no violence.
+
+TASK: Create a warm, engaging story for young children (ages 2 to 8) that teaches the value of "${topic}".
 
 ${characterLine}
 
-Guidelines:
+Story guidelines:
 - Write ${lengthGuide}
 - Use simple, warm language a parent can read aloud to a baby or toddler
-- Weave in Swaminarayan values naturally: devotion, satsang, seva, following niyams
-- Reference Bhagwan Swaminarayan or Gunatit saints where it feels natural
+- Draw on universal Indian values: kindness, honesty, seva, gratitude, humility
+- Stories can be set anywhere — a forest, a village, a home, a festival, a garden — let the topic guide the setting
+- Occasionally (not always) stories may naturally touch on devotion or prayer, but only when it fits organically — do not force a religious angle
+- Culturally rooted in an Indian family context without being narrowly religious
 - End with a gentle, clear moral lesson
-- Keep it joyful, peaceful, and age-appropriate — no fear or violence
-- Culturally appropriate for an Indian-American Hindu family
+
+Before outputting, silently check: Did family members appear naturally, or did I force them in? If they appear, did I use only "Mummy", "Pappa", "Baa", "Dada"? Did I avoid "Bapa" for any family member?
 
 Return a JSON object with exactly this structure (no markdown, no extra text):
 {
@@ -2879,7 +3397,7 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
         responseMimeType: 'application/json',
-        temperature: 0.9,
+        temperature: 0.8,
         maxOutputTokens: 8192,
       },
     });
@@ -3914,9 +4432,8 @@ ${numbered}`;
       el.classList.toggle('tts-active', parseInt(el.dataset.idx, 10) === idx);
     });
 
-    // Scroll active paragraph into view
-    const activeEl = document.querySelector(`.story-para[data-idx="${idx}"]`);
-    if (activeEl) activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Intentionally not auto-scrolling — user controls the scroll position.
+    // The active paragraph is still highlighted via the tts-active class above.
 
     // Progress bar — paragraph-level snapshot; rAF loop refines in real-time
     _ttsTotal = paraEls.length;
@@ -4155,6 +4672,10 @@ ${numbered}`;
     $('modal-track-sub').textContent = t.albumName;
     document.querySelector('[data-action="remove-from-playlist"]').classList.toggle('hidden', context !== 'playlist');
     document.querySelector('[data-action="remove-from-queue"]').classList.toggle('hidden', context !== 'queue');
+    const native = isNative();
+    const downloaded = isDownloaded(trackId);
+    document.querySelector('[data-action="download"]').classList.toggle('hidden', !native || downloaded);
+    document.querySelector('[data-action="remove-download"]').classList.toggle('hidden', !native || !downloaded);
     showModal('track-menu');
   }
 
@@ -4182,6 +4703,21 @@ ${numbered}`;
     } else if (action === 'remove-from-queue') {
       removeFromQueue(id);
       toast('Removed from queue');
+    } else if (action === 'download') {
+      const track = state.trackById[id];
+      const name  = track ? track.name : 'track';
+      toast(`Downloading "${name}"…`);
+      downloadFile(id, null).then(() => {
+        toast(`"${name}" saved for offline`);
+        renderLibrary(); // refresh download indicators
+        if (state.activeAlbum?.id === '__downloads__') openDownloadsAlbum();
+      }).catch(() => toast('Download failed'));
+    } else if (action === 'remove-download') {
+      removeDownload(id).then(() => {
+        toast('Download removed');
+        renderLibrary();
+        if (state.activeAlbum?.id === '__downloads__') openDownloadsAlbum();
+      });
     }
   }
 
@@ -4511,6 +5047,10 @@ ${numbered}`;
       await loadAdminUsers();
     } else if (adminCurrentTab === 'viptts') {
       await loadAdminVIPTTS();
+    } else if (adminCurrentTab === 'audiobooks') {
+      await loadAdminAudiobooks();
+    } else if (adminCurrentTab === 'lyrics') {
+      await loadAdminLyrics();
     } else {
       await loadAdminSongs();
     }
@@ -4586,6 +5126,312 @@ ${numbered}`;
       console.error('loadAdminVIPTTS failed', e);
       $('admin-content').innerHTML =
         '<div class="admin-loading">Failed to load VIP TTS users. Check Firestore rules.</div>';
+    }
+  }
+
+  async function loadAdminAudiobooks() {
+    if (!isAdmin()) return;
+    const content = $('admin-content');
+    try {
+      const snap = await window.fbDb.collection('audiobookInfo').orderBy('title').get();
+      const cached = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderAdminAudiobooks(cached);
+    } catch (e) {
+      console.error('loadAdminAudiobooks failed', e);
+      content.innerHTML = '<div class="admin-loading">Failed to load audiobook info cache.</div>';
+    }
+  }
+
+  function renderAdminAudiobooks(cached) {
+    const content = $('admin-content');
+    const rows = cached.map(b => `
+      <tr style="${b.failed ? 'background:rgba(200,50,50,0.08)' : ''}">
+        <td style="padding:8px 10px;font-size:13px;color:${b.failed ? '#e05a5a' : 'var(--text1)'}">${b.title}</td>
+        <td style="padding:8px 10px;font-size:13px;color:var(--text2)">${b.author || (b.failed ? '<span style="color:#e05a5a">Not found</span>' : '—')}</td>
+        <td style="padding:8px 10px;font-size:12px;color:var(--text3);max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.description || (b.failed ? '<span style="color:#e05a5a">Not found</span>' : '—')}</td>
+        <td style="padding:8px 10px;font-size:11px;color:var(--text3);white-space:nowrap">${b.fetchedAt ? new Date(b.fetchedAt).toLocaleDateString() : '—'}</td>
+        <td style="padding:8px 10px;display:flex;gap:6px;align-items:center">
+          ${b.failed ? `<button onclick="window._adminRetryBookInfo('${b.id}','${b.title.replace(/'/g, "\\'")}')"
+            style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer">Retry</button>` : ''}
+          <button onclick="window._adminDeleteBookInfo('${b.id}')"
+            style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--line-1);background:transparent;color:var(--text3);cursor:pointer">Delete</button>
+        </td>
+      </tr>`).join('');
+
+    content.innerHTML = `
+      <div style="padding:12px 0 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button id="ab-prefetch-btn"
+          style="padding:9px 18px;border-radius:8px;background:var(--accent);color:#000;border:none;font-size:14px;font-weight:700;cursor:pointer">
+          Prefetch All Book Info
+        </button>
+        <button id="ab-seed-btn"
+          style="padding:9px 18px;border-radius:8px;background:var(--surface3);color:var(--text1);border:1px solid var(--line-1);font-size:14px;font-weight:600;cursor:pointer">
+          Seed Missing Books
+        </button>
+        <span id="ab-prefetch-status" style="font-size:13px;color:var(--text3)">
+          ${cached.length} book${cached.length !== 1 ? 's' : ''} cached
+        </span>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="border-bottom:1px solid var(--line-1)">
+              <th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--text3);font-weight:600">TITLE</th>
+              <th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--text3);font-weight:600">AUTHOR</th>
+              <th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--text3);font-weight:600">DESCRIPTION</th>
+              <th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--text3);font-weight:600">CACHED</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>${rows || '<tr><td colspan="5" style="padding:20px;color:var(--text3);font-size:13px">No books cached yet. Click Prefetch All to populate.</td></tr>'}</tbody>
+        </table>
+      </div>`;
+
+    $('ab-prefetch-btn').addEventListener('click', async () => {
+      const btn = $('ab-prefetch-btn');
+      const status = $('ab-prefetch-status');
+      btn.disabled = true;
+      btn.textContent = 'Fetching…';
+      await prefetchAllBookInfo((done, total) => {
+        if (status) status.textContent = `${done} / ${total} fetched…`;
+        if (btn) btn.textContent = `Fetching… (${done}/${total})`;
+      });
+      btn.textContent = 'Done!';
+      if (status) status.textContent = 'All books fetched.';
+      setTimeout(() => loadAdminAudiobooks(), 1000);
+    });
+
+    const SEEDED_BOOKS = [
+      { title: 'Hold On to Your Kids Why Parents Need to Matter More Than Peers', author: 'Gordon Neufeld and Gabor Maté', description: 'Hold On to Your Kids argues that peer relationships have displaced parent-child relationships as the primary attachment bond, to the detriment of children\'s development. Neufeld and Maté show how to reclaim parental influence and foster the deep connection children need to thrive.' },
+      { title: 'How We Grow Up', author: 'Matt Richtel', description: 'How We Grow Up: Understanding Adolescence is a Pulitzer Prize-winning reporter\'s investigation into the teenage mental-health crisis. Drawing on extensive reporting, Richtel explains the science of adolescence and offers practical guidance for parents, educators, and teens themselves.' },
+      { title: 'How to Talk So Little Kids Will Listen', author: 'Joanna Faber and Julie King', description: 'How to Talk So Little Kids Will Listen is a practical guide for communicating with children ages two through seven. Faber and King offer tools for handling tantrums, encouraging cooperation, and building a warm relationship — all without threats, bribes, or power struggles.' },
+      { title: 'Lisa Damour - Untangled', author: 'Lisa Damour', description: 'Untangled maps the seven transitions that turn girls into adults, from leaving childhood behind to caring about the world at large. Clinical psychologist Lisa Damour draws on research and decades of experience to help parents understand — and stay connected to — their teenage daughters.' },
+      { title: 'Raising Good Humans', author: 'Hunter Clarke-Fields', description: 'Raising Good Humans teaches parents how to break the cycle of reactive, stressed-out parenting through mindfulness. Hunter Clarke-Fields combines meditation practices with practical communication skills to help parents respond calmly, model kindness, and raise caring, confident kids.' },
+      { title: 'Raising a Socially Successful Child', author: 'Dr. Stephen Nowicki', description: 'Raising a Socially Successful Child teaches parents how to help their kids master nonverbal communication — the facial expressions, body language, and tone of voice that make up the majority of human interaction. Dr. Nowicki provides exercises and strategies to help children connect, communicate, and build lasting friendships.' },
+      { title: 'Solid Starts for Babies', author: 'Jenny Best, Kary Rappaport, and Dr. Sakina Bajowala', description: 'Solid Starts for Babies is the definitive guide to introducing solid foods, from the team behind the popular Solid Starts app. It covers baby-led weaning, purees, allergen introduction, and choking prevention — giving parents the confidence to raise happy, adventurous eaters.' },
+      { title: 'The Power of Showing Up', author: 'Daniel J. Siegel and Tina Payne Bryson', description: 'The Power of Showing Up explains the single most important thing parents can do for their children: be present. Siegel and Bryson introduce the "Four S\'s" — helping children feel Safe, Seen, Soothed, and Secure — and show how this foundation shapes resilience and wellbeing for life.' },
+      { title: "What's Going on in There How the Brain and Mind Develop in the First Five Years of Life", author: 'Lise Eliot', description: "What's Going on in There is a comprehensive, research-based tour of brain development from conception through age five. Neuroscientist Lise Eliot explains how experiences, nutrition, and environment shape a child's intelligence, personality, and emotional health in the critical early years." },
+    ];
+
+    $('ab-seed-btn').addEventListener('click', async () => {
+      const btn = $('ab-seed-btn');
+      const status = $('ab-prefetch-status');
+      btn.disabled = true;
+      btn.textContent = 'Seeding…';
+      let seeded = 0;
+      for (const book of SEEDED_BOOKS) {
+        // Skip if already cached with real data
+        const existing = cached.find(b => b.title === book.title && !b.failed);
+        if (existing) continue;
+        // Delete any failed entry first
+        const failed = cached.find(b => b.title === book.title && b.failed);
+        if (failed) {
+          try { await window.fbDb.collection('audiobookInfo').doc(failed.id).delete(); } catch {}
+        }
+        delete _abBookInfoCache[book.title];
+        try {
+          await window.fbDb.collection('audiobookInfo').add({
+            title: book.title, author: book.author, description: book.description,
+            fetchedAt: Date.now(), failed: false,
+          });
+          _abBookInfoCache[book.title] = { author: book.author, description: book.description };
+          seeded++;
+        } catch (e) { console.warn('seed failed for', book.title, e); }
+      }
+      btn.textContent = 'Seed Missing Books';
+      btn.disabled = false;
+      if (status) status.textContent = `Seeded ${seeded} book${seeded !== 1 ? 's' : ''}.`;
+      setTimeout(() => loadAdminAudiobooks(), 500);
+    });
+
+    window._adminDeleteBookInfo = async (docId) => {
+      try {
+        await window.fbDb.collection('audiobookInfo').doc(docId).delete();
+        const doc = cached.find(b => b.id === docId);
+        if (doc) delete _abBookInfoCache[doc.title];
+        loadAdminAudiobooks();
+      } catch (e) {
+        toast('Failed to delete');
+      }
+    };
+
+    window._adminRetryBookInfo = (docId, title) => {
+      openPrompt(
+        `Retry: ${title}`,
+        'Optional: author name, subtitle, or other context…',
+        '',
+        async (hint) => {
+          try {
+            await window.fbDb.collection('audiobookInfo').doc(docId).delete();
+            delete _abBookInfoCache[title];
+            toast(`Retrying "${title}"…`);
+            await fetchBookInfo(title, hint.trim() || null);
+            loadAdminAudiobooks();
+          } catch (e) {
+            toast('Retry failed');
+          }
+        }
+      );
+    };
+  }
+
+  // ── Admin: Lyrics ──────────────────────────────────────
+  async function loadAdminLyrics() {
+    if (!isAdmin()) return;
+    const content = $('admin-content');
+    try {
+      const tracks = Object.values(state.trackById || {});
+      const snap = await window.fbDb.collection('songLyrics').get();
+      const lyricsMap = {};
+      snap.docs.forEach(d => { lyricsMap[d.id] = d.data(); });
+      renderAdminLyrics(tracks, lyricsMap);
+    } catch (e) {
+      console.error('loadAdminLyrics failed', e);
+      content.innerHTML = '<div class="admin-loading">Failed to load lyrics data.</div>';
+    }
+  }
+
+  function renderAdminLyrics(tracks, lyricsMap) {
+    const content = $('admin-content');
+    const sorted = [...tracks].sort((a, b) =>
+      a.name.replace(/\.[^.]+$/, '').localeCompare(b.name.replace(/\.[^.]+$/, ''))
+    );
+    const withCount = sorted.filter(t => normalizeLyricsKey(t.name) in lyricsMap).length;
+    const withoutCount = sorted.length - withCount;
+
+    const rows = sorted.map(t => {
+      const key = normalizeLyricsKey(t.name);
+      const has = key in lyricsMap;
+      const displayName = t.name.replace(/\.[^.]+$/, '');
+      const safeKey = key.replace(/'/g, "\\'");
+      const safeName = displayName.replace(/'/g, "\\'");
+      return `
+        <tr style="border-bottom:1px solid var(--line-1)">
+          <td style="padding:10px 10px;font-size:13px;color:${has ? 'var(--text1)' : '#e05a5a'};font-weight:${has ? '400' : '500'}">${escapeHtml(displayName)}</td>
+          <td style="padding:10px;font-size:12px;color:var(--text3)">${escapeHtml(t.albumName || '—')}</td>
+          <td style="padding:10px">
+            ${has
+              ? `<span style="font-size:11px;font-weight:600;color:#4ade80;background:rgba(74,222,128,.12);border-radius:10px;padding:3px 10px">✓ Has Lyrics</span>`
+              : `<span style="font-size:11px;font-weight:600;color:#e05a5a;background:rgba(224,90,90,.1);border-radius:10px;padding:3px 10px">No Lyrics</span>`
+            }
+          </td>
+          <td style="padding:10px;font-size:12px;color:var(--text3)">${has ? escapeHtml(lyricsMap[key].language || '—') : '—'}</td>
+          <td style="padding:10px">
+            <button onclick="window._adminEditLyrics('${safeKey}','${safeName}')"
+              style="font-size:11px;padding:4px 12px;border-radius:6px;cursor:pointer;
+                ${has
+                  ? 'border:1px solid var(--line-1);background:transparent;color:var(--text2)'
+                  : 'border:1px solid rgba(74,222,128,.4);background:rgba(74,222,128,.1);color:#4ade80'
+                }">
+              ${has ? 'Edit' : '+ Add Lyrics'}
+            </button>
+          </td>
+        </tr>`;
+    }).join('');
+
+    content.innerHTML = `
+      <div style="padding:12px 0 16px;display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:13px;color:var(--text3)">${sorted.length} songs total</span>
+        <span style="font-size:13px;color:#4ade80;font-weight:600">● ${withCount} with lyrics</span>
+        <span style="font-size:13px;color:#e05a5a;font-weight:600">● ${withoutCount} missing</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="border-bottom:2px solid var(--line-1)">
+              <th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--text3);font-weight:600">SONG</th>
+              <th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--text3);font-weight:600">FOLDER</th>
+              <th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--text3);font-weight:600">STATUS</th>
+              <th style="padding:6px 10px;text-align:left;font-size:11px;color:var(--text3);font-weight:600">LANGUAGE</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>${rows || '<tr><td colspan="5" style="padding:20px;color:var(--text3);font-size:13px">No songs in library yet.</td></tr>'}</tbody>
+        </table>
+      </div>`;
+
+    window._adminEditLyrics = (key, songName) => {
+      openLyricsEditor(key, songName, lyricsMap[key] || null);
+    };
+  }
+
+  function openLyricsEditor(key, songName, existing) {
+    const content = $('admin-content');
+    content.innerHTML = `
+      <div style="max-width:600px;padding-bottom:40px">
+        <button id="lyrics-editor-back"
+          style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--accent);padding:0;margin-bottom:24px;background:none;border:none;cursor:pointer">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          Back to Lyrics
+        </button>
+        <h3 style="font-size:17px;font-weight:700;margin-bottom:4px;color:var(--text1)">${escapeHtml(songName)}</h3>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:24px">
+          Key: <code style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:11px">${escapeHtml(key)}</code>
+        </p>
+
+        <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">Language</label>
+        <input id="lyrics-lang-input" type="text" value="${escapeHtml(existing?.language || '')}"
+          placeholder="e.g. Sanskrit, Hindi, Gujarati"
+          style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--line-1);background:var(--surface2);color:var(--text1);font-size:13px;margin-bottom:20px;outline:none"/>
+
+        <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Lyrics</label>
+        <p style="font-size:11px;color:var(--text3);margin-bottom:8px">One line per lyric line · blank line = stanza break</p>
+        <textarea id="lyrics-text-input" rows="22"
+          style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--line-1);background:var(--surface2);color:var(--text1);font-size:14px;line-height:1.75;resize:vertical;font-family:inherit;outline:none"
+          placeholder="Paste or type lyrics here…">${escapeHtml(existing?.lines || '')}</textarea>
+
+        <div style="display:flex;gap:10px;margin-top:16px;align-items:center;flex-wrap:wrap">
+          <button id="lyrics-save-btn"
+            style="padding:10px 24px;border-radius:8px;background:var(--accent);color:#000;border:none;font-size:14px;font-weight:700;cursor:pointer">
+            Save Lyrics
+          </button>
+          ${existing ? `<button id="lyrics-delete-btn"
+            style="padding:10px 16px;border-radius:8px;background:transparent;color:#e05a5a;border:1px solid rgba(224,90,90,.4);font-size:13px;cursor:pointer">
+            Delete
+          </button>` : ''}
+          <span id="lyrics-save-status" style="font-size:13px;color:var(--text3)"></span>
+        </div>
+      </div>`;
+
+    $('lyrics-editor-back').addEventListener('click', () => loadAdminLyrics());
+
+    $('lyrics-save-btn').addEventListener('click', async () => {
+      const btn = $('lyrics-save-btn');
+      const status = $('lyrics-save-status');
+      const lang = $('lyrics-lang-input').value.trim();
+      const lines = $('lyrics-text-input').value;
+      if (!lines.trim()) { status.textContent = 'Lyrics cannot be empty.'; return; }
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+      try {
+        await window.fbDb.collection('songLyrics').doc(key).set({
+          songName, language: lang, lines, updatedAt: Date.now(),
+        });
+        delete _lyricsCache[key]; // clear memory cache so player picks up new data
+        status.textContent = '✓ Saved!';
+        btn.textContent = 'Save Lyrics';
+        btn.disabled = false;
+        setTimeout(() => loadAdminLyrics(), 900);
+      } catch (e) {
+        console.error('saveLyrics failed', e);
+        status.textContent = 'Error saving. Try again.';
+        btn.textContent = 'Save Lyrics';
+        btn.disabled = false;
+      }
+    });
+
+    if (existing) {
+      $('lyrics-delete-btn').addEventListener('click', async () => {
+        if (!confirm(`Delete lyrics for "${songName}"?`)) return;
+        try {
+          await window.fbDb.collection('songLyrics').doc(key).delete();
+          delete _lyricsCache[key];
+          loadAdminLyrics();
+        } catch (e) {
+          console.error('deleteLyrics failed', e);
+          toast('Error deleting lyrics.');
+        }
+      });
     }
   }
 
@@ -4880,7 +5726,7 @@ ${numbered}`;
       });
     }
     $('user-menu-cancel').addEventListener('click', () => closeModal('user-menu'));
-    document.querySelector('#user-menu .modal-backdrop').addEventListener('click', () => closeModal('user-menu'));
+    $('user-menu').addEventListener('click', (e) => { if (!e.target.closest('.modal-sheet')) closeModal('user-menu'); });
 
     // Delete account button (in Settings)
     const deleteAccountBtn = $('delete-account-btn');
@@ -4902,6 +5748,10 @@ ${numbered}`;
 
     // Settings modal
     $('settings-btn').addEventListener('click', () => {
+      // Sync audiobooks toggle state when settings opens
+      const abToggleEl = $('audiobooks-toggle');
+      if (abToggleEl) abToggleEl.setAttribute('aria-checked', state.audiobooksEnabled ? 'true' : 'false');
+
       // Guest mode: show locked child profile section
       const guestLockEl = $('settings-guest-lock');
       const childProfileForm = document.querySelector('.child-profile-form');
@@ -4960,6 +5810,30 @@ ${numbered}`;
       document.querySelectorAll('.child-gender-btn').forEach((b) =>
         b.classList.toggle('active', b.dataset.gender === cp.gender)
       );
+
+      // Inject Downloads section (native only, once)
+      if (isNative() && !$('settings-downloads-section')) {
+        const dlSection = document.createElement('div');
+        dlSection.id        = 'settings-downloads-section';
+        dlSection.className = 'settings-section';
+        dlSection.innerHTML = `
+          <div class="settings-section-label">Downloads</div>
+          <div id="settings-dl-list" class="settings-dl-list"></div>
+          <button class="modal-item danger hidden" id="settings-dl-clear-btn">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            Remove All Downloads
+          </button>`;
+        const cancelBtn = $('settings-cancel');
+        cancelBtn.parentNode.insertBefore(dlSection, cancelBtn);
+        $('settings-dl-clear-btn').addEventListener('click', async () => {
+          const keys = await dlKeys();
+          await Promise.all(keys.map(k => removeDownload(k)));
+          toast('All downloads removed');
+          renderDlSettingsSection();
+          renderLibrary();
+        });
+      }
+      renderDlSettingsSection();
 
       showModal('settings-modal');
       snapshotSettings(); // capture state so Cancel can revert
@@ -5071,7 +5945,7 @@ ${numbered}`;
       closeModal('settings-modal');
     }
     $('settings-cancel').addEventListener('click', closeSettings);
-    document.querySelector('#settings-modal .modal-backdrop').addEventListener('click', closeSettings);
+    $('settings-modal').addEventListener('click', (e) => { if (!e.target.closest('.modal-sheet')) closeSettings(); });
 
     // Advanced section toggle
     $('settings-advanced-toggle').addEventListener('click', () => {
@@ -5101,6 +5975,26 @@ ${numbered}`;
         checkSettingsDirty();
       });
     });
+    // Audiobooks toggle
+    const abToggle = $('audiobooks-toggle');
+    if (abToggle) {
+      abToggle.setAttribute('aria-checked', state.audiobooksEnabled ? 'true' : 'false');
+      abToggle.addEventListener('click', () => {
+        state.audiobooksEnabled = !state.audiobooksEnabled;
+        abToggle.setAttribute('aria-checked', state.audiobooksEnabled ? 'true' : 'false');
+        localStorage.setItem(LS.audiobooksEnabled, state.audiobooksEnabled ? '1' : '0');
+        applyAudiobooksTab();
+        saveAudiobooksSettingToFirestore();
+        if (state.audiobooksEnabled) {
+          toast('Audiobooks tab enabled');
+          loadAudiobookLibrary(); // pre-load in background
+        } else {
+          toast('Audiobooks tab hidden');
+          if (state.currentTab === 'audiobooks') switchTab('home');
+        }
+      });
+    }
+
     $('settings-refresh').addEventListener('click', async () => {
       closeModal('settings-modal');
       document.body.classList.add('refreshing');
@@ -5169,7 +6063,7 @@ ${numbered}`;
     $('import-confirm').addEventListener('click', importSharedPlaylist);
     const closeImport = () => { state.pendingShareDoc = null; closeModal('import-modal'); };
     $('import-cancel').addEventListener('click', closeImport);
-    document.querySelector('#import-modal .modal-backdrop').addEventListener('click', closeImport);
+    $('import-modal').addEventListener('click', (e) => { if (!e.target.closest('.modal-sheet')) closeImport(); });
 
     // New playlist
     $('new-playlist-btn').addEventListener('click', () => {
@@ -5262,6 +6156,41 @@ ${numbered}`;
 
     // ── Story Time ──────────────────────────────────────
     $('conv-ages-back').addEventListener('click', () => switchTab('stories'));
+
+    // Audiobooks back + more details toggle
+    $('ab-resync-btn').addEventListener('click', async () => {
+      const btn = $('ab-resync-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Syncing…'; }
+      _abLibrary = null;
+      await renderAudiobookLibrary();
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg> Sync Library`;
+      }
+    });
+
+    $('ab-detail-back').addEventListener('click', () => {
+      // Snapshot current position into memory right now, before anything else
+      if (_abAudio && _abBook && _abAudio.currentTime > 2 && _abAudio.duration) {
+        const ch = _abBook.chapters[_abChapterIdx];
+        if (ch) {
+          const chStart = ch.startTime ?? 0;
+          const chEnd   = ch.endTime   ?? _abAudio.duration;
+          saveAbProgress(_abBook.id, ch.id, Math.max(0, _abAudio.currentTime - chStart), chEnd - chStart);
+        }
+      }
+      flushAbProgressToFirestore();
+      abPause();
+      renderAudiobookLibrary();
+      switchView('view-audiobooks');
+      $('content').scrollTo({ top: 0, behavior: 'instant' });
+    });
+    $('ab-more-details-toggle').addEventListener('click', () => {
+      const toggle = $('ab-more-details-toggle');
+      const body   = $('ab-more-details-body');
+      toggle.classList.toggle('open');
+      body.classList.toggle('open');
+    });
     $('conv-starters-back').addEventListener('click', () => {
       switchView('view-conv-ages');
       $('content').scrollTo({ top: 0, behavior: 'instant' });
@@ -5540,6 +6469,17 @@ ${numbered}`;
     $('sheet-loop').addEventListener('click', toggleLoop);
     $('sheet-shuffle').addEventListener('click', toggleShuffle);
     $('sheet-queue').addEventListener('click', () => { closePlayerSheet(); switchTab('queue'); });
+    $('sheet-lyrics-btn').addEventListener('click', () => {
+      const t = state.trackById[state.currentTrackId];
+      if (t) openLyricsSheet(t);
+    });
+    $('mini-lyrics-btn').addEventListener('click', (e) => {
+      e.stopPropagation(); // don't open the full player sheet
+      const t = state.trackById[state.currentTrackId];
+      if (t) openLyricsSheet(t);
+    });
+    $('lyrics-sheet-close').addEventListener('click', closeLyricsSheet);
+    $('lyrics-sheet-handle').addEventListener('click', closeLyricsSheet);
     $('sheet-add-to').addEventListener('click', () => {
       if (!state.currentTrackId) return;
       openPlaylistPicker(state.currentTrackId);
@@ -5611,7 +6551,7 @@ ${numbered}`;
         handleTrackMenuAction(action);
       });
     });
-    document.querySelector('#track-menu .modal-backdrop').addEventListener('click', () => closeModal('track-menu'));
+    $('track-menu').addEventListener('click', (e) => { if (!e.target.closest('.modal-sheet')) closeModal('track-menu'); });
 
     // Picker
     $('picker-new').addEventListener('click', () => {
@@ -5626,11 +6566,11 @@ ${numbered}`;
     document.querySelectorAll('#picker-modal [data-action="cancel-picker"]').forEach((b) =>
       b.addEventListener('click', () => closeModal('picker-modal'))
     );
-    document.querySelector('#picker-modal .modal-backdrop').addEventListener('click', () => closeModal('picker-modal'));
+    $('picker-modal').addEventListener('click', (e) => { if (!e.target.closest('.modal-sheet')) closeModal('picker-modal'); });
 
     // Modal backdrops
-    document.querySelector('#confirm-modal .modal-backdrop').addEventListener('click', () => closeModal('confirm-modal'));
-    document.querySelector('#prompt-modal .modal-backdrop').addEventListener('click', () => closeModal('prompt-modal'));
+    $('confirm-modal').addEventListener('click', (e) => { if (!e.target.closest('.modal-sheet')) closeModal('confirm-modal'); });
+    $('prompt-modal').addEventListener('click', (e) => { if (!e.target.closest('.modal-sheet')) closeModal('prompt-modal'); });
 
     // Keyboard shortcuts (desktop)
     document.addEventListener('keydown', (e) => {
@@ -5943,4 +6883,953 @@ ${numbered}`;
   } else {
     init();
   }
+
+  // ============== AUDIOBOOKS ==============
+  const AB_FOLDER_ID = '1yJRpcfeWq-hqWf47ZEytfOsHmg1br9aO';
+  const AB_SPEED_STEPS = [0.75, 1, 1.25, 1.5, 1.75, 2];
+  const AB_VIRTUAL_CHAPTER_SECS = 1800; // 30 minutes — split threshold for single-file books
+  let _abLibrary   = null;   // { books: [{ id, name, chapters, coverFileId }] }
+  let _abBook      = null;   // currently open book
+  let _abChapterIdx = 0;     // currently playing chapter index
+  let _abAudio     = null;   // separate Audio element — never touches music player
+  let _abPlaying   = false;
+  let _abSpeed     = 1;
+  let _abProgress  = {};     // { [bookId]: { [fileId]: { position, duration } } } — in-memory cache
+  let _abSaveTimer = null;
+
+  function applyAudiobooksTab() {
+    const btn = $('audiobooks-tab-btn');
+    if (btn) btn.classList.toggle('hidden', !state.audiobooksEnabled);
+  }
+
+  // ── Firestore helpers ──────────────────────────────────────────
+  function abProgressRef(bookId) {
+    if (!state.user) return null;
+    return window.fbDb.doc(`users/${state.user.uid}/audiobookProgress/${bookId}`);
+  }
+  function abSettingsRef() {
+    if (!state.user) return null;
+    return window.fbDb.doc(`users/${state.user.uid}/settings/appFeatures`);
+  }
+
+  async function syncAudiobooksSettingFromFirestore() {
+    if (!state.user) return;
+    try {
+      const doc = await abSettingsRef().get();
+      if (doc.exists && typeof doc.data().audiobooksEnabled === 'boolean') {
+        const remote = doc.data().audiobooksEnabled;
+        if (remote !== state.audiobooksEnabled) {
+          state.audiobooksEnabled = remote;
+          localStorage.setItem(LS.audiobooksEnabled, remote ? '1' : '0');
+          applyAudiobooksTab();
+          const abToggleEl = $('audiobooks-toggle');
+          if (abToggleEl) abToggleEl.setAttribute('aria-checked', remote ? 'true' : 'false');
+        }
+      }
+    } catch (e) { console.warn('abSettings sync failed', e); }
+  }
+
+  async function syncAudiobookProgressFromFirestore() {
+    if (!state.user) return;
+    try {
+      // Load the entire progress collection in one batch
+      const snap = await window.fbDb
+        .collection(`users/${state.user.uid}/audiobookProgress`)
+        .get();
+      snap.docs.forEach(doc => {
+        _abProgress[doc.id] = doc.data().chapters || {};
+      });
+      // If audiobooks tab is currently visible, re-render so Continue Listening shows correctly
+      if (state.currentTab === 'audiobooks' && $('view-audiobooks') &&
+          !$('view-audiobooks').classList.contains('hidden')) {
+        renderAudiobookLibrary();
+      }
+    } catch (e) { console.warn('abProgress sync failed', e); }
+  }
+
+  function saveAudiobooksSettingToFirestore() {
+    if (!state.user) return;
+    abSettingsRef().set({ audiobooksEnabled: state.audiobooksEnabled }, { merge: true })
+      .catch(e => console.warn('abSettings save failed', e));
+  }
+
+  async function loadAbProgress(bookId) {
+    // If already in memory (either from sync or previous load), use it
+    if (_abProgress[bookId] !== undefined) return _abProgress[bookId];
+    // Mark as loaded (empty) so we don't duplicate-fetch
+    _abProgress[bookId] = {};
+    if (!state.user) return {};
+    try {
+      const doc = await abProgressRef(bookId).get();
+      _abProgress[bookId] = doc.exists ? (doc.data().chapters || {}) : {};
+    } catch { _abProgress[bookId] = {}; }
+    return _abProgress[bookId];
+  }
+
+  function saveAbProgress(bookId, fileId, position, duration) {
+    // Always update memory immediately — this is what renderAudiobookLibrary reads
+    if (!_abProgress[bookId]) _abProgress[bookId] = {};
+    _abProgress[bookId][fileId] = { position, duration };
+    // Debounce the Firestore write
+    clearTimeout(_abSaveTimer);
+    _abSaveTimer = setTimeout(() => flushAbProgressToFirestore(bookId), 5000);
+  }
+
+  function flushAbProgressToFirestore(bookId) {
+    clearTimeout(_abSaveTimer);
+    const id = bookId || _abBook?.id;
+    if (!state.user || !id || !_abProgress[id]) return;
+    const ref = abProgressRef(id);
+    if (ref) ref.set({ chapters: _abProgress[id] }, { merge: true })
+      .catch(e => console.warn('abProgress flush failed', e));
+  }
+
+  // ── Drive loading ─────────────────────────────────────────────
+  function isImage(file) {
+    const name = (file.name || '').toLowerCase();
+    return name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.webp');
+  }
+
+  // Recursively finds all folders containing audio files (up to maxDepth levels deep).
+  // bookFolder is always the top-level folder — its name is the book title.
+  // rootFiles are the top-level folder's files (used for cover image lookup).
+  async function _findBookFolders(folder, depth, maxDepth, bookFolder = null, rootFiles = null) {
+    const rootFolder = bookFolder || folder;
+    if (depth > maxDepth) return [];
+    try {
+      const children = await listAllChildren(folder.id);
+      const topFiles  = rootFiles || children; // top-level files for cover lookup
+      const audio = children.filter(isAudio);
+      if (audio.length) {
+        // Search for cover in both the root folder AND the current (audio) folder
+        // so images stored anywhere in the book's folder tree are found
+        const combinedFiles = topFiles === children
+          ? children
+          : [...topFiles, ...children];
+        return [{ folder: rootFolder, audio, allFiles: combinedFiles }];
+      }
+      const subFolders = children.filter(isFolder);
+      if (!subFolders.length) return [];
+      const nested = await Promise.all(
+        subFolders.map(sf => _findBookFolders(sf, depth + 1, maxDepth, rootFolder, topFiles))
+      );
+      return nested.flat();
+    } catch { return []; }
+  }
+
+  async function loadAudiobookLibrary(forceRefresh = false) {
+    if (_abLibrary && !forceRefresh) return _abLibrary;
+    try {
+      const topFolders = (await listAllChildren(AB_FOLDER_ID)).filter(isFolder);
+
+      // Recursively find every folder that actually contains audio files.
+      // This handles any nesting depth (flat, one level, two levels, etc.)
+      const bookResults = (await Promise.all(
+        topFolders.map(folder => _findBookFolders(folder, 0, 3))
+      )).flat();
+
+      const books = bookResults.map(({ folder, audio, allFiles }) => {
+        const sorted = [...audio].sort((a, b) => naturalCompare(a.name, b.name));
+        const coverFile = allFiles.find(isImage);
+        return {
+          id: folder.id,
+          name: folder.name,
+          chapters: sorted.map(f => ({
+            id: f.id,
+            name: cleanTrackName(f.name),
+            rawName: f.name,
+          })),
+          coverFileId: coverFile ? coverFile.id : null,
+        };
+      });
+
+      books.sort((a, b) => naturalCompare(a.name, b.name));
+      _abLibrary = { books };
+      return _abLibrary;
+    } catch (e) {
+      console.warn('audiobook library load failed', e);
+      return { books: [] };
+    }
+  }
+
+  // ── Cover URL ─────────────────────────────────────────────────
+  function makeAbBook(folder, allFiles, audioFiles) {
+    const chapters = [...audioFiles].sort((a, b) => naturalCompare(a.name, b.name));
+    const coverFile = allFiles.find(isImage);
+    return {
+      id: folder.id,
+      name: folder.name,
+      chapters: chapters.map(f => ({
+        id: f.id,
+        name: cleanTrackName(f.name),
+        rawName: f.name,
+      })),
+      coverFileId: coverFile ? coverFile.id : null,
+    };
+  }
+
+  function abCoverUrl(fileId) {
+    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+  }
+
+  // ── Deterministic cover gradient from book name ───────────────
+  function abCoverGradient(name) {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
+    const hue = Math.abs(h) % 360;
+    const hue2 = (hue + 40) % 360;
+    return `linear-gradient(135deg, hsl(${hue},45%,20%), hsl(${hue2},50%,30%))`;
+  }
+
+  // ── Progress helpers ──────────────────────────────────────────
+
+  // For single-file books split into virtual chapters, progress is stored under
+  // "realId_vp0", "realId_vp1", … keys instead of the real chapter id.
+  // This helper returns all progress entries for a given real chapter id,
+  // including any virtual-part entries.
+  function _chapterProgressEntries(prog, realId) {
+    const entries = [];
+    if (prog[realId]) entries.push(prog[realId]);
+    Object.keys(prog).forEach(k => {
+      if (k.startsWith(realId + '_vp')) entries.push(prog[k]);
+    });
+    return entries;
+  }
+
+  function abBookProgress(bookId, book) {
+    const prog = _abProgress[bookId] || {};
+    const totalChapters = book.chapters.length;
+    if (totalChapters === 0) return 0;
+
+    // For single-file books split into virtual 30-min parts, progress is stored
+    // under "realId_vp0", "realId_vp1", … with position relative to part start.
+    // Convert to an absolute position: partIndex * 1800 + relativePosition.
+    // Total duration comes from the raw (pre-virtual) chapter entry when available.
+    if (totalChapters === 1) {
+      const realId = book.chapters[0].id;
+
+      // Collect virtual-part entries keyed by part index
+      const vpMap = {};
+      const escapedId = realId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      Object.keys(prog).forEach(k => {
+        const m = k.match(new RegExp(`^${escapedId}_vp(\\d+)$`));
+        if (m && prog[k] && prog[k].duration) vpMap[parseInt(m[1])] = prog[k];
+      });
+      const vpIndices = Object.keys(vpMap).map(Number);
+
+      if (vpIndices.length > 0) {
+        // Sum actual listened time across ALL parts (handles skipped parts —
+        // e.g. parts 1,2,4,5 played but 3 skipped should reflect ~80%, not 40%).
+        let listened = 0, maxIdx = 0;
+        vpIndices.forEach(i => {
+          const e = vpMap[i];
+          listened += Math.min(e.position || 0, e.duration || AB_VIRTUAL_CHAPTER_SECS);
+          if (i > maxIdx) maxIdx = i;
+        });
+
+        // Total duration from the raw entry (set on expansion); fall back to an
+        // estimate from the furthest part if not yet persisted.
+        const rawEntry = prog[realId];
+        const totalDur = (rawEntry && rawEntry.duration > 0)
+          ? rawEntry.duration
+          : (maxIdx + 1) * AB_VIRTUAL_CHAPTER_SECS;
+        return totalDur > 0 ? Math.min(listened / totalDur, 1) : 0;
+      }
+
+      // No virtual entries yet — use raw entry (absolute position in full file)
+      const rawEntry = prog[realId];
+      if (rawEntry && rawEntry.duration > 0) {
+        return Math.min((rawEntry.position || 0) / rawEntry.duration, 1);
+      }
+      return 0;
+    }
+
+    // Multi-chapter books: use original logic.
+    let knownDur = 0, knownCount = 0;
+    book.chapters.forEach(ch => {
+      const p = prog[ch.id];
+      if (p && p.duration) { knownDur += p.duration; knownCount++; }
+    });
+    const avgDur = knownCount > 0 ? knownDur / knownCount : 1;
+    const estimatedTotal = totalChapters * avgDur;
+
+    let totalPos = 0;
+    book.chapters.forEach(ch => {
+      const p = prog[ch.id];
+      if (p) totalPos += Math.min(p.position || 0, p.duration || avgDur);
+    });
+
+    return estimatedTotal > 0 ? totalPos / estimatedTotal : 0;
+  }
+
+  function abChapterPct(bookId, fileId) {
+    const p = (_abProgress[bookId] || {})[fileId];
+    if (!p || !p.duration) return 0;
+    return Math.min(p.position / p.duration, 1);
+  }
+
+  function abLastChapterIdx(book) {
+    // find the first incomplete chapter, or last if all done
+    const prog = _abProgress[book.id] || {};
+    for (let i = 0; i < book.chapters.length; i++) {
+      const p = prog[book.chapters[i].id];
+      if (!p || !p.duration || p.position / p.duration < 0.95) return i;
+    }
+    return 0;
+  }
+
+  // Split a single-file book into virtual 30-min chapters.
+  // Virtual chapters share the same audio file (realId) but have startTime/endTime offsets.
+  // Progress is stored relative to the chapter start so abChapterPct works unchanged.
+  function expandToVirtualChapters(realChapter, totalDuration) {
+    const count = Math.ceil(totalDuration / AB_VIRTUAL_CHAPTER_SECS);
+    const chapters = [];
+    for (let i = 0; i < count; i++) {
+      chapters.push({
+        id:        `${realChapter.id}_vp${i}`,
+        name:      `Part ${i + 1}`,
+        realId:    realChapter.id,
+        startTime: i * AB_VIRTUAL_CHAPTER_SECS,
+        endTime:   Math.min((i + 1) * AB_VIRTUAL_CHAPTER_SECS, totalDuration),
+      });
+    }
+    return chapters;
+  }
+
+  // ── Render main listing ───────────────────────────────────────
+  let _abRenderPending = false;
+  async function renderAudiobookLibrary() {
+    if (_abRenderPending) return;
+    _abRenderPending = true;
+    try { await _renderAudiobookLibrary(); } finally { _abRenderPending = false; }
+  }
+  async function _renderAudiobookLibrary() {
+    const grid = $('ab-books-grid');
+    const continueScroll = $('ab-continue-scroll');
+    if (!grid || !continueScroll) return;
+
+    // Clear all previous state (including any injected empty-state elements)
+    grid.innerHTML = '';
+    continueScroll.innerHTML = '';
+    continueScroll.style.display = '';
+    continueScroll.parentNode.querySelectorAll('.ab-continue-empty').forEach(el => el.remove());
+
+    // Show skeletons while loading
+    for (let i = 0; i < 4; i++) {
+      const sk = document.createElement('div');
+      sk.className = 'ab-book-skeleton';
+      grid.appendChild(sk);
+    }
+
+    const lib = await loadAudiobookLibrary();
+    if (!lib.books.length) {
+      grid.innerHTML = '<div style="padding:20px;color:var(--text3);font-size:13px;grid-column:1/-1">No audiobooks found in the library.</div>';
+      return;
+    }
+
+    // Load progress for all books
+    await Promise.all(lib.books.map(b => loadAbProgress(b.id)));
+
+    // Count header
+    const countEl = $('ab-books-count');
+    if (countEl) countEl.textContent = `${lib.books.length} book${lib.books.length !== 1 ? 's' : ''}`;
+
+    // Continue Listening
+    const inProgress = lib.books.filter(b => {
+      const pct = abBookProgress(b.id, b);
+      return pct > 0 && pct < 0.95;
+    });
+    const continueHeader = $('ab-continue-header');
+    if (inProgress.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'ab-continue-empty';
+      empty.innerHTML = `<span style="font-size:28px;flex-shrink:0">🎧</span><span>No books started yet. <strong>Browse below →</strong> to begin your first listen.</span>`;
+      continueScroll.parentNode.insertBefore(empty, continueScroll);
+      continueScroll.style.display = 'none';
+    } else {
+      inProgress.forEach(book => {
+        const pct = abBookProgress(book.id, book);
+        const pctPct = Math.round(pct * 100);
+        const lastIdx = abLastChapterIdx(book);
+        const card = document.createElement('div');
+        card.className = 'ab-continue-card';
+        card.innerHTML = `
+          <div class="ab-continue-cover">
+            ${book.coverFileId
+              ? `<img src="${abCoverUrl(book.coverFileId)}" alt="${book.name}" loading="lazy">`
+              : `<div class="ab-cover-placeholder" style="background:${abCoverGradient(book.name)}">📖</div>`}
+          </div>
+          <div class="ab-continue-bar-wrap"><div class="ab-continue-bar-fill" style="width:${pctPct}%"></div></div>
+          <div class="ab-continue-info">
+            <div class="ab-continue-title">${book.name}</div>
+            <div class="ab-continue-meta">${pctPct}% done</div>
+          </div>
+          <button class="ab-continue-delete-btn" title="Remove from Continue Listening">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>`;
+        card.querySelector('.ab-continue-delete-btn').addEventListener('click', e => {
+          e.stopPropagation();
+          openConfirm(
+            'Remove reading progress?',
+            `This will permanently delete your progress for "${book.name}", including which chapters you've listened to and how far you got. This cannot be undone.`,
+            async () => {
+              delete _abProgress[book.id];
+              const ref = abProgressRef(book.id);
+              if (ref) ref.delete().catch(e => console.warn('abProgress delete failed', e));
+              card.remove();
+              // Show empty state if no more in-progress books
+              if (!continueScroll.querySelector('.ab-continue-card')) {
+                const empty = document.createElement('div');
+                empty.className = 'ab-continue-empty';
+                empty.innerHTML = `<span style="font-size:28px;flex-shrink:0">🎧</span><span>No books started yet. <strong>Browse below →</strong> to begin your first listen.</span>`;
+                continueScroll.parentNode.insertBefore(empty, continueScroll);
+                continueScroll.style.display = 'none';
+              }
+            },
+            { confirmLabel: 'Delete Progress', danger: true }
+          );
+        });
+        card.addEventListener('click', () => openAudiobook(book, lastIdx));
+        continueScroll.appendChild(card);
+      });
+    }
+
+    // Books grid
+    grid.innerHTML = '';
+    lib.books.forEach(book => {
+      const pct = abBookProgress(book.id, book);
+      const pctPct = Math.round(pct * 100);
+      const done = pct >= 0.95;
+      const circumference = 75.4;
+      const offset = circumference * (1 - Math.min(pct, 1));
+      const tile = document.createElement('div');
+      tile.className = 'ab-book-tile';
+      const ringHtml = pctPct > 0 ? `
+        <div class="ab-progress-ring">
+          <svg viewBox="0 0 32 32" width="32" height="32">
+            <circle class="ab-ring-bg" cx="16" cy="16" r="12" stroke-dasharray="${circumference}"/>
+            <circle class="ab-ring-fill${done ? ' done' : ''}" cx="16" cy="16" r="12"
+              stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
+          </svg>
+          <div class="ab-ring-pct">${done ? '✓' : pctPct + '%'}</div>
+        </div>` : '';
+      tile.innerHTML = `
+        <div class="ab-book-cover">
+          ${book.coverFileId
+            ? `<img src="${abCoverUrl(book.coverFileId)}" alt="${book.name}" loading="lazy">`
+            : `<div class="ab-cover-placeholder" style="background:${abCoverGradient(book.name)}">📖</div>`}
+          ${ringHtml}
+        </div>
+        <div class="ab-book-info">
+          <div class="ab-book-title">${book.name}</div>
+          <div class="ab-book-meta">${book.chapters.length} chapter${book.chapters.length !== 1 ? 's' : ''}</div>
+        </div>`;
+      tile.addEventListener('click', () => openAudiobook(book, abLastChapterIdx(book)));
+      grid.appendChild(tile);
+    });
+  }
+
+  // ── Open a book ───────────────────────────────────────────────
+  async function openAudiobook(book, startChapterIdx = 0) {
+    // Fast path: if this single-file book was opened before, its total duration is
+    // cached in Firestore. Load progress and pre-expand to virtual chapters BEFORE
+    // any rendering so the hero count + chapter list are split from the first frame
+    // (no single-file flash).
+    if (book.chapters.length === 1) {
+      await loadAbProgress(book.id);
+      const cachedDur = (_abProgress[book.id] || {})[book.chapters[0].id]?.duration;
+      if (cachedDur && cachedDur > AB_VIRTUAL_CHAPTER_SECS) {
+        const vchapters = expandToVirtualChapters(book.chapters[0], cachedDur);
+        book = { ...book, chapters: vchapters };
+        startChapterIdx = abLastChapterIdx(book);
+      }
+    }
+
+    _abBook = book;
+    _abChapterIdx = startChapterIdx;
+
+    // Render hero with placeholder author while we fetch
+    const renderHero = (author) => {
+      const hero = $('ab-hero');
+      if (!hero) return;
+      hero.innerHTML = `
+        <div class="ab-hero-cover">
+          ${book.coverFileId
+            ? `<img src="${abCoverUrl(book.coverFileId)}" alt="${book.name}">`
+            : `<div class="ab-cover-placeholder" style="background:${abCoverGradient(book.name)}">📖</div>`}
+        </div>
+        <div class="ab-hero-info">
+          <div class="ab-hero-title">${book.name}</div>
+          ${author ? `<div class="ab-hero-author">${author}</div>` : '<div class="ab-hero-author ab-hero-author--loading">Loading…</div>'}
+          <div class="ab-hero-stats">
+            <div class="ab-hero-stat">
+              <div class="ab-hero-stat-val">${book.chapters.length}</div>
+              <div class="ab-hero-stat-label">Chapters</div>
+            </div>
+          </div>
+        </div>`;
+    };
+    renderHero(null);
+
+    // Reset more details section
+    const toggle = $('ab-more-details-toggle');
+    const body   = $('ab-more-details-body');
+    if (toggle) toggle.classList.remove('open');
+    if (body)   body.classList.remove('open');
+    const descEl = $('ab-description');
+    if (descEl) { descEl.textContent = ''; descEl.classList.add('ab-description--loading'); }
+
+    // Fetch book info and update hero + description
+    fetchBookInfo(book.name).then(({ author, description }) => {
+      // Update author in hero
+      const authorEl = $('ab-hero')?.querySelector('.ab-hero-author');
+      if (authorEl) {
+        if (author) { authorEl.textContent = author; authorEl.classList.remove('ab-hero-author--loading'); }
+        else { authorEl.remove(); }
+      }
+      // Update description
+      if (descEl) {
+        descEl.classList.remove('ab-description--loading');
+        descEl.textContent = description || 'No description available.';
+      }
+    });
+
+    // Ensure progress is loaded (no-op if the fast path above already loaded it)
+    await loadAbProgress(book.id);
+    renderAbChapters();
+
+    switchView('view-audiobook-detail');
+    $('content').scrollTo({ top: 0, behavior: 'instant' });
+
+    // Load chapter without autoplaying — user taps play to start
+    abLoadChapter(_abChapterIdx, false);
+
+    // For single-file books not yet expanded (first open, no cached duration):
+    // expand to virtual 30-min chapters once duration is known. Streaming audio
+    // often reports duration=Infinity at loadedmetadata and only resolves it later
+    // via durationchange, so we listen to both events.
+    if (book.chapters.length === 1) {
+      const audioEl = abGetAudio();
+      let expanded = false;
+      const tryExpand = () => {
+        if (expanded) return;
+        if (_abBook?.id !== book.id) {
+          audioEl.removeEventListener('durationchange', tryExpand);
+          return;
+        }
+        const totalDur = audioEl.duration;
+        if (!isFinite(totalDur) || totalDur <= AB_VIRTUAL_CHAPTER_SECS) return;
+        expanded = true;
+        audioEl.removeEventListener('durationchange', tryExpand);
+        const vchapters = expandToVirtualChapters(book.chapters[0], totalDur);
+        _abBook = { ...book, chapters: vchapters };
+        // Persist total file duration under the real chapter id so abBookProgress
+        // can compute accurate percentages without knowing the virtual chapter count.
+        if (!_abProgress[book.id]) _abProgress[book.id] = {};
+        const _rawEntry = _abProgress[book.id][book.chapters[0].id] || {};
+        _abProgress[book.id][book.chapters[0].id] = { ..._rawEntry, duration: totalDur };
+        flushAbProgressToFirestore(book.id);
+        const resumeIdx = abLastChapterIdx(_abBook);
+        _abChapterIdx = resumeIdx;
+        renderAbChapters();
+        const statEl = $('ab-hero')?.querySelector('.ab-hero-stat-val');
+        if (statEl) statEl.textContent = vchapters.length;
+        const vch = vchapters[resumeIdx];
+        const saved = (_abProgress[_abBook.id] || {})[vch.id];
+        const absPos = (saved && saved.position > 0 && saved.position < (saved.duration ?? (vch.endTime - vch.startTime)) - 2)
+          ? vch.startTime + saved.position : vch.startTime;
+        if (absPos > 0) audioEl.currentTime = absPos;
+      };
+      tryExpand(); // immediate if duration already known
+      if (!expanded) audioEl.addEventListener('durationchange', tryExpand);
+    }
+  }
+
+  // ── Chapter list ──────────────────────────────────────────────
+  function renderAbChapters() {
+    const container = $('ab-chapters');
+    if (!container || !_abBook) return;
+    container.innerHTML = `<div class="ab-chapters-heading">Chapters</div>`;
+    _abBook.chapters.forEach((ch, idx) => {
+      const pct = abChapterPct(_abBook.id, ch.id);
+      const pctPct = Math.round(pct * 100);
+      const done = pct >= 0.95;
+      const isActive = idx === _abChapterIdx;
+      const row = document.createElement('div');
+      row.className = `ab-chapter-row${isActive ? ' active' : ''}`;
+      row.dataset.idx = idx;
+      let numContent = done ? '✓' : (isActive ? '▶' : String(idx + 1));
+      const realId = ch.realId || ch.id;
+      const dlDone = isNative() && isDownloaded(realId);
+      const dlIcon = dlDone
+        ? `<button class="dl-dot ab-dl-dot" data-fileid="${realId}" aria-label="Remove download" title="Downloaded — tap to remove"></button>`
+        : (isNative() ? `<button class="ab-dl-btn" data-fileid="${realId}" aria-label="Download chapter" title="Download">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </button>` : '');
+      row.innerHTML = `
+        <div class="ab-chapter-num${done ? ' done' : ''}${isActive ? ' active' : ''}">${numContent}</div>
+        <div class="ab-chapter-info">
+          <div class="ab-chapter-name${done ? ' done' : ''}${isActive ? ' active' : ''}">${ch.name}</div>
+        </div>
+        <div class="ab-chapter-pct-wrap">
+          <div class="ab-chapter-pct${done ? ' done' : ''}${isActive ? ' active' : ''}">${pctPct > 0 ? pctPct + '%' : ''}</div>
+          <div class="ab-chapter-bar"><div class="ab-chapter-bar-fill${done ? ' done' : ''}${isActive ? ' active' : ''}" style="width:${pctPct}%"></div></div>
+        </div>
+        ${dlIcon}`;
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('.ab-dl-btn') || e.target.closest('.ab-dl-dot')) return;
+        abLoadChapter(idx, true);
+      });
+      const dlDot = row.querySelector('.ab-dl-dot');
+      if (dlDot) {
+        dlDot.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const fid = dlDot.dataset.fileid;
+          openConfirm(
+            'Remove download?',
+            'This chapter will no longer be available offline. You can download it again anytime.',
+            async () => {
+              await removeDownload(fid);
+              renderAbChapters();
+              renderDlSettingsSection();
+              toast('Download removed');
+            },
+            { confirmLabel: 'Remove', danger: true }
+          );
+        });
+      }
+      const dlBtn = row.querySelector('.ab-dl-btn');
+      if (dlBtn) {
+        dlBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const fid = dlBtn.dataset.fileid;
+          dlBtn.disabled = true;
+          dlBtn.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>`;
+          downloadFile(fid, null)
+            .then(() => { toast('Chapter saved for offline'); renderAbChapters(); })
+            .catch(() => { dlBtn.disabled = false; toast('Download failed'); });
+        });
+      }
+      container.appendChild(row);
+    });
+  }
+
+  // ── Player ────────────────────────────────────────────────────
+  function abGetAudio() {
+    if (!_abAudio) {
+      _abAudio = new Audio();
+      _abAudio.addEventListener('timeupdate', abOnTimeUpdate);
+      _abAudio.addEventListener('ended', abOnEnded);
+      _abAudio.addEventListener('play',  () => {
+        _abPlaying = true;
+        abUpdatePlayBtn();
+        // Pause the music player when audiobook starts
+        if (!audio.paused) audio.pause();
+      });
+      _abAudio.addEventListener('pause', () => {
+        _abPlaying = false;
+        abUpdatePlayBtn();
+        // Save progress immediately on any pause (including iOS audio interruptions).
+        if (_abBook && _abAudio.currentTime > 2 && _abAudio.duration) {
+          const ch = _abBook.chapters[_abChapterIdx];
+          if (ch) {
+            const chStart = ch.startTime ?? 0;
+            const chEnd   = ch.endTime   ?? _abAudio.duration;
+            const relPos  = Math.max(0, _abAudio.currentTime - chStart);
+            const chDur   = chEnd - chStart;
+            saveAbProgress(_abBook.id, ch.id, relPos, chDur);
+            flushAbProgressToFirestore(_abBook.id);
+          }
+        }
+      });
+    }
+    return _abAudio;
+  }
+
+  function abLoadChapter(idx, autoplay = false) {
+    if (!_abBook || idx < 0 || idx >= _abBook.chapters.length) return;
+    _abChapterIdx = idx;
+    const ch = _abBook.chapters[idx];
+    const audioEl = abGetAudio();
+
+    // Virtual chapters share a file — only reload src when the file changes
+    const fileId   = ch.realId || ch.id;
+    const sameFile = audioEl.src && audioEl.src.includes(encodeURIComponent(fileId));
+    if (!sameFile) {
+      audioEl.src = audioSrc(fileId);
+    }
+    audioEl.playbackRate = _abSpeed;
+
+    // Restore saved position (stored relative to ch.startTime)
+    const chStart = ch.startTime ?? 0;
+    const chEnd   = ch.endTime   ?? Infinity;
+    const chDur   = isFinite(chEnd) ? chEnd - chStart : 0;
+    const saved   = (_abProgress[_abBook.id] || {})[ch.id];
+    // saved.position is relative; convert back to absolute audio time
+    const absPos  = (saved && saved.position > 0 && saved.position < (saved.duration ?? chDur) - 2)
+      ? chStart + saved.position
+      : chStart;
+
+    const seekAndPlay = () => {
+      if (absPos > 0) audioEl.currentTime = absPos;
+      if (autoplay) audioEl.play().catch(() => {});
+    };
+
+    if (!sameFile) {
+      audioEl.addEventListener('loadedmetadata', seekAndPlay, { once: true });
+    } else {
+      seekAndPlay();
+    }
+
+    // Update player UI
+    const trackEl = $('ab-player-track');
+    if (trackEl) trackEl.textContent = ch.name;
+    const subEl = $('ab-player-sub');
+    if (subEl) subEl.textContent = `Chapter ${idx + 1} of ${_abBook.chapters.length}`;
+    abUpdatePlayBtn();
+    abUpdateProgressBar(0, 0);
+    renderAbChapters();
+    abWirePlayerControls();
+  }
+
+  let _abControlsWired = false;
+  function abWirePlayerControls() {
+    if (_abControlsWired) return;
+    _abControlsWired = true;
+
+    $('ab-play-btn').addEventListener('click', () => {
+      if (!_abAudio) return;
+      _abPlaying ? _abAudio.pause() : _abAudio.play().catch(() => {});
+    });
+    $('ab-skip-back-btn').addEventListener('click', () => {
+      if (_abAudio) _abAudio.currentTime = Math.max(0, _abAudio.currentTime - 30);
+    });
+    $('ab-skip-fwd-btn').addEventListener('click', () => {
+      if (_abAudio) _abAudio.currentTime = Math.min(_abAudio.duration || 0, _abAudio.currentTime + 30);
+    });
+    $('ab-prev-btn').addEventListener('click', () => {
+      if (_abBook && _abChapterIdx > 0) abLoadChapter(_abChapterIdx - 1, _abPlaying);
+    });
+    $('ab-speed-btn').addEventListener('click', () => {
+      const next = AB_SPEED_STEPS[(AB_SPEED_STEPS.indexOf(_abSpeed) + 1) % AB_SPEED_STEPS.length];
+      _abSpeed = next;
+      if (_abAudio) _abAudio.playbackRate = _abSpeed;
+      const btn = $('ab-speed-btn');
+      if (btn) btn.textContent = `${_abSpeed}×`;
+    });
+
+    // Seek on progress bar tap
+    const progressBar = $('ab-player-progress');
+    if (progressBar) {
+      progressBar.addEventListener('click', (e) => {
+        if (!_abAudio || !_abAudio.duration) return;
+        const ch = _abBook?.chapters[_abChapterIdx];
+        const chStart = ch?.startTime ?? 0;
+        const chEnd   = ch?.endTime   ?? _abAudio.duration;
+        const rect = progressBar.getBoundingClientRect();
+        const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        _abAudio.currentTime = chStart + pct * (chEnd - chStart);
+      });
+    }
+  }
+
+  function abOnTimeUpdate() {
+    if (!_abAudio || !_abBook) return;
+    const pos = _abAudio.currentTime;
+    const dur = _abAudio.duration || 0;
+    const ch  = _abBook.chapters[_abChapterIdx];
+    if (!ch) return;
+
+    const chStart = ch.startTime ?? 0;
+    const chEnd   = ch.endTime   ?? dur;
+    const relPos  = Math.max(0, pos - chStart);
+    const chDur   = Math.max(1, chEnd - chStart);
+
+    // Virtual chapter boundary: advance to next part
+    if (ch.endTime !== undefined && pos >= ch.endTime - 0.3 && _abPlaying) {
+      if (_abChapterIdx < _abBook.chapters.length - 1) {
+        // Save current part as complete before advancing, then flush so Continue
+        // Listening sees accurate progress even after a page reload.
+        saveAbProgress(_abBook.id, ch.id, chDur, chDur);
+        flushAbProgressToFirestore(_abBook.id);
+        abLoadChapter(_abChapterIdx + 1, true);
+      }
+      return;
+    }
+
+    abUpdateProgressBar(relPos, chDur);
+    if (!dur || relPos < 2) return;
+    if (Math.round(pos) % 5 === 0) {
+      saveAbProgress(_abBook.id, ch.id, relPos, chDur);
+    }
+  }
+
+  function abOnEnded() {
+    if (!_abBook) return;
+    const ch = _abBook.chapters[_abChapterIdx];
+    if (ch && _abAudio) {
+      const chStart = ch.startTime ?? 0;
+      const chEnd   = ch.endTime   ?? _abAudio.duration;
+      const chDur   = chEnd - chStart;
+      saveAbProgress(_abBook.id, ch.id, chDur, chDur);
+    }
+    if (_abChapterIdx < _abBook.chapters.length - 1) {
+      abLoadChapter(_abChapterIdx + 1, true);
+    } else {
+      _abPlaying = false;
+      abUpdatePlayBtn();
+      toast('🎉 Book complete!');
+    }
+  }
+
+  function abUpdateProgressBar(pos, dur) {
+    const pct = dur > 0 ? pos / dur : 0;
+    const fill = $('ab-player-progress-fill');
+    const dot  = $('ab-player-progress-dot');
+    if (fill) fill.style.width = `${pct * 100}%`;
+    if (dot)  dot.style.left   = `calc(${pct * 100}% - 5px)`;
+    const elapsed = $('ab-player-elapsed');
+    const remain  = $('ab-player-remain');
+    if (elapsed) elapsed.textContent = fmtTime(pos);
+    if (remain && dur > 0) remain.textContent = `−${fmtTime(dur - pos)}`;
+  }
+
+  function abUpdatePlayBtn() {
+    const icon = $('ab-play-icon');
+    if (!icon) return;
+    icon.innerHTML = _abPlaying
+      ? '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>'
+      : '<polygon points="5 3 19 12 5 21 5 3"/>';
+  }
+
+  function abPause() {
+    if (_abAudio && _abPlaying) _abAudio.pause();
+    // Flush current position to Firestore immediately so hard refresh works
+    flushAbProgressToFirestore();
+  }
+
+  function fmtTime(secs) {
+    if (!secs || isNaN(secs)) return '0:00';
+    const s = Math.floor(secs);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  }
+
+  // ── Book description: Google Books first, Gemini fallback ────────
+  // ── Book info cache ───────────────────────────────────────────
+  const _abBookInfoCache = {};  // in-memory; keyed by book title
+
+  async function fetchBookInfo(title, hint = null) {
+    if (!hint && _abBookInfoCache[title]) return _abBookInfoCache[title];
+
+    // 1. Firestore cache (skip if hint provided — hint means we want a fresh fetch)
+    if (!hint) {
+      try {
+        const snap = await window.fbDb.collection('audiobookInfo')
+          .where('title', '==', title).limit(1).get();
+        if (!snap.empty) {
+          const d = snap.docs[0].data();
+          const info = { author: d.author || null, description: d.description || null };
+          _abBookInfoCache[title] = info;
+          return info;
+        }
+      } catch { /* fall through */ }
+    }
+
+    // Strip subtitle for cleaner API searches; append hint if provided
+    const shortTitle = title.split(/\s*[-:]\s+/)[0].trim();
+    const searchQuery = hint ? `${shortTitle} ${hint}` : shortTitle;
+
+    // 2. Google Books API
+    let info = null;
+    try {
+      const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchQuery)}&maxResults=3`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        const item = (data.items || []).find(i => {
+          const t = (i.volumeInfo?.title || '').toLowerCase();
+          const q = shortTitle.toLowerCase();
+          return t.includes(q.split(' ')[0]) || q.includes(t.split(' ')[0]);
+        }) || data.items?.[0];
+        if (item?.volumeInfo) {
+          const candidate = {
+            author: (item.volumeInfo.authors || []).join(', ') || null,
+            description: item.volumeInfo.description || null,
+          };
+          if (candidate.author || candidate.description) info = candidate;
+        }
+      }
+    } catch { /* fall through */ }
+
+    // 3. Gemini fallback
+    if (!info) {
+      try {
+        const key = (window.DRIFT_CONFIG || {}).geminiKey || '';
+        if (key) {
+          const hintLine = hint ? `\nAdditional context: ${hint}` : '';
+          const prompt = `For the parenting audiobook titled "${shortTitle}":${hintLine}
+1. The author's name (if you know it, otherwise write "Unknown")
+2. A 2-3 sentence description of what the book is about
+
+Respond in this exact JSON format with no extra text:
+{"author": "Author Name", "description": "Description here."}`;
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
+          const body = JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: 'application/json', temperature: 0.3, maxOutputTokens: 300 },
+          });
+          const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+          if (res.ok) {
+            const data = await res.json();
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+            if (text) {
+              const parsed = JSON.parse(text);
+              info = {
+                author: parsed.author && parsed.author !== 'Unknown' ? parsed.author : null,
+                description: parsed.description || null,
+              };
+            }
+          }
+        }
+      } catch { /* fall through */ }
+    }
+
+    if (!info) info = { author: null, description: null };
+
+    // 4. Persist to Firestore so future loads skip the API calls (save even failures)
+    try {
+      await window.fbDb.collection('audiobookInfo').add({
+        title,
+        author: info.author || '',
+        description: info.description || '',
+        fetchedAt: Date.now(),
+        failed: !info.author && !info.description,
+      });
+    } catch { /* non-fatal */ }
+
+    _abBookInfoCache[title] = info;
+    return info;
+  }
+
+  // Admin: fetch and cache info for every book in the library
+  async function prefetchAllBookInfo(onProgress) {
+    const lib = await loadAudiobookLibrary();
+    const books = lib.books;
+    let done = 0;
+    for (const book of books) {
+      // Delete any existing failed entry so we retry fresh
+      try {
+        const snap = await window.fbDb.collection('audiobookInfo')
+          .where('title', '==', book.name).where('failed', '==', true).limit(1).get();
+        if (!snap.empty) {
+          await snap.docs[0].ref.delete();
+          delete _abBookInfoCache[book.name];
+        }
+      } catch { /* non-fatal */ }
+      await fetchBookInfo(book.name);
+      done++;
+      if (onProgress) onProgress(done, books.length);
+    }
+  }
+
 })();

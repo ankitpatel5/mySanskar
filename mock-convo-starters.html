@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conversation Starters — Revamp Mockup</title>
+<style>
+  :root {
+    --bg-0:#0a0a0b; --bg-1:#121214; --bg-2:#1a1a1d; --bg-3:#232327;
+    --fg-0:#f5f5f7; --fg-1:#c9c9cf; --fg-2:#8b8b94; --fg-3:#5e5e66;
+    --accent:#1db954; --accent-dim:rgba(29,185,84,0.12);
+    --amber:#f5b43c; --violet:#a78bfa; --sky:#38bdf8; --rose:#fb7185;
+    --line:rgba(255,255,255,0.06); --line-2:rgba(255,255,255,0.10);
+    --card-radius:20px; --chip-radius:50px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    background:#050506; color:var(--fg-0);
+    font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;
+    padding:48px 16px 80px;
+  }
+
+  /* ── layout ── */
+  .page-title { font-size:11px; font-weight:700; color:var(--fg-3); text-transform:uppercase; letter-spacing:.12em; text-align:center; margin-bottom:6px; }
+  .page-sub   { font-size:12px; color:var(--fg-3); text-align:center; margin-bottom:48px; }
+
+  .row { display:flex; gap:24px; flex-wrap:wrap; justify-content:center; margin-bottom:64px; }
+  .col { display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .col-label { font-size:11px; font-weight:700; color:var(--fg-3); text-transform:uppercase; letter-spacing:.08em; text-align:center; }
+  .col-sub   { font-size:11px; color:var(--fg-3); text-align:center; max-width:240px; line-height:1.5; margin-top:2px; }
+
+  /* ── phone shell ── */
+  .phone {
+    width:320px; min-height:580px;
+    background:var(--bg-0); border-radius:36px;
+    border:1.5px solid rgba(255,255,255,0.08);
+    box-shadow:0 20px 50px rgba(0,0,0,0.6);
+    overflow:hidden; position:relative;
+  }
+
+  /* ── shared tab bar ── */
+  .tab-bar { display:flex; align-items:center; justify-content:center; padding:14px 20px 0; gap:4px; }
+  .tab-bar-title { font-size:17px; font-weight:700; letter-spacing:-.02em; color:var(--fg-0); }
+  .screen-body { padding:16px 18px 24px; }
+
+  /* ── section labels ── */
+  .section-label { font-size:11px; font-weight:600; color:var(--fg-3); text-transform:uppercase; letter-spacing:.08em; margin-bottom:10px; }
+
+  /* ── category pills ── */
+  .pills { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+  .pill {
+    padding:7px 14px; border-radius:var(--chip-radius);
+    font-size:12px; font-weight:600; border:1.5px solid var(--line-2);
+    background:var(--bg-2); color:var(--fg-2); white-space:nowrap;
+    display:flex; align-items:center; gap:5px;
+  }
+  .pill.active { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+
+  /* ── daily featured card ── */
+  .daily-card {
+    border-radius:var(--card-radius); padding:20px;
+    background:linear-gradient(135deg, rgba(29,185,84,0.18) 0%, rgba(29,185,84,0.06) 100%);
+    border:1px solid rgba(29,185,84,0.25); margin-bottom:16px; position:relative;
+  }
+  .daily-badge { font-size:10px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px; }
+  .daily-question { font-size:16px; font-weight:700; color:var(--fg-0); line-height:1.4; margin-bottom:12px; }
+  .daily-meta { font-size:11px; color:var(--fg-2); display:flex; align-items:center; gap:6px; }
+  .daily-meta span { background:var(--bg-3); padding:3px 8px; border-radius:20px; }
+  .daily-cta {
+    margin-top:14px; width:100%; padding:11px; border-radius:12px;
+    background:var(--accent); color:#fff; font-size:13px; font-weight:700;
+    border:none; text-align:center;
+  }
+
+  /* ── prompt cards (list) ── */
+  .prompt-card {
+    background:var(--bg-1); border-radius:16px; padding:16px;
+    border:1px solid var(--line-2); margin-bottom:10px;
+    display:flex; align-items:flex-start; gap:12px;
+  }
+  .prompt-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:16px; }
+  .prompt-icon.green  { background:rgba(29,185,84,0.12); }
+  .prompt-icon.amber  { background:rgba(245,180,60,0.12); }
+  .prompt-icon.violet { background:rgba(167,139,250,0.12); }
+  .prompt-icon.rose   { background:rgba(251,113,133,0.12); }
+  .prompt-icon.sky    { background:rgba(56,189,248,0.12); }
+  .prompt-text { font-size:13px; color:var(--fg-1); line-height:1.45; font-weight:500; flex:1; }
+  .prompt-tag  { font-size:10px; color:var(--fg-3); margin-top:5px; display:flex; gap:4px; flex-wrap:wrap; }
+  .prompt-tag span { background:var(--bg-3); padding:2px 7px; border-radius:20px; }
+  .prompt-arrow { color:var(--fg-3); margin-top:2px; font-size:12px; flex-shrink:0; }
+
+  /* ── SCREEN B: Card detail + follow-up tree ── */
+  .big-card {
+    background:var(--bg-1); border-radius:20px; padding:24px;
+    border:1px solid var(--line-2); margin-bottom:16px;
+  }
+  .big-card-cat { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+  .big-card-q   { font-size:18px; font-weight:800; color:var(--fg-0); line-height:1.35; margin-bottom:16px; }
+  .big-card-ctx { display:flex; gap:6px; flex-wrap:wrap; }
+  .big-card-ctx span { font-size:11px; color:var(--fg-2); background:var(--bg-3); padding:4px 10px; border-radius:20px; }
+
+  .deeper-label { font-size:11px; font-weight:600; color:var(--fg-3); margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+  .deeper-label::after { content:''; flex:1; height:1px; background:var(--line); }
+
+  .followup {
+    background:var(--bg-2); border-radius:14px; padding:14px 16px;
+    border:1px solid var(--line); margin-bottom:8px; position:relative;
+  }
+  .followup-num { font-size:10px; font-weight:700; color:var(--accent); margin-bottom:4px; }
+  .followup-q   { font-size:13px; color:var(--fg-1); line-height:1.45; }
+  .followup.locked { opacity:.4; }
+  .followup.locked::after { content:'Unlocks after first question'; font-size:10px; color:var(--fg-3); position:absolute; bottom:10px; right:12px; }
+
+  .nav-row { display:flex; gap:8px; margin-top:6px; }
+  .btn-ghost    { flex:1; padding:11px; border-radius:12px; border:1.5px solid var(--line-2); color:var(--fg-2); font-size:13px; font-weight:600; background:transparent; text-align:center; }
+  .btn-primary  { flex:1; padding:11px; border-radius:12px; background:var(--accent); color:#fff; font-size:13px; font-weight:700; border:none; text-align:center; }
+
+  /* ── SCREEN C: Post-story prompt ── */
+  .story-done-bar {
+    background:var(--bg-1); border-radius:16px; padding:16px;
+    border:1px solid var(--line-2); margin-bottom:12px;
+    display:flex; align-items:center; gap:12px;
+  }
+  .story-thumb { width:44px; height:44px; border-radius:10px; background:linear-gradient(135deg,#9b59b6,#6c3483); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:20px; }
+  .story-info  { flex:1; }
+  .story-name  { font-size:13px; font-weight:700; color:var(--fg-0); margin-bottom:2px; }
+  .story-done  { font-size:11px; color:var(--accent); font-weight:600; }
+
+  .post-story-card {
+    border-radius:20px; padding:20px;
+    background:linear-gradient(135deg,rgba(167,139,250,0.15),rgba(167,139,250,0.05));
+    border:1px solid rgba(167,139,250,0.25); margin-bottom:12px;
+  }
+  .post-story-badge { font-size:10px; font-weight:700; color:var(--violet); text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px; display:flex; align-items:center; gap:5px; }
+  .post-story-q { font-size:15px; font-weight:700; color:var(--fg-0); line-height:1.4; margin-bottom:14px; }
+  .post-story-theme { font-size:11px; color:var(--fg-2); margin-bottom:14px; display:flex; align-items:center; gap:5px; }
+  .btn-violet { width:100%; padding:11px; border-radius:12px; background:rgba(167,139,250,0.2); border:1px solid rgba(167,139,250,0.4); color:var(--violet); font-size:13px; font-weight:700; text-align:center; }
+
+  /* ── SCREEN D: Newborn version ── */
+  .newborn-banner {
+    background:linear-gradient(135deg,rgba(251,113,133,0.15),rgba(251,146,60,0.08));
+    border-radius:16px; padding:16px 18px; margin-bottom:20px;
+    border:1px solid rgba(251,113,133,0.2);
+  }
+  .newborn-banner-title { font-size:14px; font-weight:700; color:var(--fg-0); margin-bottom:4px; }
+  .newborn-banner-sub   { font-size:12px; color:var(--fg-2); line-height:1.45; }
+
+  .newborn-cat-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+  .newborn-cat {
+    background:var(--bg-1); border-radius:16px; padding:16px 14px;
+    border:1px solid var(--line-2); display:flex; flex-direction:column; gap:8px;
+    cursor:pointer;
+  }
+  .newborn-cat.active { border-color:rgba(251,113,133,0.5); background:rgba(251,113,133,0.07); }
+  .newborn-cat-icon { font-size:24px; }
+  .newborn-cat-name { font-size:13px; font-weight:700; color:var(--fg-0); }
+  .newborn-cat-sub  { font-size:11px; color:var(--fg-2); line-height:1.35; }
+
+  .newborn-prompt {
+    background:var(--bg-1); border-radius:16px; padding:18px;
+    border:1px solid var(--line-2); margin-bottom:10px;
+  }
+  .newborn-prompt-q  { font-size:14px; font-weight:600; color:var(--fg-0); line-height:1.45; margin-bottom:8px; }
+  .newborn-prompt-tip { font-size:11px; color:var(--accent); display:flex; gap:6px; align-items:flex-start; }
+  .newborn-prompt-tip::before { content:'💡'; font-size:11px; flex-shrink:0; }
+
+  /* ── divider ── */
+  .divider { border:none; border-top:1px solid rgba(255,255,255,0.04); margin:64px 0; }
+
+  /* ── age badge ── */
+  .age-badge {
+    position:absolute; top:14px; right:18px;
+    font-size:10px; font-weight:700; color:var(--fg-2);
+    background:var(--bg-3); padding:3px 10px; border-radius:20px;
+  }
+</style>
+</head>
+<body>
+
+<p class="page-title">Conversation Starters — Revamp Mockup</p>
+<p class="page-sub">4 screens · age-adaptive · science-backed</p>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ROW 1 — Screen A (categories + card list) + Screen B (card detail + follow-up tree)
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="row">
+
+  <!-- SCREEN A: Main tab — older kids -->
+  <div class="col">
+    <div class="col-label">Screen A — Main tab (older kids)</div>
+    <div class="phone">
+      <div class="age-badge">Age 6+ ✦</div>
+      <div class="tab-bar"><div class="tab-bar-title">Conversations</div></div>
+      <div class="screen-body">
+
+        <!-- Category pills -->
+        <div class="pills">
+          <div class="pill active">All</div>
+          <div class="pill">🙏 Faith</div>
+          <div class="pill">⚖️ Dharma</div>
+          <div class="pill">✨ Gratitude</div>
+          <div class="pill">❤️ Emotions</div>
+          <div class="pill">🌿 Heritage</div>
+          <div class="pill">😄 Fun</div>
+        </div>
+
+        <!-- Daily featured -->
+        <div class="daily-card">
+          <div class="daily-badge">✦ Today's prompt for Arjun</div>
+          <div class="daily-question">"What is one thing you did today that you think Bhagwan Swaminarayan and Swami would be proud of?"</div>
+          <div class="daily-meta">
+            <span>🙏 Faith</span>
+            <span>🌙 Bedtime</span>
+            <span>~5 min</span>
+          </div>
+          <div class="daily-cta">Start conversation →</div>
+        </div>
+
+        <div class="section-label">More prompts</div>
+
+        <!-- Prompt list -->
+        <div class="prompt-card">
+          <div class="prompt-icon green">🙏</div>
+          <div>
+            <div class="prompt-text">"Why do we do puja every morning? What does it feel like when you sit down to pray?"</div>
+            <div class="prompt-tag"><span>🙏 Faith</span><span>🌅 Morning</span></div>
+          </div>
+          <div class="prompt-arrow">›</div>
+        </div>
+
+        <div class="prompt-card">
+          <div class="prompt-icon amber">⚖️</div>
+          <div>
+            <div class="prompt-text">"Bhagwan Swaminarayan taught us to always tell the truth. Has telling the truth ever been hard for you?"</div>
+            <div class="prompt-tag"><span>⚖️ Dharma</span><span>🚗 Car ride</span></div>
+          </div>
+          <div class="prompt-arrow">›</div>
+        </div>
+
+        <div class="prompt-card">
+          <div class="prompt-icon rose">❤️</div>
+          <div>
+            <div class="prompt-text">"What is your favourite kirtan? What do you think the words mean?"</div>
+            <div class="prompt-tag"><span>🙏 Faith</span><span>🍽️ Dinner</span></div>
+          </div>
+          <div class="prompt-arrow">›</div>
+        </div>
+
+        <div class="prompt-card">
+          <div class="prompt-icon violet">🌿</div>
+          <div>
+            <div class="prompt-text">"What does seva mean to you? What is one small seva you could do this week?"</div>
+            <div class="prompt-tag"><span>⚖️ Dharma</span><span>🙏 After satsang</span></div>
+          </div>
+          <div class="prompt-arrow">›</div>
+        </div>
+
+        <div class="prompt-card">
+          <div class="prompt-icon sky">😄</div>
+          <div>
+            <div class="prompt-text">"If you could swap lives with any animal for a day, which one and why?"</div>
+            <div class="prompt-tag"><span>😄 Fun</span><span>🚗 Car ride</span></div>
+          </div>
+          <div class="prompt-arrow">›</div>
+        </div>
+
+      </div>
+    </div>
+    <div class="col-sub">Categories + daily personalised prompt + context tags (dinner, car, bedtime, after prayer)</div>
+  </div>
+
+  <!-- SCREEN B: Card detail + follow-up tree -->
+  <div class="col">
+    <div class="col-label">Screen B — Card detail + follow-up tree</div>
+    <div class="phone">
+      <div class="tab-bar">
+        <div style="font-size:13px;color:var(--fg-2);margin-right:auto;">← Back</div>
+        <div style="font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-dim);padding:4px 10px;border-radius:20px;">🙏 Faith</div>
+      </div>
+      <div class="screen-body">
+
+        <!-- Big question card -->
+        <div class="big-card">
+          <div class="big-card-cat" style="color:var(--accent);">🙏 Faith & Bhakti</div>
+          <div class="big-card-q">"What is one thing you did today that you think Bhagwan Swaminarayan and Swami would be proud of?"</div>
+          <div class="big-card-ctx">
+            <span>🌙 Bedtime</span>
+            <span>~5 min</span>
+            <span>Ages 5+</span>
+          </div>
+        </div>
+
+        <!-- Follow-up tree -->
+        <div class="deeper-label">Go deeper — follow-up questions</div>
+
+        <div class="followup">
+          <div class="followup-num">FOLLOW-UP 1</div>
+          <div class="followup-q">"How did it feel inside when you did that? Do you think Bhagwan was with you in that moment?"</div>
+        </div>
+
+        <div class="followup">
+          <div class="followup-num">FOLLOW-UP 2</div>
+          <div class="followup-q">"Is there anything you'd do differently? What do you think Swami would say about it?"</div>
+        </div>
+
+        <div class="followup locked">
+          <div class="followup-num">FOLLOW-UP 3</div>
+          <div class="followup-q">"What is one thing you can do tomorrow to make Bhagwan Swaminarayan happy?"</div>
+        </div>
+
+        <div class="nav-row">
+          <div class="btn-ghost">Skip</div>
+          <div class="btn-primary">Next question →</div>
+        </div>
+
+      </div>
+    </div>
+    <div class="col-sub">Main question + 3 follow-ups revealed progressively. Follow-up 3 unlocks after first two are discussed.</div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ROW 2 — Screen C (post-story) + Screen D (newborn)
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="row">
+
+  <!-- SCREEN C: Post-story prompt -->
+  <div class="col">
+    <div class="col-label">Screen C — Post-story prompt</div>
+    <div class="phone">
+      <div class="tab-bar"><div class="tab-bar-title">Stories</div></div>
+      <div class="screen-body">
+
+        <!-- Story just completed -->
+        <div class="story-done-bar">
+          <div class="story-thumb">📖</div>
+          <div class="story-info">
+            <div class="story-name">Prahlad & Bhagwan Vishnu</div>
+            <div class="story-done">✓ Story complete</div>
+          </div>
+        </div>
+
+        <!-- Post-story conversation prompt -->
+        <div class="post-story-card">
+          <div class="post-story-badge">
+            <span>💬</span> Based on what you just heard
+          </div>
+          <div class="post-story-q">"Prahlad kept his faith even when it was really hard. Has there ever been a time you believed in something even when others didn't?"</div>
+          <div class="post-story-theme">
+            🌿 Theme: <strong style="color:var(--fg-1);">Unwavering faith</strong>
+          </div>
+          <div class="btn-violet">Start this conversation</div>
+        </div>
+
+        <!-- Follow-ups preview -->
+        <div class="section-label" style="margin-top:4px;">If it goes well, ask next:</div>
+
+        <div class="prompt-card" style="margin-bottom:8px;">
+          <div class="prompt-icon violet">1</div>
+          <div>
+            <div class="prompt-text">"What gave Prahlad the courage to keep going?"</div>
+          </div>
+        </div>
+
+        <div class="prompt-card">
+          <div class="prompt-icon violet">2</div>
+          <div>
+            <div class="prompt-text">"Do you think faith can protect you? How?"</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="col-sub">After finishing a story, a tailored conversation prompt appears — tied to that story's exact theme. Biggest differentiator from any other app.</div>
+  </div>
+
+  <!-- SCREEN D: Newborn / baby version -->
+  <div class="col">
+    <div class="col-label">Screen D — Newborn / baby (0–2 yrs)</div>
+    <div class="phone">
+      <div class="age-badge">0–2 yrs ✦</div>
+      <div class="tab-bar"><div class="tab-bar-title">Conversations</div></div>
+      <div class="screen-body">
+
+        <!-- Newborn context banner -->
+        <div class="newborn-banner">
+          <div class="newborn-banner-title">Talk to your baby every day 🌸</div>
+          <div class="newborn-banner-sub">Even before they respond, your voice builds their brain. Pick a topic and start talking.</div>
+        </div>
+
+        <!-- 4 science-backed categories -->
+        <div class="section-label">What do you want to talk about?</div>
+        <div class="newborn-cat-grid">
+          <div class="newborn-cat active">
+            <div class="newborn-cat-icon">👶</div>
+            <div class="newborn-cat-name">Faces & Bodies</div>
+            <div class="newborn-cat-sub">Body awareness & vocabulary</div>
+          </div>
+          <div class="newborn-cat">
+            <div class="newborn-cat-icon">👨‍👩‍👧</div>
+            <div class="newborn-cat-name">People & Family</div>
+            <div class="newborn-cat-sub">Attachment & belonging</div>
+          </div>
+          <div class="newborn-cat">
+            <div class="newborn-cat-icon">🌍</div>
+            <div class="newborn-cat-name">World Around Us</div>
+            <div class="newborn-cat-sub">Senses & exploration</div>
+          </div>
+          <div class="newborn-cat">
+            <div class="newborn-cat-icon">🌅</div>
+            <div class="newborn-cat-name">Our Daily Life</div>
+            <div class="newborn-cat-sub">Routines & security</div>
+          </div>
+        </div>
+
+        <!-- Prompts for selected category -->
+        <div class="section-label">Faces & Bodies</div>
+
+        <div class="newborn-prompt">
+          <div class="newborn-prompt-q">Let's talk about the parts of your face</div>
+          <div class="newborn-prompt-tip">Touch each part gently as you name it — eyes, nose, mouth, ears. Babies who hear body words early say them first.</div>
+        </div>
+
+        <div class="newborn-prompt">
+          <div class="newborn-prompt-q">Let's talk about your tiny hands</div>
+          <div class="newborn-prompt-tip">Count each finger slowly and wiggle them. Repetition helps pattern recognition form in their brain.</div>
+        </div>
+
+        <div class="newborn-prompt">
+          <div class="newborn-prompt-q">Let's talk about your big beautiful eyes</div>
+          <div class="newborn-prompt-tip">Hold your face 8–12 inches away — that's a newborn's focus range. Your eyes are their favourite thing to look at.</div>
+        </div>
+
+      </div>
+    </div>
+    <div class="col-sub">4 simple categories for 0–2 yrs. Prompts are things the parent says TO the baby — not questions — with a science tip on why it helps.</div>
+  </div>
+
+</div>
+
+<!-- section divider -->
+<hr class="divider">
+
+<!-- Summary notes -->
+<div style="max-width:700px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+  <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:18px 20px;">
+    <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Screen A — Main tab</div>
+    <div style="font-size:12px;color:var(--fg-2);line-height:1.6;">7 category pills · daily personalised prompt · context tags (🍽️🚗🌙🙏) · list of prompts below</div>
+  </div>
+  <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:18px 20px;">
+    <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Screen B — Card detail</div>
+    <div style="font-size:12px;color:var(--fg-2);line-height:1.6;">Full question + 3 follow-ups revealed progressively · skip / next · context + age tags</div>
+  </div>
+  <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:18px 20px;">
+    <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Screen C — Post-story</div>
+    <div style="font-size:12px;color:var(--fg-2);line-height:1.6;">Appears after story ends · question tied to that story's exact theme · 2 suggested follow-ups</div>
+  </div>
+  <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:18px 20px;">
+    <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Screen D — Newborn</div>
+    <div style="font-size:12px;color:var(--fg-2);line-height:1.6;">4 science-backed categories (Faces & Bodies, People & Family, World Around Us, Our Daily Life) · "Let's talk about…" prompts — a topic, not a script · science tip on each · auto-shown when child is 0–2 yrs</div>
+  </div>
+</div>
+
+</body>
+</html>

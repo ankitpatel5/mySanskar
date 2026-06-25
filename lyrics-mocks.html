@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lyrics UX Mocks — mySanskar</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0e0e10;
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 15px;
+    font-weight: 600;
+    color: #888;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .subtitle {
+    text-align: center;
+    font-size: 13px;
+    color: #555;
+    margin-bottom: 36px;
+  }
+
+  /* ── Layout: 3 phones side by side ── */
+  .mocks-row {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .mock-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 280px;
+  }
+
+  .mock-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #4ade80;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+  .mock-desc {
+    font-size: 12px;
+    color: #666;
+    text-align: center;
+    line-height: 1.5;
+    padding: 0 8px;
+  }
+
+  /* ── Phone shell ── */
+  .phone {
+    width: 280px;
+    height: 560px;
+    background: #111113;
+    border-radius: 36px;
+    border: 1.5px solid #2a2a2e;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,.6);
+  }
+
+  /* ── Shared player chrome ── */
+  .player-bg {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(160deg, #1a1a2e 0%, #111113 60%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 20px 16px;
+    position: relative;
+  }
+
+  .drag-handle {
+    width: 36px;
+    height: 4px;
+    background: #333;
+    border-radius: 2px;
+    margin-bottom: 14px;
+    flex-shrink: 0;
+  }
+
+  .art {
+    width: 160px;
+    height: 160px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #4ade80 0%, #22c55e 50%, #16a34a 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 52px;
+    flex-shrink: 0;
+    box-shadow: 0 8px 32px rgba(74,222,128,.25);
+  }
+
+  .song-info {
+    margin-top: 16px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .song-title { font-size: 16px; font-weight: 700; color: #fff; }
+  .song-artist { font-size: 13px; color: #888; margin-top: 3px; }
+
+  .scrubber {
+    width: 100%;
+    margin-top: 14px;
+    flex-shrink: 0;
+  }
+  .scrubber-track {
+    height: 3px;
+    background: #2a2a2e;
+    border-radius: 2px;
+    position: relative;
+  }
+  .scrubber-fill {
+    height: 3px;
+    width: 38%;
+    background: #4ade80;
+    border-radius: 2px;
+    position: relative;
+  }
+  .scrubber-fill::after {
+    content: '';
+    width: 10px; height: 10px;
+    background: #fff;
+    border-radius: 50%;
+    position: absolute;
+    right: -5px; top: -3.5px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.4);
+  }
+  .scrubber-times {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #666;
+    margin-top: 5px;
+  }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    margin-top: 10px;
+    flex-shrink: 0;
+  }
+  .ctrl-btn {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    color: #ccc;
+    cursor: pointer;
+    border-radius: 50%;
+  }
+  .ctrl-btn.play {
+    width: 52px; height: 52px;
+    background: #4ade80;
+    color: #000;
+    border-radius: 50%;
+  }
+  .ctrl-btn svg { display: block; }
+
+  .extras-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    flex-shrink: 0;
+  }
+  .extra-btn {
+    display: flex; align-items: center; gap: 5px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 11px;
+    color: #aaa;
+    cursor: pointer;
+  }
+
+  /* ─────────────────────────────────────── */
+  /* OPTION A — Tab Switcher (Apple Music style) */
+  /* ─────────────────────────────────────── */
+  .tab-switcher {
+    display: flex;
+    gap: 0;
+    background: rgba(255,255,255,.06);
+    border-radius: 10px;
+    padding: 3px;
+    margin-top: 12px;
+    flex-shrink: 0;
+  }
+  .tab-btn {
+    flex: 1;
+    text-align: center;
+    padding: 5px 0;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 8px;
+    color: #888;
+    cursor: pointer;
+  }
+  .tab-btn.active {
+    background: #1e1e24;
+    color: #fff;
+  }
+
+  /* Lyrics panel for Option A */
+  .lyrics-panel-a {
+    width: 100%;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    margin-top: 10px;
+  }
+  .lyrics-scroll {
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 4px 0;
+  }
+  .lyric-line {
+    font-size: 14px;
+    font-weight: 600;
+    color: #3a3a3e;
+    line-height: 1.4;
+    transition: color .3s;
+    text-align: left;
+  }
+  .lyric-line.active { color: #fff; font-size: 16px; }
+  .lyric-line.near { color: #666; }
+  .lyrics-fade {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 40px;
+    background: linear-gradient(transparent, #111113);
+    pointer-events: none;
+  }
+
+  /* ─────────────────────────────────────── */
+  /* OPTION B — Swipe-up / Bottom Drawer   */
+  /* ─────────────────────────────────────── */
+  .lyrics-drawer {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 68%;
+    background: #18181c;
+    border-radius: 20px 20px 0 0;
+    padding: 14px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 -8px 32px rgba(0,0,0,.5);
+    border-top: 1px solid #2a2a2e;
+  }
+  .drawer-handle {
+    width: 32px; height: 3px;
+    background: #333;
+    border-radius: 2px;
+    margin: 0 auto 12px;
+  }
+  .drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+  }
+  .drawer-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+  }
+  .drawer-song-chip {
+    font-size: 10px;
+    color: #4ade80;
+    background: rgba(74,222,128,.1);
+    border-radius: 10px;
+    padding: 3px 8px;
+  }
+  .drawer-lyrics {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .drawer-lyric-line {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    line-height: 1.4;
+  }
+  .drawer-lyric-line.active { color: #fff; font-size: 15px; }
+  .drawer-lyric-line.near { color: #555; }
+  .mini-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #222;
+    flex-shrink: 0;
+  }
+  .mini-art {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #4ade80, #16a34a);
+    font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mini-info { flex: 1; }
+  .mini-title { font-size: 12px; font-weight: 600; color: #fff; }
+  .mini-artist { font-size: 10px; color: #666; margin-top: 1px; }
+  .mini-play {
+    width: 32px; height: 32px;
+    background: #4ade80;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #000;
+  }
+
+  /* lyrics button on extras */
+  .extra-btn.lyrics-trigger {
+    background: rgba(74,222,128,.12);
+    border-color: rgba(74,222,128,.2);
+    color: #4ade80;
+  }
+
+  /* ─────────────────────────────────────── */
+  /* OPTION C — Tap Art to flip (card flip) */
+  /* ─────────────────────────────────────── */
+  .art-flip-wrap {
+    width: 160px; height: 160px;
+    position: relative;
+    flex-shrink: 0;
+    margin-top: 16px;
+  }
+  .art-flip-front {
+    width: 160px; height: 160px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #4ade80 0%, #22c55e 50%, #16a34a 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 52px;
+    box-shadow: 0 8px 32px rgba(74,222,128,.25);
+    position: relative;
+  }
+  .art-tap-hint {
+    position: absolute;
+    bottom: 8px; right: 8px;
+    background: rgba(0,0,0,.5);
+    border-radius: 8px;
+    padding: 3px 7px;
+    font-size: 9px;
+    color: rgba(255,255,255,.7);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .art-flip-back {
+    width: 160px; height: 160px;
+    border-radius: 16px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid #2a2a2e;
+    padding: 14px 12px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .flip-lyric {
+    font-size: 12px;
+    font-weight: 600;
+    color: #2a2a2e;
+    line-height: 1.3;
+  }
+  .flip-lyric.active { color: #fff; font-size: 14px; }
+  .flip-lyric.near { color: #555; }
+  .flip-fade {
+    position: absolute;
+    bottom: 0; left: 0; right: 0; height: 32px;
+    background: linear-gradient(transparent, rgba(17,17,19,.95));
+  }
+  .flip-expand-hint {
+    position: absolute;
+    bottom: 8px; right: 8px;
+    background: rgba(74,222,128,.15);
+    border-radius: 8px;
+    padding: 3px 7px;
+    font-size: 9px;
+    color: #4ade80;
+  }
+
+  /* Option C full-lyrics sheet (positioned absolutely inside phone) */
+  .lyrics-fullscreen {
+    position: absolute;
+    inset: 0;
+    background: #111113;
+    border-radius: 36px;
+    padding: 20px 20px 20px;
+    display: flex;
+    flex-direction: column;
+  }
+  .lf-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex-shrink: 0;
+  }
+  .lf-back {
+    font-size: 13px;
+    color: #4ade80;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .lf-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .lf-karaoke-badge {
+    font-size: 10px;
+    color: #4ade80;
+    background: rgba(74,222,128,.1);
+    border-radius: 10px;
+    padding: 2px 8px;
+  }
+  .lf-lyrics {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: relative;
+  }
+  .lf-line {
+    font-size: 16px;
+    font-weight: 700;
+    color: #2a2a2e;
+    line-height: 1.4;
+  }
+  .lf-line.active { color: #fff; font-size: 20px; }
+  .lf-line.near { color: #555; }
+  .lf-fade {
+    position: absolute;
+    bottom: 0; left: 0; right: 0; height: 60px;
+    background: linear-gradient(transparent, #111113);
+  }
+  .lf-mini {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #1e1e24;
+    flex-shrink: 0;
+    margin-top: 8px;
+  }
+  .lf-mini-art {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #4ade80, #16a34a);
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .lf-mini-info { flex: 1; }
+  .lf-mini-title { font-size: 13px; font-weight: 600; color: #fff; }
+  .lf-mini-artist { font-size: 11px; color: #666; margin-top: 2px; }
+  .lf-mini-controls {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .lf-mini-ctrl { color: #888; }
+  .lf-mini-play {
+    width: 36px; height: 36px;
+    background: #4ade80;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #000;
+  }
+
+  /* toggle buttons between the two states for each option */
+  .toggle-row {
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+  }
+  .toggle-btn {
+    padding: 6px 14px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 16px;
+    font-size: 11px;
+    color: #aaa;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .toggle-btn.active {
+    background: rgba(74,222,128,.15);
+    border-color: rgba(74,222,128,.3);
+    color: #4ade80;
+  }
+
+  /* ── Pros/cons ── */
+  .pros-cons {
+    width: 280px;
+    background: rgba(255,255,255,.03);
+    border: 1px solid #1e1e24;
+    border-radius: 14px;
+    padding: 14px;
+  }
+  .pros-cons h4 {
+    font-size: 11px;
+    font-weight: 700;
+    color: #555;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .pc-item {
+    display: flex; align-items: flex-start; gap: 7px;
+    font-size: 11.5px;
+    color: #666;
+    line-height: 1.4;
+    margin-bottom: 5px;
+  }
+  .pc-item .dot { flex-shrink: 0; margin-top: 2px; }
+  .pc-item.pro .dot { color: #4ade80; }
+  .pc-item.con .dot { color: #f87171; }
+  .pc-item.pro { color: #aaa; }
+  .pc-item.con { color: #aaa; }
+
+  /* SVG icons inline */
+  svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+</style>
+</head>
+<body>
+
+<h1>Lyrics Feature — UX Mocks</h1>
+<p class="subtitle">3 design options for mySanskar · click the toggle buttons to switch states</p>
+
+<div class="mocks-row">
+
+  <!-- ══════════════════════════════════════════
+       OPTION A — Tab Switcher inside player sheet
+       ══════════════════════════════════════════ -->
+  <div class="mock-col">
+    <div class="mock-label">Option A</div>
+    <div class="mock-desc">Tab bar inside the player sheet — "Player" and "Lyrics" tabs switch the content area</div>
+
+    <div class="toggle-row">
+      <button class="toggle-btn active" onclick="showA('player')">▶ Player view</button>
+      <button class="toggle-btn" onclick="showA('lyrics')">🎵 Lyrics view</button>
+    </div>
+
+    <!-- Phone -->
+    <div class="phone">
+      <div class="player-bg" id="opt-a">
+        <div class="drag-handle"></div>
+
+        <!-- Tab switcher -->
+        <div class="tab-switcher">
+          <div class="tab-btn active" id="tab-player-btn" onclick="showA('player')">Now Playing</div>
+          <div class="tab-btn" id="tab-lyrics-btn" onclick="showA('lyrics')">Lyrics</div>
+        </div>
+
+        <!-- PLAYER VIEW -->
+        <div id="a-player-view" style="display:flex; flex-direction:column; align-items:center; width:100%;">
+          <div class="art" style="margin-top:14px;">🎵</div>
+          <div class="song-info">
+            <div class="song-title">Gayatri Mantra</div>
+            <div class="song-artist">mySanskar · Devotional</div>
+          </div>
+          <div class="scrubber" style="margin-top:10px;">
+            <div class="scrubber-track"><div class="scrubber-fill"></div></div>
+            <div class="scrubber-times"><span>1:23</span><span>4:12</span></div>
+          </div>
+          <div class="controls">
+            <div class="ctrl-btn">
+              <svg width="18" height="18" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+            </div>
+            <div class="ctrl-btn">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="19 20 9 12 19 4 19 20"/><rect x="4" y="5" width="2" height="14"/></svg>
+            </div>
+            <div class="ctrl-btn play">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+            </div>
+            <div class="ctrl-btn">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 4 15 12 5 20 5 4"/><rect x="18" y="5" width="2" height="14"/></svg>
+            </div>
+            <div class="ctrl-btn">
+              <svg width="18" height="18" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+            </div>
+          </div>
+          <div class="extras-row">
+            <div class="extra-btn">
+              <svg width="13" height="13" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/><polyline points="17 18 21 14 17 10"/></svg> Queue
+            </div>
+            <div class="extra-btn">
+              <svg width="13" height="13" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add to…
+            </div>
+          </div>
+        </div>
+
+        <!-- LYRICS VIEW (hidden initially) -->
+        <div id="a-lyrics-view" style="display:none; flex-direction:column; align-items:flex-start; width:100%; flex:1; min-height:0; margin-top:10px;">
+          <div style="font-size:11px; color:#555; margin-bottom:8px; align-self:center;">Gayatri Mantra · Sanskrit</div>
+          <div class="lyrics-panel-a">
+            <div class="lyrics-scroll">
+              <div class="lyric-line">ॐ भूर्भुवः स्वः</div>
+              <div class="lyric-line near">तत्सवितुर्वरेण्यम्</div>
+              <div class="lyric-line active">भर्गो देवस्य धीमहि</div>
+              <div class="lyric-line near">धियो यो नः प्रचोदयात्</div>
+              <div class="lyric-line" style="margin-top:8px; color: #2a2a2e;">ॐ भूर्भुवः स्वः</div>
+              <div class="lyric-line" style="color: #2a2a2e;">तत्सवितुर्वरेण्यम्</div>
+            </div>
+            <div class="lyrics-fade"></div>
+          </div>
+          <!-- mini controls at bottom when in lyrics view -->
+          <div class="scrubber" style="margin-top:8px;">
+            <div class="scrubber-track"><div class="scrubber-fill"></div></div>
+            <div class="scrubber-times"><span>1:23</span><span>4:12</span></div>
+          </div>
+          <div class="controls" style="align-self:center; margin-top:6px;">
+            <div class="ctrl-btn">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="19 20 9 12 19 4 19 20"/><rect x="4" y="5" width="2" height="14"/></svg>
+            </div>
+            <div class="ctrl-btn play">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+            </div>
+            <div class="ctrl-btn">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 4 15 12 5 20 5 4"/><rect x="18" y="5" width="2" height="14"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pros-cons">
+      <h4>Pros & Cons</h4>
+      <div class="pc-item pro"><span class="dot">✦</span> Familiar pattern — feels like Apple Music / Spotify</div>
+      <div class="pc-item pro"><span class="dot">✦</span> Easy to switch back and forth while listening</div>
+      <div class="pc-item pro"><span class="dot">✦</span> Controls stay visible in both tabs</div>
+      <div class="pc-item con"><span class="dot">✦</span> Needs room for the tab bar (slightly reduces art size)</div>
+      <div class="pc-item con"><span class="dot">✦</span> Only accessible from inside the player sheet</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       OPTION B — "Lyrics" button → bottom drawer
+       ══════════════════════════════════════════ -->
+  <div class="mock-col">
+    <div class="mock-label">Option B</div>
+    <div class="mock-desc">A "Lyrics" button in the extras row opens a swipe-up drawer that slides over the player</div>
+
+    <div class="toggle-row">
+      <button class="toggle-btn active" onclick="showB('player')">▶ Player view</button>
+      <button class="toggle-btn" onclick="showB('drawer')">🎵 Lyrics drawer</button>
+    </div>
+
+    <div class="phone">
+      <div class="player-bg" id="opt-b">
+        <div class="drag-handle"></div>
+        <div class="art">🎵</div>
+        <div class="song-info">
+          <div class="song-title">Gayatri Mantra</div>
+          <div class="song-artist">mySanskar · Devotional</div>
+        </div>
+        <div class="scrubber">
+          <div class="scrubber-track"><div class="scrubber-fill"></div></div>
+          <div class="scrubber-times"><span>1:23</span><span>4:12</span></div>
+        </div>
+        <div class="controls">
+          <div class="ctrl-btn"><svg width="18" height="18" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg></div>
+          <div class="ctrl-btn"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="19 20 9 12 19 4 19 20"/><rect x="4" y="5" width="2" height="14"/></svg></div>
+          <div class="ctrl-btn play"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg></div>
+          <div class="ctrl-btn"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 4 15 12 5 20 5 4"/><rect x="18" y="5" width="2" height="14"/></svg></div>
+          <div class="ctrl-btn"><svg width="18" height="18" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>
+        </div>
+        <div class="extras-row">
+          <div class="extra-btn">
+            <svg width="13" height="13" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/><polyline points="17 18 21 14 17 10"/></svg> Queue
+          </div>
+          <div class="extra-btn lyrics-trigger" onclick="showB('drawer')">
+            <svg width="13" height="13" viewBox="0 0 24 24"><line x1="3" y1="8" x2="15" y2="8"/><line x1="3" y1="14" x2="11" y2="14"/><circle cx="18" cy="14" r="3"/><path d="M18 11V7l-3 1"/></svg> Lyrics
+          </div>
+          <div class="extra-btn">
+            <svg width="13" height="13" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add to…
+          </div>
+        </div>
+
+        <!-- Lyrics Drawer (hidden by default) -->
+        <div class="lyrics-drawer" id="b-drawer" style="display:none;">
+          <div class="drawer-handle"></div>
+          <div class="drawer-header">
+            <span class="drawer-title">Lyrics</span>
+            <span class="drawer-song-chip">Gayatri Mantra</span>
+          </div>
+          <div class="drawer-lyrics">
+            <div class="drawer-lyric-line">ॐ भूर्भुवः स्वः</div>
+            <div class="drawer-lyric-line near">तत्सवितुर्वरेण्यम्</div>
+            <div class="drawer-lyric-line active">भर्गो देवस्य धीमहि</div>
+            <div class="drawer-lyric-line near">धियो यो नः प्रचोदयात्</div>
+            <div class="drawer-lyric-line" style="color:#1e1e24;">ॐ भूर्भुवः स्वः</div>
+            <div class="drawer-lyric-line" style="color:#1e1e24;">तत्सवितुर्वरेण्यम्</div>
+          </div>
+          <div class="mini-controls">
+            <div class="mini-art">🎵</div>
+            <div class="mini-info">
+              <div class="mini-title">Gayatri Mantra</div>
+              <div class="mini-artist">mySanskar · Devotional</div>
+            </div>
+            <div class="ctrl-btn" style="width:28px;height:28px;color:#888;"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="19 20 9 12 19 4 19 20"/><rect x="4" y="5" width="2" height="14"/></svg></div>
+            <div class="mini-play"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg></div>
+            <div class="ctrl-btn" style="width:28px;height:28px;color:#888;" onclick="showB('player')">
+              <svg width="16" height="16" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pros-cons">
+      <h4>Pros & Cons</h4>
+      <div class="pc-item pro"><span class="dot">✦</span> Feels like a natural "pull-up" extension — doesn't fully replace the player</div>
+      <div class="pc-item pro"><span class="dot">✦</span> Player still partially visible behind the drawer (context preserved)</div>
+      <div class="pc-item pro"><span class="dot">✦</span> Easy to add more metadata tabs (Translation, About song)</div>
+      <div class="pc-item con"><span class="dot">✦</span> Button may be easy to miss (buried in extras row)</div>
+      <div class="pc-item con"><span class="dot">✦</span> Less space for lyrics text than a full-screen view</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       OPTION C — Tap art → card flip + full screen
+       ══════════════════════════════════════════ -->
+  <div class="mock-col">
+    <div class="mock-label">Option C</div>
+    <div class="mock-desc">Tap album art flips to a compact lyrics preview; a second tap expands to full-screen karaoke mode</div>
+
+    <div class="toggle-row">
+      <button class="toggle-btn active" onclick="showC('player')">▶ Player</button>
+      <button class="toggle-btn" onclick="showC('flipped')">🔄 Art flipped</button>
+      <button class="toggle-btn" onclick="showC('fullscreen')">⛶ Full lyrics</button>
+    </div>
+
+    <div class="phone">
+      <div class="player-bg">
+        <div class="drag-handle"></div>
+
+        <!-- PLAYER VIEW (art + normal layout) -->
+        <div id="c-player-view" style="display:flex; flex-direction:column; align-items:center; width:100%;">
+          <div class="art-flip-wrap" onclick="showC('flipped')" style="cursor:pointer;">
+            <div class="art-flip-front">
+              🎵
+              <div class="art-tap-hint">
+                <svg width="10" height="10" viewBox="0 0 24 24"><path d="M18 11l-6-6-6 6"/><path d="M18 17l-6-6-6 6" opacity=".4"/></svg>
+                tap for lyrics
+              </div>
+            </div>
+          </div>
+          <div class="song-info">
+            <div class="song-title">Gayatri Mantra</div>
+            <div class="song-artist">mySanskar · Devotional</div>
+          </div>
+          <div class="scrubber">
+            <div class="scrubber-track"><div class="scrubber-fill"></div></div>
+            <div class="scrubber-times"><span>1:23</span><span>4:12</span></div>
+          </div>
+          <div class="controls">
+            <div class="ctrl-btn"><svg width="18" height="18" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg></div>
+            <div class="ctrl-btn"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="19 20 9 12 19 4 19 20"/><rect x="4" y="5" width="2" height="14"/></svg></div>
+            <div class="ctrl-btn play"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg></div>
+            <div class="ctrl-btn"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 4 15 12 5 20 5 4"/><rect x="18" y="5" width="2" height="14"/></svg></div>
+            <div class="ctrl-btn"><svg width="18" height="18" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>
+          </div>
+          <div class="extras-row">
+            <div class="extra-btn"><svg width="13" height="13" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/><polyline points="17 18 21 14 17 10"/></svg> Queue</div>
+            <div class="extra-btn"><svg width="13" height="13" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add to…</div>
+          </div>
+        </div>
+
+        <!-- FLIPPED view (art shows lyrics preview) -->
+        <div id="c-flipped-view" style="display:none; flex-direction:column; align-items:center; width:100%;">
+          <div class="art-flip-wrap" onclick="showC('fullscreen')" style="cursor:pointer; margin-top:16px;">
+            <div class="art-flip-back">
+              <div class="flip-lyric">ॐ भूर्भुवः स्वः</div>
+              <div class="flip-lyric near">तत्सवितुर्वरेण्यम्</div>
+              <div class="flip-lyric active">भर्गो देवस्य धीमहि</div>
+              <div class="flip-lyric near">धियो यो नः प्रचोदयात्</div>
+              <div class="flip-lyric">ॐ भूर्भुवः स्वः</div>
+              <div class="flip-fade"></div>
+              <div class="flip-expand-hint">expand ↗</div>
+            </div>
+          </div>
+          <div class="song-info">
+            <div class="song-title">Gayatri Mantra</div>
+            <div class="song-artist" style="color:#4ade80; font-size:11px;">Sanskrit · tap art to expand</div>
+          </div>
+          <div class="scrubber">
+            <div class="scrubber-track"><div class="scrubber-fill"></div></div>
+            <div class="scrubber-times"><span>1:23</span><span>4:12</span></div>
+          </div>
+          <div class="controls">
+            <div class="ctrl-btn"><svg width="18" height="18" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg></div>
+            <div class="ctrl-btn"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="19 20 9 12 19 4 19 20"/><rect x="4" y="5" width="2" height="14"/></svg></div>
+            <div class="ctrl-btn play"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg></div>
+            <div class="ctrl-btn"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 4 15 12 5 20 5 4"/><rect x="18" y="5" width="2" height="14"/></svg></div>
+            <div class="ctrl-btn" onclick="showC('player')" style="cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FULLSCREEN lyrics (absolute overlay inside phone) -->
+      <div class="lyrics-fullscreen" id="c-fullscreen-view" style="display:none;">
+        <div class="lf-header">
+          <div class="lf-back" onclick="showC('flipped')" style="cursor:pointer;">
+            <svg width="14" height="14" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg> Back
+          </div>
+          <div class="lf-title">Lyrics</div>
+          <div class="lf-karaoke-badge">Live</div>
+        </div>
+        <div class="lf-lyrics">
+          <div class="lf-line">ॐ भूर्भुवः स्वः</div>
+          <div class="lf-line near">तत्सवितुर्वरेण्यम्</div>
+          <div class="lf-line active">भर्गो देवस्य धीमहि</div>
+          <div class="lf-line near">धियो यो नः प्रचोदयात्</div>
+          <div class="lf-line" style="color:#1e1e24;">ॐ भूर्भुवः स्वः</div>
+          <div class="lf-line" style="color:#1e1e24;">तत्सवितुर्वरेण्यम्</div>
+          <div class="lf-line" style="color:#1a1a20;">भर्गो देवस्य धीमहि</div>
+          <div class="lf-fade"></div>
+        </div>
+        <div class="scrubber" style="margin-bottom:0;">
+          <div class="scrubber-track"><div class="scrubber-fill"></div></div>
+          <div class="scrubber-times"><span>1:23</span><span>4:12</span></div>
+        </div>
+        <div class="lf-mini">
+          <div class="lf-mini-art">🎵</div>
+          <div class="lf-mini-info">
+            <div class="lf-mini-title">Gayatri Mantra</div>
+            <div class="lf-mini-artist">mySanskar · Devotional</div>
+          </div>
+          <div class="lf-mini-controls">
+            <div class="lf-mini-ctrl"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="19 20 9 12 19 4 19 20"/><rect x="4" y="5" width="2" height="14"/></svg></div>
+            <div class="lf-mini-play"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg></div>
+            <div class="lf-mini-ctrl"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 4 15 12 5 20 5 4"/><rect x="18" y="5" width="2" height="14"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pros-cons">
+      <h4>Pros & Cons</h4>
+      <div class="pc-item pro"><span class="dot">✦</span> Delightful interaction — tapping art feels natural & unexpected</div>
+      <div class="pc-item pro"><span class="dot">✦</span> Full-screen mode is best for reading long Sanskrit/Hindi text</div>
+      <div class="pc-item pro"><span class="dot">✦</span> Progressive disclosure — preview first, then expand</div>
+      <div class="pc-item con"><span class="dot">✦</span> Tap-to-flip is not discoverable without the hint label</div>
+      <div class="pc-item con"><span class="dot">✦</span> Most complex to build (3 states to manage)</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function showA(view) {
+    const btns = document.querySelectorAll('[onclick^="showA"]');
+    btns.forEach(b => b.classList.toggle('active', b.getAttribute('onclick').includes(`'${view}'`)));
+
+    const tabP = document.getElementById('tab-player-btn');
+    const tabL = document.getElementById('tab-lyrics-btn');
+    const pv = document.getElementById('a-player-view');
+    const lv = document.getElementById('a-lyrics-view');
+
+    if (view === 'player') {
+      tabP.classList.add('active'); tabL.classList.remove('active');
+      pv.style.display = 'flex'; lv.style.display = 'none';
+    } else {
+      tabL.classList.add('active'); tabP.classList.remove('active');
+      pv.style.display = 'none'; lv.style.display = 'flex';
+    }
+  }
+
+  function showB(view) {
+    const btns = document.querySelectorAll('[onclick^="showB"]');
+    btns.forEach(b => b.classList.toggle('active', b.getAttribute('onclick').includes(`'${view}'`)));
+    document.getElementById('b-drawer').style.display = view === 'drawer' ? 'flex' : 'none';
+  }
+
+  function showC(view) {
+    const btns = document.querySelectorAll('[onclick^="showC"]');
+    btns.forEach(b => b.classList.toggle('active', b.getAttribute('onclick').includes(`'${view}'`)));
+
+    document.getElementById('c-player-view').style.display    = view === 'player'     ? 'flex' : 'none';
+    document.getElementById('c-flipped-view').style.display   = view === 'flipped'    ? 'flex' : 'none';
+    document.getElementById('c-fullscreen-view').style.display = view === 'fullscreen' ? 'flex' : 'none';
+  }
+</script>
+</body>
+</html>

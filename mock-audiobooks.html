@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0a0a0a;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  color: #fff;
+  max-width: 390px;
+  margin: 0 auto;
+}
+
+/* ── Screen label ── */
+.screen-label {
+  background: #1a1a2e;
+  color: #7b8cde;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 10px 20px;
+  border-bottom: 1px solid #222;
+}
+
+/* ── Top bar ── */
+.topbar {
+  padding: 16px 20px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.topbar-title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+/* ── Section headers ── */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 10px;
+}
+.section-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+.section-see-all {
+  font-size: 13px;
+  color: #e8a838;
+}
+
+/* ── Continue Listening horizontal scroll ── */
+.continue-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 0 20px 4px;
+  scrollbar-width: none;
+}
+.continue-scroll::-webkit-scrollbar { display: none; }
+
+.continue-card {
+  flex-shrink: 0;
+  width: 140px;
+  background: #161616;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #222;
+}
+.continue-cover {
+  width: 140px;
+  height: 140px;
+  position: relative;
+  flex-shrink: 0;
+}
+.continue-cover img, .continue-cover .cover-placeholder {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cover-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+}
+.progress-bar-wrap {
+  height: 3px;
+  background: #2a2a2a;
+  margin: 0;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: #e8a838;
+  border-radius: 0;
+}
+.continue-info {
+  padding: 8px 10px 10px;
+}
+.continue-book-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.continue-meta {
+  font-size: 11px;
+  color: #666;
+  margin-top: 3px;
+}
+.continue-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 7px;
+  background: #e8a838;
+  color: #000;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 999px;
+  width: fit-content;
+}
+
+/* ── Empty continue state ── */
+.continue-empty {
+  margin: 0 20px;
+  background: #161616;
+  border: 1px dashed #2a2a2a;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.continue-empty-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+.continue-empty-text {
+  font-size: 13px;
+  color: #888;
+  line-height: 1.4;
+}
+.continue-empty-text strong {
+  color: #e8a838;
+  font-weight: 600;
+}
+
+/* ── Books grid ── */
+.books-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 0 20px 100px;
+}
+.book-tile {
+  background: #161616;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #222;
+  cursor: pointer;
+}
+.book-cover {
+  width: 100%;
+  aspect-ratio: 1;
+  position: relative;
+}
+.book-cover .cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 52px;
+}
+/* Progress ring overlay */
+.book-progress-ring {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+}
+.book-progress-ring svg {
+  transform: rotate(-90deg);
+}
+.book-progress-ring .ring-bg {
+  fill: none;
+  stroke: rgba(0,0,0,0.5);
+  stroke-width: 3;
+}
+.book-progress-ring .ring-fill {
+  fill: none;
+  stroke: #e8a838;
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.3s;
+}
+.ring-pct {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 700;
+  color: #fff;
+}
+.book-info {
+  padding: 9px 10px 11px;
+}
+.book-title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #fff;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.book-author {
+  font-size: 11px;
+  color: #666;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.book-chapters {
+  font-size: 11px;
+  color: #555;
+  margin-top: 4px;
+}
+
+/* ── Bottom tab bar ── */
+.tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 390px;
+  background: #0f0f0f;
+  border-top: 1px solid #1e1e1e;
+  display: flex;
+  padding: 8px 0 20px;
+}
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding-top: 4px;
+  opacity: 0.4;
+  font-size: 10px;
+  font-weight: 500;
+  color: #fff;
+}
+.tab.active { opacity: 1; color: #e8a838; }
+.tab svg { width: 22px; height: 22px; }
+
+/* ── SCREEN 2: Book detail ── */
+.book-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px 12px;
+}
+.back-btn {
+  color: #e8a838;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.book-detail-title {
+  font-size: 16px;
+  font-weight: 600;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.book-hero {
+  display: flex;
+  gap: 16px;
+  padding: 0 20px 20px;
+  align-items: flex-end;
+}
+.book-hero-cover {
+  width: 110px;
+  height: 110px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.book-hero-cover .cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+}
+.book-hero-info { flex: 1; }
+.book-hero-name {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+.book-hero-author {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 12px;
+}
+.book-hero-stats {
+  display: flex;
+  gap: 12px;
+}
+.hero-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hero-stat-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: #e8a838;
+}
+.hero-stat-label {
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Mini player */
+.mini-player {
+  margin: 0 20px 20px;
+  background: #1a1a1a;
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid #2a2a2a;
+}
+.mini-player-track {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mini-player-sub {
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 12px;
+}
+.mini-progress {
+  height: 3px;
+  background: #2a2a2a;
+  border-radius: 2px;
+  margin-bottom: 12px;
+  position: relative;
+}
+.mini-progress-fill {
+  height: 100%;
+  background: #e8a838;
+  border-radius: 2px;
+  width: 38%;
+}
+.mini-progress-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #e8a838;
+  border-radius: 50%;
+  top: -3.5px;
+  left: calc(38% - 5px);
+}
+.mini-time {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #555;
+  margin-bottom: 12px;
+}
+.player-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ctrl-btn {
+  color: #888;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.ctrl-btn svg { width: 22px; height: 22px; }
+.ctrl-btn.primary { color: #fff; }
+.play-btn {
+  width: 46px;
+  height: 46px;
+  background: #e8a838;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+}
+.play-btn svg { width: 22px; height: 22px; }
+.speed-btn {
+  background: #2a2a2a;
+  color: #e8a838;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 9px;
+  border-radius: 6px;
+}
+
+/* Chapter list */
+.chapter-list {
+  padding: 0 20px 120px;
+}
+.chapter-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #1a1a1a;
+}
+.chapter-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #1e1e1e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  flex-shrink: 0;
+}
+.chapter-num.done { background: #1a3325; color: #4caf68; }
+.chapter-num.active { background: #e8a838; color: #000; }
+.chapter-info { flex: 1; min-width: 0; }
+.chapter-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chapter-name.done { color: #555; }
+.chapter-duration {
+  font-size: 11px;
+  color: #555;
+  margin-top: 2px;
+}
+.chapter-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.chapter-pct {
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+}
+.chapter-pct.done { color: #4caf68; }
+.chapter-pct.active { color: #e8a838; }
+.chapter-bar {
+  width: 48px;
+  height: 3px;
+  background: #2a2a2a;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.chapter-bar-fill {
+  height: 100%;
+  background: #555;
+  border-radius: 2px;
+}
+.chapter-bar-fill.done { background: #4caf68; }
+.chapter-bar-fill.active { background: #e8a838; }
+
+/* ── More Details collapsible ── */
+.more-details-wrap {
+  margin: 0 20px 16px;
+}
+.more-details-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #161616;
+  border: 1px solid #222;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-radius 0.2s;
+}
+.more-details-toggle.open {
+  border-radius: 12px 12px 0 0;
+  border-bottom-color: #111;
+}
+.more-details-toggle-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e8a838;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.more-details-toggle-chevron {
+  color: #555;
+  transition: transform 0.2s;
+  font-size: 12px;
+}
+.more-details-toggle.open .more-details-toggle-chevron {
+  transform: rotate(180deg);
+}
+.more-details-body {
+  background: #161616;
+  border: 1px solid #222;
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s ease;
+}
+.more-details-body.open {
+  max-height: 600px;
+}
+.detail-section {
+  padding: 14px 16px;
+  border-bottom: 1px solid #1e1e1e;
+}
+.detail-section:last-child { border-bottom: none; }
+.detail-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #555;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.detail-description {
+  font-size: 13px;
+  color: #aaa;
+  line-height: 1.6;
+}
+.detail-source-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.detail-source-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+.detail-stars {
+  color: #e8a838;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+.detail-rating-meta {
+  font-size: 11px;
+  color: #555;
+  margin-left: 4px;
+}
+.detail-review {
+  background: #111;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.detail-review-text {
+  font-size: 12px;
+  color: #999;
+  line-height: 1.5;
+  font-style: italic;
+}
+.detail-review-author {
+  font-size: 11px;
+  color: #555;
+  margin-top: 5px;
+}
+.detail-review-stars {
+  color: #e8a838;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+.detail-external-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #e8a838;
+  margin-top: 10px;
+  font-weight: 600;
+}
+.detail-note {
+  font-size: 11px;
+  color: #444;
+  font-style: italic;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+/* ── SCREEN 3: Settings ── */
+.settings-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #555;
+  padding: 24px 20px 8px;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid #1a1a1a;
+  background: #111;
+}
+.settings-row-left { flex: 1; }
+.settings-row-label { font-size: 15px; font-weight: 500; }
+.settings-row-sub { font-size: 12px; color: #666; margin-top: 2px; }
+.toggle {
+  width: 50px;
+  height: 28px;
+  border-radius: 14px;
+  background: #333;
+  position: relative;
+  flex-shrink: 0;
+}
+.toggle.on { background: #4caf68; }
+.toggle-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  transition: left 0.2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+.toggle.on .toggle-dot { left: 25px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 1A: Audiobooks tab — WITH books in progress
+     ═══════════════════════════════════════════ -->
+<div class="screen-label">SCREEN 1A — Audiobooks Tab (with history)</div>
+
+<div class="topbar">
+  <div class="topbar-title">Audiobooks</div>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+</div>
+
+<!-- Continue Listening -->
+<div class="section-header">
+  <div class="section-title">Continue Listening</div>
+  <div class="section-see-all">See all</div>
+</div>
+
+<div class="continue-scroll">
+  <!-- Book 1 - 67% through -->
+  <div class="continue-card">
+    <div class="continue-cover">
+      <div class="cover-placeholder" style="background: linear-gradient(135deg, #1a3a5c, #2d6a8f);">📖</div>
+    </div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:67%"></div></div>
+    <div class="continue-info">
+      <div class="continue-book-title">Bal Ramayan</div>
+      <div class="continue-meta">Ch. 7 · 67% complete</div>
+      <div class="continue-btn">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Resume
+      </div>
+    </div>
+  </div>
+
+  <!-- Book 2 - 23% through -->
+  <div class="continue-card">
+    <div class="continue-cover">
+      <div class="cover-placeholder" style="background: linear-gradient(135deg, #3a1a5c, #7a3a9f);">🕉️</div>
+    </div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:23%"></div></div>
+    <div class="continue-info">
+      <div class="continue-book-title">Satsang Stories Vol. 1</div>
+      <div class="continue-meta">Ch. 2 · 23% complete</div>
+      <div class="continue-btn">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Resume
+      </div>
+    </div>
+  </div>
+
+  <!-- Book 3 - 100% -->
+  <div class="continue-card">
+    <div class="continue-cover">
+      <div class="cover-placeholder" style="background: linear-gradient(135deg, #1a4a2a, #2d8a4f);">🙏</div>
+    </div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:100%; background:#4caf68"></div></div>
+    <div class="continue-info">
+      <div class="continue-book-title">Swaminarayan Bal Katha</div>
+      <div class="continue-meta">Completed ✓</div>
+      <div class="continue-btn" style="background:#1a3325; color:#4caf68">
+        Replay
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Books -->
+<div class="section-header" style="margin-top:8px">
+  <div class="section-title">Books</div>
+  <div style="font-size:13px;color:#555">6 books</div>
+</div>
+
+<div class="books-grid">
+  <!-- Book 1 - with cover image (placeholder gradient), 67% -->
+  <div class="book-tile">
+    <div class="book-cover">
+      <div class="cover-placeholder" style="background: linear-gradient(135deg, #1a3a5c, #2d6a8f);">📖</div>
+      <div class="book-progress-ring">
+        <svg viewBox="0 0 32 32" width="32" height="32">
+          <circle class="ring-bg" cx="16" cy="16" r="12" stroke-dasharray="75.4"/>
+          <circle class="ring-fill" cx="16" cy="16" r="12"
+            stroke-dasharray="75.4"
+            stroke-dashoffset="24.9"/><!-- 67% -->
+        </svg>
+        <div class="ring-pct">67%</div>
+      </div>
+    </div>
+    <div class="book-info">
+      <div class="book-title">Bal Ramayan</div>
+      <div class="book-chapters">12 chapters · 4h 20m</div>
+    </div>
+  </div>
+
+  <!-- Book 2 - 23% -->
+  <div class="book-tile">
+    <div class="book-cover">
+      <div class="cover-placeholder" style="background: linear-gradient(135deg, #3a1a5c, #7a3a9f);">🕉️</div>
+      <div class="book-progress-ring">
+        <svg viewBox="0 0 32 32" width="32" height="32">
+          <circle class="ring-bg" cx="16" cy="16" r="12" stroke-dasharray="75.4"/>
+          <circle class="ring-fill" cx="16" cy="16" r="12"
+            stroke-dasharray="75.4"
+            stroke-dashoffset="58"/><!-- 23% -->
+        </svg>
+        <div class="ring-pct">23%</div>
+      </div>
+    </div>
+    <div class="book-info">
+      <div class="book-title">Satsang Stories Vol. 1</div>
+      <div class="book-chapters">8 chapters · 2h 45m</div>
+    </div>
+  </div>
+
+  <!-- Book 3 - completed -->
+  <div class="book-tile">
+    <div class="book-cover">
+      <div class="cover-placeholder" style="background: linear-gradient(135deg, #1a4a2a, #2d8a4f);">🙏</div>
+      <div class="book-progress-ring">
+        <svg viewBox="0 0 32 32" width="32" height="32">
+          <circle class="ring-bg" cx="16" cy="16" r="12" stroke-dasharray="75.4"/>
+          <circle class="ring-fill" cx="16" cy="16" r="12"
+            stroke-dasharray="75.4"
+            stroke-dashoffset="0"
+            style="stroke:#4caf68"/>
+        </svg>
+        <div class="ring-pct" style="color:#4caf68">✓</div>
+      </div>
+    </div>
+    <div class="book-info">
+      <div class="book-title">Swaminarayan Bal Katha</div>
+      <div class="book-chapters">10 chapters · 3h 10m</div>
+    </div>
+  </div>
+
+  <!-- Book 4 - not started -->
+  <div class="book-tile">
+    <div class="book-cover">
+      <div class="cover-placeholder" style="background: linear-gradient(135deg, #4a2a1a, #9f5a2d);">📿</div>
+    </div>
+    <div class="book-info">
+      <div class="book-title">Nishtha ni Vato</div>
+      <div class="book-chapters">15 chapters · 5h 00m</div>
+    </div>
+  </div>
+
+  <!-- Book 5 - not started -->
+  <div class="book-tile">
+    <div class="book-cover">
+      <div class="cover-placeholder" style="background: linear-gradient(135deg, #1a3a4a, #2d7a8f);">🌸</div>
+    </div>
+    <div class="book-info">
+      <div class="book-title">Bhagwan Swaminarayan Bal Leela</div>
+      <div class="book-chapters">9 chapters · 3h 30m</div>
+    </div>
+  </div>
+
+  <!-- Book 6 - not started -->
+  <div class="book-tile">
+    <div class="book-cover">
+      <div class="cover-placeholder" style="background: linear-gradient(135deg, #3a3a1a, #8f8f2d);">⭐</div>
+    </div>
+    <div class="book-info">
+      <div class="book-title">Satsang Stories Vol. 2</div>
+      <div class="book-chapters">11 chapters · 4h 05m</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab bar -->
+<div class="tabbar">
+  <div class="tab">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Home
+  </div>
+  <div class="tab">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+    Music
+  </div>
+  <div class="tab">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+    Stories
+  </div>
+  <div class="tab active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+    Audiobooks
+  </div>
+</div>
+
+<br><br><br><br>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 1B: Audiobooks tab — EMPTY STATE
+     ═══════════════════════════════════════════ -->
+<div class="screen-label">SCREEN 1B — Audiobooks Tab (empty / first time)</div>
+
+<div class="topbar">
+  <div class="topbar-title">Audiobooks</div>
+</div>
+
+<div class="section-header">
+  <div class="section-title">Continue Listening</div>
+</div>
+
+<div class="continue-empty">
+  <div class="continue-empty-icon">🎧</div>
+  <div class="continue-empty-text">
+    No books started yet.<br>
+    <strong>Browse Books below →</strong> to begin your first listen.
+  </div>
+</div>
+
+<div class="section-header" style="margin-top:20px">
+  <div class="section-title">Books</div>
+  <div style="font-size:13px;color:#555">6 books</div>
+</div>
+
+<div class="books-grid">
+  <div class="book-tile">
+    <div class="book-cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#1a3a5c,#2d6a8f);">📖</div></div>
+    <div class="book-info"><div class="book-title">Bal Ramayan</div><div class="book-chapters">12 chapters · 4h 20m</div></div>
+  </div>
+  <div class="book-tile">
+    <div class="book-cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#3a1a5c,#7a3a9f);">🕉️</div></div>
+    <div class="book-info"><div class="book-title">Satsang Stories Vol. 1</div><div class="book-chapters">8 chapters · 2h 45m</div></div>
+  </div>
+  <div class="book-tile">
+    <div class="book-cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#1a4a2a,#2d8a4f);">🙏</div></div>
+    <div class="book-info"><div class="book-title">Swaminarayan Bal Katha</div><div class="book-chapters">10 chapters · 3h 10m</div></div>
+  </div>
+  <div class="book-tile">
+    <div class="book-cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#4a2a1a,#9f5a2d);">📿</div></div>
+    <div class="book-info"><div class="book-title">Nishtha ni Vato</div><div class="book-chapters">15 chapters · 5h 00m</div></div>
+  </div>
+</div>
+
+<br><br><br><br>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 2: Book detail / chapter list
+     ═══════════════════════════════════════════ -->
+<div class="screen-label">SCREEN 2 — Book Detail (chapter list + player)</div>
+
+<div class="book-detail-header">
+  <div class="back-btn">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Audiobooks
+  </div>
+</div>
+
+<div class="book-hero">
+  <div class="book-hero-cover">
+    <div class="cover-placeholder" style="background:linear-gradient(135deg,#1a3a5c,#2d6a8f);">📖</div>
+  </div>
+  <div class="book-hero-info">
+    <div class="book-hero-name">Bal Ramayan</div>
+    <div class="book-hero-author">Traditional · Children's</div>
+    <div class="book-hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-val">67%</div>
+        <div class="hero-stat-label">Done</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">4h 20m</div>
+        <div class="hero-stat-label">Total</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">12</div>
+        <div class="hero-stat-label">Chapters</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- More Details collapsible -->
+<div class="more-details-wrap">
+  <div class="more-details-toggle" id="moreDetailsToggle" onclick="toggleDetails()">
+    <div class="more-details-toggle-label">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      More Details
+    </div>
+    <div class="more-details-toggle-chevron" id="moreDetailsChevron">▼</div>
+  </div>
+  <div class="more-details-body" id="moreDetailsBody">
+
+    <!-- About -->
+    <div class="detail-section">
+      <div class="detail-section-title">📖 About this Book</div>
+      <div class="detail-description">
+        Bal Ramayan is a beloved retelling of the ancient Hindu epic Ramayana, adapted for young listeners. Follow the journey of Rama — a prince of Ayodhya — from his birth to his triumphant return home, touching on values of duty, devotion, courage, and love. This version uses simple, engaging storytelling perfect for children ages 4–12.
+      </div>
+      <div class="detail-note">Description via Google Books · May not reflect exact audio content</div>
+    </div>
+
+
+  </div>
+</div>
+
+<script>
+function toggleDetails() {
+  const toggle = document.getElementById('moreDetailsToggle');
+  const body = document.getElementById('moreDetailsBody');
+  toggle.classList.toggle('open');
+  body.classList.toggle('open');
+}
+</script>
+
+<!-- Mini player -->
+<div class="mini-player">
+  <div class="mini-player-track">Chapter 7 — Hanuman Meets Sita</div>
+  <div class="mini-player-sub">38:24 left</div>
+  <div class="mini-progress">
+    <div class="mini-progress-fill"></div>
+    <div class="mini-progress-dot"></div>
+  </div>
+  <div class="mini-time">
+    <span>21:36</span>
+    <span>-38:24</span>
+  </div>
+  <div class="player-controls">
+    <div class="ctrl-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+      <span>Prev</span>
+    </div>
+    <div class="ctrl-btn primary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+      <span>–30s</span>
+    </div>
+    <div class="play-btn">
+      <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+    </div>
+    <div class="ctrl-btn primary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-3.51"/></svg>
+      <span>+30s</span>
+    </div>
+    <div class="speed-btn">1.25×</div>
+  </div>
+</div>
+
+<!-- Chapter list -->
+<div class="chapter-list">
+  <div style="font-size:12px;font-weight:700;color:#555;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:4px">Chapters</div>
+
+  <div class="chapter-row">
+    <div class="chapter-num done">✓</div>
+    <div class="chapter-info"><div class="chapter-name done">1 — The Birth of Rama</div><div class="chapter-duration">22 min</div></div>
+    <div class="chapter-progress"><div class="chapter-pct done">100%</div><div class="chapter-bar"><div class="chapter-bar-fill done" style="width:100%"></div></div></div>
+  </div>
+  <div class="chapter-row">
+    <div class="chapter-num done">✓</div>
+    <div class="chapter-info"><div class="chapter-name done">2 — Gurukul Days</div><div class="chapter-duration">18 min</div></div>
+    <div class="chapter-progress"><div class="chapter-pct done">100%</div><div class="chapter-bar"><div class="chapter-bar-fill done" style="width:100%"></div></div></div>
+  </div>
+  <div class="chapter-row">
+    <div class="chapter-num done">✓</div>
+    <div class="chapter-info"><div class="chapter-name done">3 — Sita Swayamvar</div><div class="chapter-duration">25 min</div></div>
+    <div class="chapter-progress"><div class="chapter-pct done">100%</div><div class="chapter-bar"><div class="chapter-bar-fill done" style="width:100%"></div></div></div>
+  </div>
+  <div class="chapter-row">
+    <div class="chapter-num done">✓</div>
+    <div class="chapter-info"><div class="chapter-name done">4 — Exile Begins</div><div class="chapter-duration">20 min</div></div>
+    <div class="chapter-progress"><div class="chapter-pct done">100%</div><div class="chapter-bar"><div class="chapter-bar-fill done" style="width:100%"></div></div></div>
+  </div>
+  <div class="chapter-row">
+    <div class="chapter-num done">✓</div>
+    <div class="chapter-info"><div class="chapter-name done">5 — Chitrakoot</div><div class="chapter-duration">17 min</div></div>
+    <div class="chapter-progress"><div class="chapter-pct done">100%</div><div class="chapter-bar"><div class="chapter-bar-fill done" style="width:100%"></div></div></div>
+  </div>
+  <div class="chapter-row">
+    <div class="chapter-num done">✓</div>
+    <div class="chapter-info"><div class="chapter-name done">6 — Sita is Taken</div><div class="chapter-duration">28 min</div></div>
+    <div class="chapter-progress"><div class="chapter-pct done">100%</div><div class="chapter-bar"><div class="chapter-bar-fill done" style="width:100%"></div></div></div>
+  </div>
+  <!-- Currently playing -->
+  <div class="chapter-row" style="background:#1a1500;margin:0 -20px;padding:12px 20px;border-bottom:1px solid #1a1a1a">
+    <div class="chapter-num active">▶</div>
+    <div class="chapter-info"><div class="chapter-name" style="color:#e8a838">7 — Hanuman Meets Sita</div><div class="chapter-duration">60 min · 38 min left</div></div>
+    <div class="chapter-progress"><div class="chapter-pct active">38%</div><div class="chapter-bar"><div class="chapter-bar-fill active" style="width:38%"></div></div></div>
+  </div>
+  <div class="chapter-row">
+    <div class="chapter-num">8</div>
+    <div class="chapter-info"><div class="chapter-name">8 — The Battle Begins</div><div class="chapter-duration">35 min</div></div>
+    <div class="chapter-progress"><div class="chapter-pct">0%</div><div class="chapter-bar"><div class="chapter-bar-fill" style="width:0%"></div></div></div>
+  </div>
+  <div class="chapter-row">
+    <div class="chapter-num">9</div>
+    <div class="chapter-info"><div class="chapter-name">9 — Kumbhakarna Falls</div><div class="chapter-duration">22 min</div></div>
+    <div class="chapter-progress"><div class="chapter-pct">0%</div><div class="chapter-bar"><div class="chapter-bar-fill" style="width:0%"></div></div></div>
+  </div>
+  <div class="chapter-row">
+    <div class="chapter-num">10</div>
+    <div class="chapter-info"><div class="chapter-name">10 — Ravana Defeated</div><div class="chapter-duration">30 min</div></div>
+    <div class="chapter-progress"><div class="chapter-pct">0%</div><div class="chapter-bar"><div class="chapter-bar-fill" style="width:0%"></div></div></div>
+  </div>
+  <div class="chapter-row">
+    <div class="chapter-num">11</div>
+    <div class="chapter-info"><div class="chapter-name">11 — Return to Ayodhya</div><div class="chapter-duration">19 min</div></div>
+    <div class="chapter-progress"><div class="chapter-pct">0%</div><div class="chapter-bar"><div class="chapter-bar-fill" style="width:0%"></div></div></div>
+  </div>
+  <div class="chapter-row">
+    <div class="chapter-num">12</div>
+    <div class="chapter-info"><div class="chapter-name">12 — Ram Rajya</div><div class="chapter-duration">24 min</div></div>
+    <div class="chapter-progress"><div class="chapter-pct">0%</div><div class="chapter-bar"><div class="chapter-bar-fill" style="width:0%"></div></div></div>
+  </div>
+</div>
+
+<br><br><br><br>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 3: Settings — Enable Audiobooks
+     ═══════════════════════════════════════════ -->
+<div class="screen-label">SCREEN 3 — Settings: Enable Audiobooks</div>
+
+<div class="topbar" style="padding-bottom:16px">
+  <div class="topbar-title">Settings</div>
+</div>
+
+<div class="settings-section-title">Advanced Features</div>
+<div class="settings-row">
+  <div class="settings-row-left">
+    <div class="settings-row-label">🎧 Parenting Audiobooks</div>
+    <div class="settings-row-sub">Adds an Audiobooks tab with curated books for parents</div>
+  </div>
+  <div class="toggle on"><div class="toggle-dot"></div></div>
+</div>
+<div class="settings-row">
+  <div class="settings-row-left">
+    <div class="settings-row-label">🔔 Daily Story Reminder</div>
+    <div class="settings-row-sub">Remind me to read a story each evening</div>
+  </div>
+  <div class="toggle"><div class="toggle-dot"></div></div>
+</div>
+
+<br><br><br>
+
+</body>
+</html>

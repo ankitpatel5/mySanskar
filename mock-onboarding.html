@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Onboarding Mockup</title>
+<style>
+  :root {
+    --bg-0: #0a0a0b; --bg-1: #121214; --bg-2: #1a1a1d; --bg-3: #232327;
+    --fg-0: #f5f5f7; --fg-1: #c9c9cf; --fg-2: #8b8b94; --fg-3: #5e5e66;
+    --accent: #1db954; --accent-soft: rgba(29,185,84,0.14);
+    --line: rgba(255,255,255,0.06); --line-2: rgba(255,255,255,0.1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #050506;
+    color: var(--fg-0);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    padding: 40px 16px 80px;
+  }
+
+  /* ── Layout ── */
+  .section-header {
+    font-size: 11px; font-weight: 700; color: var(--fg-3);
+    text-transform: uppercase; letter-spacing: 0.12em;
+    text-align: center; margin: 0 0 8px;
+  }
+  .section-desc {
+    font-size: 12px; color: var(--fg-3); text-align: center;
+    margin-bottom: 28px; line-height: 1.5;
+  }
+  .screens { display: flex; flex-wrap: wrap; gap: 32px; justify-content: center; }
+  .screen-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .screen-label { font-size: 11px; font-weight: 700; color: var(--fg-3); text-transform: uppercase; letter-spacing: 0.08em; }
+  .annotation {
+    font-size: 11px; color: var(--fg-3); line-height: 1.6; max-width: 260px;
+    background: rgba(255,255,255,0.03); border-left: 2px solid rgba(255,255,255,0.08);
+    padding: 9px 12px; border-radius: 0 6px 6px 0; margin-top: 2px;
+  }
+  .annotation b { color: var(--fg-1); }
+  .annotation.accent { border-left-color: var(--accent); }
+  hr.divider { border: none; border-top: 1px solid rgba(255,255,255,0.04); margin: 48px 0; }
+
+  /* ── Phone shell ── */
+  .phone {
+    width: 300px;
+    background: var(--bg-0);
+    border-radius: 40px;
+    overflow: hidden;
+    border: 1.5px solid rgba(255,255,255,0.08);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.7);
+    position: relative;
+    min-height: 540px;
+    display: flex; flex-direction: column;
+  }
+  .phone-status {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 20px 0;
+    font-size: 11px; color: var(--fg-3);
+  }
+
+  /* ── Shared components ── */
+  .btn-primary {
+    display: block; width: 100%; height: 52px; border-radius: 16px;
+    background: var(--accent); color: #fff;
+    font-size: 16px; font-weight: 700; border: none; cursor: pointer;
+    letter-spacing: -0.01em;
+  }
+  .btn-ghost {
+    display: block; width: 100%; height: 44px;
+    background: none; color: var(--fg-2);
+    font-size: 15px; font-weight: 600; border: none; cursor: pointer;
+  }
+  .dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 28px; }
+  .dot { width: 6px; height: 6px; border-radius: 3px; background: var(--bg-3); transition: all .2s; }
+  .dot.active { width: 20px; background: var(--accent); }
+
+  /* ── SCREEN 1: Welcome ── */
+  .welcome-screen {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: space-between;
+    padding: 20px 28px 36px;
+    background: var(--bg-0);
+    text-align: center;
+  }
+  .welcome-glow {
+    width: 120px; height: 120px; border-radius: 32px;
+    background: linear-gradient(135deg, #1a3320 0%, #0d1a0f 100%);
+    border: 1px solid rgba(29,185,84,0.25);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 60px rgba(29,185,84,0.15);
+    margin: 16px auto 0;
+    font-size: 52px;
+  }
+  .welcome-wordmark {
+    font-size: 26px; font-weight: 800; color: var(--fg-0);
+    letter-spacing: -0.03em; margin-bottom: 10px;
+  }
+  .welcome-wordmark span { color: var(--accent); }
+  .welcome-tagline {
+    font-size: 15px; color: var(--fg-2); line-height: 1.5; max-width: 220px; margin: 0 auto;
+  }
+  .welcome-bottom { width: 100%; }
+
+  /* ── SCREEN 2: App tour ── */
+  .tour-screen {
+    flex: 1; display: flex; flex-direction: column;
+    padding: 16px 24px 36px;
+    background: var(--bg-0);
+  }
+  .tour-heading {
+    font-size: 22px; font-weight: 800; color: var(--fg-0);
+    letter-spacing: -0.02em; margin-bottom: 6px; line-height: 1.2;
+  }
+  .tour-sub { font-size: 14px; color: var(--fg-2); margin-bottom: 28px; line-height: 1.5; }
+  .tour-cards { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .tour-card {
+    display: flex; align-items: flex-start; gap: 14px;
+    background: var(--bg-1); border-radius: 16px;
+    padding: 16px 16px; border: 1px solid var(--line-2);
+    flex: 1;
+  }
+  .tour-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .tour-icon.home { background: rgba(255,200,80,0.12); }
+  .tour-icon.music { background: rgba(29,185,84,0.12); }
+  .tour-icon.stories { background: rgba(120,80,255,0.12); }
+  .tour-card-title { font-size: 14px; font-weight: 700; color: var(--fg-0); margin-bottom: 3px; }
+  .tour-card-desc { font-size: 12px; color: var(--fg-2); line-height: 1.45; }
+  .tour-bottom { margin-top: 24px; }
+
+  /* ── SCREEN 3: Profile setup ── */
+  .profile-screen {
+    flex: 1; display: flex; flex-direction: column;
+    padding: 16px 24px 36px;
+    background: var(--bg-0);
+  }
+  .profile-heading {
+    font-size: 22px; font-weight: 800; color: var(--fg-0);
+    letter-spacing: -0.02em; margin-bottom: 6px; line-height: 1.2;
+  }
+  .profile-sub { font-size: 14px; color: var(--fg-2); margin-bottom: 24px; line-height: 1.5; }
+  .field-group { margin-bottom: 16px; }
+  .field-label {
+    font-size: 12px; font-weight: 600; color: var(--fg-2);
+    margin-bottom: 6px; display: block;
+  }
+  .field-optional { color: var(--fg-3); font-weight: 400; }
+  .text-input {
+    width: 100%; height: 46px; border-radius: 12px;
+    background: var(--bg-2); border: 1.5px solid var(--line-2);
+    color: var(--fg-0); font-size: 15px; padding: 0 14px;
+  }
+  .gender-row { display: flex; gap: 7px; }
+  .gender-btn {
+    flex: 1; height: 40px; border-radius: 10px;
+    background: var(--bg-2); border: 1.5px solid var(--line-2);
+    color: var(--fg-2); font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .gender-btn.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .profile-bottom { margin-top: auto; }
+  .skip-link { text-align: center; margin-top: 10px; font-size: 13px; color: var(--fg-3); cursor: pointer; }
+
+  /* ── SCREEN 4: All set ── */
+  .done-screen {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: space-between;
+    padding: 20px 28px 36px;
+    background: var(--bg-0); text-align: center;
+  }
+  .done-circle {
+    width: 90px; height: 90px; border-radius: 50%;
+    background: var(--accent-soft);
+    border: 2px solid rgba(29,185,84,0.35);
+    display: flex; align-items: center; justify-content: center;
+    margin: 24px auto 0;
+    box-shadow: 0 0 40px rgba(29,185,84,0.2);
+  }
+  .done-heading { font-size: 24px; font-weight: 800; color: var(--fg-0); letter-spacing: -0.02em; margin-bottom: 10px; }
+  .done-sub { font-size: 14px; color: var(--fg-2); line-height: 1.5; max-width: 220px; margin: 0 auto; }
+  .done-bottom { width: 100%; }
+  .done-hints { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+  .done-hint {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--bg-1); border-radius: 12px; padding: 11px 14px;
+    text-align: left;
+    border: 1px solid var(--line);
+  }
+  .done-hint-icon { font-size: 18px; flex-shrink: 0; }
+  .done-hint-text { font-size: 13px; color: var(--fg-1); line-height: 1.4; }
+  .done-hint-text b { color: var(--fg-0); }
+
+  /* ── SCREEN 5: Tab tooltip (in-app coach mark) ── */
+  .app-screen { flex: 1; position: relative; }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px 10px; border-bottom: 1px solid var(--line);
+  }
+  .topbar-title { font-size: 17px; font-weight: 700; }
+  .home-content { padding: 14px; }
+  .sotd-placeholder {
+    background: var(--bg-1); border-radius: 16px;
+    padding: 16px; border: 1px solid var(--line-2);
+    margin-bottom: 10px;
+  }
+  .sotd-tag { font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+  .sotd-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .sotd-sub { font-size: 12px; color: var(--fg-2); }
+  .tabbar {
+    display: flex; border-top: 1px solid var(--line);
+    padding: 10px 0 20px; background: rgba(10,10,11,0.92);
+    position: relative;
+  }
+  .tab-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 4px 0; cursor: pointer; position: relative;
+  }
+  .tab-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+  .tab-label { font-size: 10px; font-weight: 600; color: var(--fg-3); }
+  .tab-item.active .tab-label { color: var(--accent); }
+  .tab-item.active svg { stroke: var(--accent); }
+
+  /* Coach mark spotlight */
+  .coach-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.65);
+    z-index: 10;
+    pointer-events: none;
+  }
+  /* Cutout around stories tab */
+  .coach-spotlight {
+    position: absolute; bottom: 8px; right: 0;
+    width: 100px; height: 64px;
+    background: transparent;
+    border-radius: 14px;
+    box-shadow: 0 0 0 999px rgba(0,0,0,0.65);
+    z-index: 11;
+  }
+  .coach-tooltip {
+    position: absolute; bottom: 80px; right: 10px;
+    width: 180px;
+    background: var(--fg-0);
+    color: #000;
+    border-radius: 14px;
+    padding: 12px 14px;
+    z-index: 12;
+    font-size: 13px; line-height: 1.5;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .coach-tooltip b { font-weight: 700; }
+  .coach-tooltip::after {
+    content: '';
+    position: absolute; bottom: -8px; right: 28px;
+    width: 0; height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid var(--fg-0);
+  }
+  .coach-tooltip-btn {
+    display: block; width: 100%; margin-top: 10px;
+    height: 30px; border-radius: 8px;
+    background: #000; color: #fff;
+    font-size: 12px; font-weight: 700; border: none; cursor: pointer;
+  }
+  /* Pulse ring on tab */
+  .tab-pulse {
+    position: absolute; top: 2px; right: 22px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); z-index: 13;
+  }
+
+  /* ── Tab tooltip variant: Music ── */
+  .coach-spotlight-music {
+    position: absolute; bottom: 8px; left: 0;
+    width: 100px; height: 64px;
+    background: transparent;
+    border-radius: 14px;
+    box-shadow: 0 0 0 999px rgba(0,0,0,0.65);
+    z-index: 11;
+  }
+  .coach-tooltip-music {
+    position: absolute; bottom: 80px; left: 10px;
+    width: 180px;
+    background: var(--fg-0); color: #000;
+    border-radius: 14px; padding: 12px 14px;
+    z-index: 12; font-size: 13px; line-height: 1.5;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .coach-tooltip-music b { font-weight: 700; }
+  .coach-tooltip-music::after {
+    content: '';
+    position: absolute; bottom: -8px; left: 28px;
+    width: 0; height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid var(--fg-0);
+  }
+  .coach-tooltip-music .coach-tooltip-btn {
+    display: block; width: 100%; margin-top: 10px;
+    height: 30px; border-radius: 8px;
+    background: #000; color: #fff;
+    font-size: 12px; font-weight: 700; border: none; cursor: pointer;
+  }
+  .tab-pulse-music {
+    position: absolute; top: 2px; left: 22px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); z-index: 13;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ SECTION 1: Splash onboarding ═══════════ -->
+<div class="section-header" style="margin-bottom:6px;">Phase 1 — Splash Onboarding</div>
+<div class="section-desc">Shown once, immediately after first sign-in. 3 swipeable cards → profile setup → done.</div>
+
+<div class="screens">
+
+  <!-- SCREEN 1: Welcome -->
+  <div class="screen-wrap">
+    <div class="screen-label">1 of 5 — Welcome</div>
+    <div class="phone">
+      <div class="phone-status"><span>9:41</span><span>●●●</span></div>
+      <div class="welcome-screen">
+        <div>
+          <div class="welcome-glow">🪔</div>
+        </div>
+        <div>
+          <div class="welcome-wordmark">my<span>Sanskar</span></div>
+          <div class="welcome-tagline">Spiritual music and personalised stories for your little ones.</div>
+        </div>
+        <div class="welcome-bottom">
+          <div class="dots">
+            <div class="dot active"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+          </div>
+          <button class="btn-primary">Get Started</button>
+        </div>
+      </div>
+    </div>
+    <div class="annotation accent">
+      <b>First screen after sign-in.</b> Sets the tone — what is this app and who is it for. Single CTA, no friction.
+    </div>
+  </div>
+
+  <!-- SCREEN 2: App tour -->
+  <div class="screen-wrap">
+    <div class="screen-label">2 of 5 — What's inside</div>
+    <div class="phone">
+      <div class="phone-status"><span>9:41</span><span>●●●</span></div>
+      <div class="tour-screen">
+        <div class="tour-heading">Three things,<br>one app.</div>
+        <div class="tour-sub">Here's what's waiting for you and your child.</div>
+        <div class="tour-cards">
+
+          <div class="tour-card">
+            <div class="tour-icon home">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#f5c842" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </div>
+            <div>
+              <div class="tour-card-title">Daily Story</div>
+              <div class="tour-card-desc">A fresh AI-written spiritual story personalised for your child, every single day.</div>
+            </div>
+          </div>
+
+          <div class="tour-card">
+            <div class="tour-icon music">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#1db954" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            </div>
+            <div>
+              <div class="tour-card-title">Music Library</div>
+              <div class="tour-card-desc">Bhajans, kirtans, and devotional songs organized into albums for easy listening.</div>
+            </div>
+          </div>
+
+          <div class="tour-card">
+            <div class="tour-icon stories">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            </div>
+            <div>
+              <div class="tour-card-title">Story Generator</div>
+              <div class="tour-card-desc">Create custom spiritual stories on demand — pick the theme, character, and length.</div>
+            </div>
+          </div>
+
+        </div>
+        <div class="tour-bottom">
+          <div class="dots">
+            <div class="dot"></div>
+            <div class="dot active"></div>
+            <div class="dot"></div>
+          </div>
+          <button class="btn-primary">Next</button>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      <b>One card per tab.</b> Each maps to a tab in the app so the layout makes sense before they see it. Icons match the tab bar exactly.
+    </div>
+  </div>
+
+  <!-- SCREEN 3: Profile setup -->
+  <div class="screen-wrap">
+    <div class="screen-label">3 of 5 — Child profile</div>
+    <div class="phone">
+      <div class="phone-status"><span>9:41</span><span>●●●</span></div>
+      <div class="profile-screen">
+        <div style="font-size:32px;margin-bottom:12px;">👶</div>
+        <div class="profile-heading">Tell us about<br>your child.</div>
+        <div class="profile-sub">We use this to write stories just for them. You can always change it in Settings.</div>
+        <div class="field-group">
+          <label class="field-label">Name</label>
+          <input class="text-input" type="text" placeholder="Child's name" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Gender</label>
+          <div class="gender-row">
+            <button class="gender-btn">Girl</button>
+            <button class="gender-btn active">Boy</button>
+            <button class="gender-btn" style="font-size:11px;">Either</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Date of Birth <span class="field-optional">(optional)</span></label>
+          <input class="text-input" type="text" placeholder="YYYY-MM-DD" />
+        </div>
+        <div class="profile-bottom">
+          <div class="dots" style="margin-bottom:16px;">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot active"></div>
+          </div>
+          <button class="btn-primary">Save & Continue</button>
+          <div class="skip-link">Skip for now</div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      <b>Profile setup inline in onboarding</b> — no need to dig into Settings later. "Skip for now" available so it's never a blocker. Skipping means SOTD shows a generic setup prompt.
+    </div>
+  </div>
+
+  <!-- SCREEN 4: All set -->
+  <div class="screen-wrap">
+    <div class="screen-label">4 of 5 — All set</div>
+    <div class="phone">
+      <div class="phone-status"><span>9:41</span><span>●●●</span></div>
+      <div class="done-screen">
+        <div>
+          <div class="done-circle">
+            <svg viewBox="0 0 32 32" width="40" height="40" fill="none" stroke="#1db954" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 16 13 22 25 10"/></svg>
+          </div>
+          <div style="margin-top:20px;">
+            <div class="done-heading">You're all set,<br>let's begin!</div>
+            <div class="done-sub">Here are a few things to try first.</div>
+          </div>
+        </div>
+        <div class="done-bottom">
+          <div class="done-hints">
+            <div class="done-hint">
+              <div class="done-hint-icon">🪔</div>
+              <div class="done-hint-text"><b>Check the Home tab</b> for today's personalised story.</div>
+            </div>
+            <div class="done-hint">
+              <div class="done-hint-icon">🎵</div>
+              <div class="done-hint-text"><b>Browse the Music tab</b> to find bhajans and kirtans.</div>
+            </div>
+            <div class="done-hint">
+              <div class="done-hint-icon">✨</div>
+              <div class="done-hint-text"><b>Generate a story</b> — pick any theme and character you like.</div>
+            </div>
+          </div>
+          <button class="btn-primary">Open mySanskar</button>
+        </div>
+      </div>
+    </div>
+    <div class="annotation accent">
+      <b>Confirmation + orientation.</b> Reinforces what to do first so the app doesn't feel empty. Tapping "Open mySanskar" lands them on the Home tab.
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════ SECTION 2: In-app coach marks ═══════════ -->
+<hr class="divider">
+<div class="section-header" style="margin-bottom:6px;">Phase 2 — In-App Coach Marks</div>
+<div class="section-desc">Shown the first time a user lands on each tab. Dismissed with a tap. Never shown again.</div>
+
+<div class="screens">
+
+  <!-- SCREEN 5: Stories tab coach mark -->
+  <div class="screen-wrap">
+    <div class="screen-label">5 of 5 — Tab tooltip (Stories)</div>
+    <div class="phone">
+      <div class="phone-status"><span>9:41</span><span>●●●</span></div>
+      <div class="app-screen">
+        <!-- Dimmed app behind -->
+        <div class="topbar">
+          <div class="topbar-title">mySanskar</div>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
+        <div class="home-content">
+          <div class="sotd-placeholder">
+            <div class="sotd-tag">★ Story of the Day</div>
+            <div class="sotd-title">The Brave Little Lamp</div>
+            <div class="sotd-sub">A story about courage · For Arjun</div>
+          </div>
+          <div class="sotd-placeholder" style="opacity:0.4;height:60px;"></div>
+        </div>
+
+        <!-- Overlay -->
+        <div class="coach-overlay"></div>
+
+        <!-- Spotlight cutout on Stories tab (simulated via tooltip) -->
+        <div class="coach-tooltip" style="z-index:20;">
+          <b>✨ Stories</b><br>
+          Generate custom spiritual stories on demand or browse your saved ones.
+          <button class="coach-tooltip-btn">Got it</button>
+        </div>
+
+        <div class="tabbar" style="position:relative;z-index:15;">
+          <div class="tab-item active">
+            <div class="tab-icon">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#1db954" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            </div>
+            <span class="tab-label" style="color:var(--accent);">Home</span>
+          </div>
+          <div class="tab-item">
+            <div class="tab-icon">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-linecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            </div>
+            <span class="tab-label">Music</span>
+          </div>
+          <div class="tab-item" style="position:relative;">
+            <div class="tab-pulse"></div>
+            <div class="tab-icon">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2" stroke-linecap="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            </div>
+            <span class="tab-label" style="color:var(--fg-0);">Stories</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      <b>Pulsing green dot</b> on the tab + tooltip pointing to it. Background is dimmed, spotlight on the tab. Tap "Got it" or anywhere to dismiss. Shown once per tab, only on first visit.
+    </div>
+  </div>
+
+  <!-- SCREEN 6: Music tab coach mark -->
+  <div class="screen-wrap">
+    <div class="screen-label">Variant — Music tab tooltip</div>
+    <div class="phone">
+      <div class="phone-status"><span>9:41</span><span>●●●</span></div>
+      <div class="app-screen">
+        <div class="topbar">
+          <div class="topbar-title">mySanskar</div>
+        </div>
+        <div class="home-content">
+          <div class="sotd-placeholder">
+            <div class="sotd-tag">★ Story of the Day</div>
+            <div class="sotd-title">The Brave Little Lamp</div>
+            <div class="sotd-sub">A story about courage · For Arjun</div>
+          </div>
+        </div>
+
+        <div class="coach-overlay"></div>
+
+        <div class="coach-tooltip-music" style="z-index:20;">
+          <b>🎵 Music</b><br>
+          Browse bhajans, kirtans, and devotional albums. Build playlists for your child.
+          <button class="coach-tooltip-btn">Got it</button>
+        </div>
+
+        <div class="tabbar" style="position:relative;z-index:15;">
+          <div class="tab-item active">
+            <div class="tab-icon">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#1db954" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            </div>
+            <span class="tab-label" style="color:var(--accent);">Home</span>
+          </div>
+          <div class="tab-item" style="position:relative;">
+            <div class="tab-pulse-music"></div>
+            <div class="tab-icon">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2" stroke-linecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            </div>
+            <span class="tab-label" style="color:var(--fg-0);">Music</span>
+          </div>
+          <div class="tab-item">
+            <div class="tab-icon">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-linecap="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            </div>
+            <span class="tab-label">Stories</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      Same pattern, different tab. Coach marks are shown <b>sequentially</b> — Music tooltip fires the first time they tap Music, Stories tooltip fires on first Stories visit.
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════ Decision callout ═══════════ -->
+<hr class="divider">
+<div style="max-width:660px;margin:0 auto;background:rgba(29,185,84,0.06);border:1px solid rgba(29,185,84,0.2);border-radius:16px;padding:24px 28px;">
+  <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px;">Implementation Notes</div>
+  <div style="display:flex;flex-direction:column;gap:14px;">
+    <div style="font-size:13px;color:var(--fg-1);line-height:1.6;">
+      <span style="font-weight:700;color:var(--fg-0);">Trigger</span><br>
+      Check <code style="background:var(--bg-2);padding:1px 5px;border-radius:4px;font-size:12px;">localStorage.getItem('drift.onboardingDone')</code> on app load. If missing → show onboarding. Set it to <code style="background:var(--bg-2);padding:1px 5px;border-radius:4px;font-size:12px;">'1'</code> when the user reaches the final screen.
+    </div>
+    <div style="font-size:13px;color:var(--fg-1);line-height:1.6;">
+      <span style="font-weight:700;color:var(--fg-0);">Coach marks</span><br>
+      Track seen tabs with <code style="background:var(--bg-2);padding:1px 5px;border-radius:4px;font-size:12px;">drift.seenTabs</code> (JSON array). On first switch to Music or Stories, show the tooltip. Tap anywhere to dismiss and mark it seen.
+    </div>
+    <div style="font-size:13px;color:var(--fg-1);line-height:1.6;">
+      <span style="font-weight:700;color:var(--fg-0);">Skip behaviour</span><br>
+      "Skip for now" on the profile screen skips straight to Screen 4 (All set). Profile can be added later via Settings — SOTD shows the "Add your child → Settings" prompt in the meantime.
+    </div>
+    <div style="font-size:13px;color:var(--fg-1);line-height:1.6;">
+      <span style="font-weight:700;color:var(--fg-0);">Guest vs signed-in</span><br>
+      Onboarding fires for both. For guests, the profile step still works (saves to localStorage). If they later sign in, existing sync logic uploads it to Firestore.
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

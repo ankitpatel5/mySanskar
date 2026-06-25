@@ -16,3 +16,8 @@ package.json
 .translation-progress.json
 
 .claude/
+
+# Native app projects — not part of the web deploy.
+# (Xcode derived-data builds add thousands of files and blow Vercel's 15k limit.)
+ios/
+android/

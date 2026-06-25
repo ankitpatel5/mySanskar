@@ -426,10 +426,97 @@
               <h2 class="view-title" id="conv-starters-title">Starters</h2>
               <p class="view-sub" id="conv-starters-sub"></p>
             </div>
+            <span id="conv-starters-progress" class="conv-progress-badge hidden"></span>
           </div>
           <div id="conv-tip-bar" class="conv-tip-bar"></div>
           <div class="conv-cat-scroll" id="conv-cat-scroll"></div>
           <div id="conv-starters-list" class="conv-starters-list"></div>
+        </section>
+
+        <!-- ── Audiobooks: main listing ── -->
+        <section id="view-audiobooks" class="view hidden">
+          <div class="view-header">
+            <div>
+              <h2 class="view-title">Audiobooks</h2>
+            </div>
+          </div>
+          <!-- Continue Listening -->
+          <div class="ab-section-header" id="ab-continue-header">
+            <span class="ab-section-title">Continue Listening</span>
+          </div>
+          <div id="ab-continue-scroll" class="ab-continue-scroll"></div>
+          <!-- Books grid -->
+          <div class="ab-section-header">
+            <span class="ab-section-title">Books</span>
+            <span id="ab-books-count" class="ab-books-count"></span>
+          </div>
+          <div id="ab-books-grid" class="ab-books-grid"></div>
+          <div class="ab-resync-wrap">
+            <button class="ab-resync-btn" id="ab-resync-btn">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
+              Sync Library
+            </button>
+          </div>
+        </section>
+
+        <!-- ── Audiobooks: book detail ── -->
+        <section id="view-audiobook-detail" class="view hidden">
+          <div class="ab-detail-topbar">
+            <button class="back-btn" id="ab-detail-back" aria-label="Back">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+          </div>
+          <!-- Book hero -->
+          <div class="ab-hero" id="ab-hero"></div>
+          <!-- More Details collapsible -->
+          <div class="ab-more-details-wrap" id="ab-more-details-wrap">
+            <button class="ab-more-details-toggle" id="ab-more-details-toggle">
+              <span class="ab-more-details-label">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                More Details
+              </span>
+              <svg class="ab-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="ab-more-details-body" id="ab-more-details-body">
+              <div class="ab-description" id="ab-description"></div>
+              <div class="ab-description-source">Description via Google Books</div>
+            </div>
+          </div>
+          <!-- Mini player -->
+          <div class="ab-player" id="ab-player">
+            <div class="ab-player-track" id="ab-player-track">—</div>
+            <div class="ab-player-sub" id="ab-player-sub"></div>
+            <div class="ab-player-progress-wrap">
+              <div class="ab-player-progress" id="ab-player-progress">
+                <div class="ab-player-progress-fill" id="ab-player-progress-fill"></div>
+                <div class="ab-player-progress-dot" id="ab-player-progress-dot"></div>
+              </div>
+            </div>
+            <div class="ab-player-times">
+              <span id="ab-player-elapsed">0:00</span>
+              <span id="ab-player-remain"></span>
+            </div>
+            <div class="ab-player-controls">
+              <button class="ab-ctrl-btn" id="ab-prev-btn" title="Previous chapter">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+                <span>Prev</span>
+              </button>
+              <button class="ab-ctrl-btn" id="ab-skip-back-btn" title="Back 30s">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+                <span>−30s</span>
+              </button>
+              <button class="ab-play-btn" id="ab-play-btn">
+                <svg id="ab-play-icon" viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </button>
+              <button class="ab-ctrl-btn" id="ab-skip-fwd-btn" title="Forward 30s">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-3.51"/></svg>
+                <span>+30s</span>
+              </button>
+              <button class="ab-speed-btn" id="ab-speed-btn">1×</button>
+            </div>
+          </div>
+          <!-- Chapter list -->
+          <div class="ab-chapters" id="ab-chapters"></div>
         </section>
 
         <!-- Story Time: Story reader -->
@@ -550,6 +637,9 @@
           <button id="mini-loop" class="mini-tog-btn" aria-label="Loop">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
           </button>
+          <button id="mini-lyrics-btn" class="mini-tog-btn mini-lyrics-btn hidden" aria-label="Lyrics">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="8" x2="13" y2="8"/><line x1="3" y1="13" x2="10" y2="13"/><circle cx="17" cy="15" r="3"/><path d="M20 12V5l-5 1.5"/></svg>
+          </button>
         </div>
       </div>
 
@@ -604,10 +694,28 @@
           <button id="sheet-queue" class="extra-btn">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/><polyline points="17 18 21 14 17 10"/></svg> Queue
           </button>
+          <button id="sheet-lyrics-btn" class="extra-btn extra-btn-lyrics hidden">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="8" x2="13" y2="8"/><line x1="3" y1="13" x2="10" y2="13"/><circle cx="17" cy="15" r="3"/><path d="M20 12V5l-5 1.5"/></svg> Lyrics
+          </button>
           <button id="sheet-add-to" class="extra-btn">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add to…
           </button>
         </div>
+      </div>
+
+      <!-- Lyrics Sheet -->
+      <div id="lyrics-sheet" class="lyrics-sheet hidden">
+        <div id="lyrics-sheet-handle" class="lyrics-sheet-handle"></div>
+        <div class="lyrics-sheet-header">
+          <div class="lyrics-sheet-meta">
+            <span class="lyrics-sheet-title" id="lyrics-sheet-title"></span>
+            <span class="lyrics-sheet-lang" id="lyrics-sheet-lang"></span>
+          </div>
+          <button id="lyrics-sheet-close" class="lyrics-sheet-close" aria-label="Close lyrics">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="lyrics-sheet-body" id="lyrics-sheet-body"></div>
       </div>
 
       <!-- Admin Dashboard (full-screen, only rendered inside main-screen) -->
@@ -639,6 +747,8 @@
           <button class="admin-tab active" data-atab="users">Users</button>
           <button class="admin-tab" data-atab="songs">Top Songs</button>
           <button class="admin-tab" data-atab="viptts">VIP TTS</button>
+          <button class="admin-tab" data-atab="audiobooks">Audiobooks</button>
+          <button class="admin-tab" data-atab="lyrics">Lyrics</button>
         </div>
         <div class="admin-content" id="admin-content">
           <div class="admin-loading">Loading…</div>
@@ -657,6 +767,10 @@
         <button class="tab" data-tab="stories">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
           <span>Stories</span>
+        </button>
+        <button class="tab hidden" data-tab="audiobooks" id="audiobooks-tab-btn">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+          <span>Audiobooks</span>
         </button>
       </nav>
     </main>
@@ -937,6 +1051,15 @@
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <div class="settings-advanced-body hidden" id="settings-advanced-body">
+            <div class="settings-feature-row">
+              <div class="settings-feature-info">
+                <div class="settings-feature-label">🎧 Parenting Audiobooks</div>
+                <div class="settings-feature-sub">Adds an Audiobooks tab with curated books for parents</div>
+              </div>
+              <button class="settings-feature-toggle" id="audiobooks-toggle" role="switch" aria-checked="false">
+                <span class="settings-feature-toggle-dot"></span>
+              </button>
+            </div>
             <button class="modal-item" id="settings-refresh">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
               Resync Music Library
@@ -1002,6 +1125,12 @@
         </button>
         <button class="modal-item danger hidden" data-action="remove-from-queue">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Remove from queue
+        </button>
+        <button class="modal-item hidden" data-action="download">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download
+        </button>
+        <button class="modal-item danger hidden" data-action="remove-download">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg> Remove Download
         </button>
         <button class="modal-item cancel" data-action="cancel">Cancel</button>
       </div>
@@ -1086,6 +1215,7 @@
   <script src="translations-data.js"></script>
   <script src="title-translations.js"></script>
   <script src="conversation-starters.js"></script>
+  <script src="lyrics-data.js"></script>
   <script src="utils.js"></script>
   <script src="app.js?v=20250601u"></script>
   <script>

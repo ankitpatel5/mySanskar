@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Baby animation preview</title>
+<style>
+  :root {
+    --bg-0: #0a0a0b; --bg-1: #121214;
+    --fg-0: #f5f5f7; --fg-2: #8b8b94;
+    --accent: #1db954;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg-0);
+    color: var(--fg-0);
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 48px;
+    padding: 40px 16px;
+  }
+
+  h2 {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--fg-2);
+    text-align: center;
+  }
+
+  .card {
+    background: var(--bg-1);
+    border-radius: 28px;
+    padding: 36px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    width: 280px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .label {
+    font-size: 11px;
+    color: var(--fg-2);
+    text-align: center;
+    margin-top: -6px;
+  }
+
+  /* ── OPTION A: current behaviour (whole image moves) ── */
+  .icon-wrap-a {
+    width: 110px;
+    height: 110px;
+  }
+  .icon-wrap-a img {
+    width: 110px;
+    height: 110px;
+    object-fit: contain;
+    border-radius: 24px;
+    transform-origin: bottom center;
+    animation: baby-animate 8s ease-in-out 0.5s infinite;
+  }
+
+  /* ── OPTION B: only the baby moves, plate stays still ── */
+  .icon-wrap-b {
+    width: 110px;
+    height: 110px;
+    position: relative;
+  }
+  /* static white plate (recreates the cream background) */
+  .icon-plate {
+    position: absolute;
+    inset: 0;
+    background: #fef7ec;
+    border-radius: 24px;
+  }
+  /* transparent baby on top — only this animates */
+  .icon-wrap-b img {
+    position: absolute;
+    inset: 0;
+    width: 110px;
+    height: 110px;
+    object-fit: contain;
+    transform-origin: bottom center;
+    animation: baby-animate 8s ease-in-out 0.5s infinite;
+  }
+
+  /* shared animation */
+  @keyframes baby-animate {
+    0%, 5%  { transform: rotate(0deg) scale(1) translateY(0px); }
+    10%  { transform: rotate(-7deg) scale(1.02) translateY(-2px); }
+    16%  { transform: rotate(8deg)  scale(1.02) translateY(-2px); }
+    22%  { transform: rotate(-8deg) scale(1.02) translateY(-2px); }
+    28%  { transform: rotate(8deg)  scale(1.02) translateY(-2px); }
+    33%  { transform: rotate(-3deg) scale(1.01) translateY(-1px); }
+    36%  { transform: rotate(0deg) scale(1) translateY(0px); }
+    38%  { transform: rotate(-1.5deg) scale(1.05) translateY(-6px); }
+    40%  { transform: rotate(1.5deg)  scale(1.0)  translateY(0px); }
+    42%  { transform: rotate(-1.5deg) scale(1.04) translateY(-4px); }
+    44%  { transform: rotate(0.5deg)  scale(1.01) translateY(-1px); }
+    46%, 100% { transform: rotate(0deg) scale(1) translateY(0px); }
+  }
+
+  .app-name {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .tagline {
+    font-size: 11px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+</style>
+</head>
+<body>
+
+<div style="display:flex; gap:32px; flex-wrap:wrap; justify-content:center;">
+
+  <!-- Option A: whole image animates (current) -->
+  <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
+    <h2>Current — whole icon moves</h2>
+    <div class="card">
+      <div class="icon-wrap-a">
+        <img src="baal.png" alt="mySanskar">
+      </div>
+      <div class="app-name">mySanskar</div>
+      <div class="tagline">Rooted in Bhakti</div>
+    </div>
+    <div class="label" style="max-width:200px;">Entire image (incl. white plate)<br>rotates and bounces</div>
+  </div>
+
+  <!-- Option B: only baby animates -->
+  <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
+    <h2>New — only baby moves</h2>
+    <div class="card">
+      <div class="icon-wrap-b">
+        <div class="icon-plate"></div>
+        <img src="baal-baby.png" alt="mySanskar">
+      </div>
+      <div class="app-name">mySanskar</div>
+      <div class="tagline">Rooted in Bhakti</div>
+    </div>
+    <div class="label" style="max-width:200px;">White plate stays fixed;<br>only the baby waves &amp; giggles</div>
+  </div>
+
+</div>
+
+</body>
+</html>

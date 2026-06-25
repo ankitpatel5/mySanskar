@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0a0a0a;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 100vh;
+}
+
+/* ── shared card shell ── */
+.card {
+  width: 100%;
+  max-width: 390px;
+  margin: 0 auto;
+  background: #111;
+  border-bottom: 1px solid #1f1f1f;
+  padding: 40px 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #444;
+  margin-bottom: 20px;
+}
+
+/* ── OPTION A: Bold white wordmark ── */
+.opt-a-title {
+  font-size: 42px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.opt-a-sub {
+  font-size: 14px;
+  color: #666;
+  margin-top: 10px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+/* ── OPTION B: my + Sanskar two-weight split ── */
+.opt-b-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  line-height: 1;
+}
+.opt-b-my {
+  font-size: 42px;
+  font-weight: 300;
+  color: #888;
+  letter-spacing: -0.02em;
+}
+.opt-b-sanskar {
+  font-size: 42px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+.opt-b-sub {
+  font-size: 13px;
+  color: #555;
+  margin-top: 10px;
+  font-weight: 400;
+}
+
+/* ── OPTION C: Symbol + name stacked ── */
+.opt-c-icon {
+  width: 44px;
+  height: 44px;
+  margin-bottom: 16px;
+  color: #e8a030;
+}
+.opt-c-title {
+  font-size: 34px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+.opt-c-sub {
+  font-size: 13px;
+  color: #555;
+  margin-top: 8px;
+}
+
+/* ── OPTION D: Accent-letter large initial ── */
+.opt-d-wrap {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  line-height: 1;
+}
+.opt-d-m {
+  font-size: 80px;
+  font-weight: 800;
+  color: #e8a030;
+  letter-spacing: -0.04em;
+  line-height: 0.85;
+}
+.opt-d-rest {
+  font-size: 38px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.02em;
+  padding-bottom: 6px;
+}
+.opt-d-sub {
+  font-size: 13px;
+  color: #555;
+  margin-top: 12px;
+}
+</style>
+</head>
+<body>
+
+<!-- ── A: Bold white wordmark ── -->
+<div class="card">
+  <div class="label">Option A — Bold white wordmark</div>
+  <div class="opt-a-title">mySanskar</div>
+  <div class="opt-a-sub">Raising little ones with faith &amp; values</div>
+</div>
+
+<!-- ── B: Two-weight split ── -->
+<div class="card">
+  <div class="label">Option B — Light + Bold split</div>
+  <div class="opt-b-wrap">
+    <span class="opt-b-my">my</span><span class="opt-b-sanskar">Sanskar</span>
+  </div>
+  <div class="opt-b-sub">Raising little ones with faith &amp; values</div>
+</div>
+
+<!-- ── C: Diya icon + name ── -->
+<div class="card">
+  <div class="label">Option C — Icon + wordmark</div>
+  <svg class="opt-c-icon" viewBox="0 0 44 44" fill="none">
+    <!-- flame -->
+    <path d="M22 6c-2 2.5-4 5.5-4 8a4 4 0 0 0 8 0c0-2.5-2-5.5-4-8z" fill="#e8a030"/>
+    <!-- wick -->
+    <line x1="22" y1="17.5" x2="22" y2="22" stroke="#e8a030" stroke-width="2" stroke-linecap="round"/>
+    <!-- bowl -->
+    <path d="M13 22c0-1.5 4-2.5 9-2.5s9 1 9 2.5l-2 10H15l-2-10z" fill="#e8a030" opacity="0.85"/>
+    <!-- base plate -->
+    <rect x="11" y="32" width="22" height="3" rx="1.5" fill="#e8a030" opacity="0.5"/>
+  </svg>
+  <div class="opt-c-title">mySanskar</div>
+  <div class="opt-c-sub">Raising little ones with faith &amp; values</div>
+</div>
+
+<!-- ── D: Giant initial ── -->
+<div class="card">
+  <div class="label">Option D — Oversized initial</div>
+  <div class="opt-d-wrap">
+    <span class="opt-d-m">m</span><span class="opt-d-rest">ySanskar</span>
+  </div>
+  <div class="opt-d-sub">Raising little ones with faith &amp; values</div>
+</div>
+
+</body>
+</html>

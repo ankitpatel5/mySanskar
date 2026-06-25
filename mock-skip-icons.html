@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skip Icon Options</title>
+<style>
+  :root { --accent: #1db954; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d0d0d;
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+    padding: 40px 24px 60px;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 36px; }
+
+  .row { margin-bottom: 40px; }
+  .label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.35); margin-bottom: 6px; }
+  .opt-label { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 14px; }
+  .desc { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 18px; line-height: 1.5; }
+
+  .controls {
+    background: linear-gradient(160deg, #1c2b22 0%, #111 100%);
+    border-radius: 20px;
+    padding: 28px 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* Prev / Next — same for all options */
+  .btn-pn {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; background: none; border: none; cursor: pointer;
+    flex-shrink: 0;
+  }
+  /* Play — same for all */
+  .btn-play {
+    width: 66px; height: 66px;
+    border-radius: 50%;
+    background: #fff; color: #000;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; border: none; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  /* Skip container */
+  .btn-skip {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: none; color: #fff; cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  /* ── OPTION 1: SF Symbols arc (number beside arc) ── */
+  /* Already shown above — this is the standard */
+
+  /* ── OPTION 2: Text + arrow stacked ── */
+  .skip-text-stack {
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+  }
+  .skip-text-stack .num { font-size: 13px; font-weight: 800; letter-spacing: -0.02em; }
+  .skip-text-stack .unit { font-size: 9px; font-weight: 600; color: rgba(255,255,255,0.6); letter-spacing: 0.04em; }
+
+  /* ── OPTION 3: Pill label (current style, just smaller/inline) ── */
+  .skip-pill {
+    display: flex; align-items: center; gap: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 999px;
+    padding: 6px 11px;
+    font-size: 12px; font-weight: 700;
+    color: rgba(255,255,255,0.85);
+    white-space: nowrap;
+  }
+
+  hr { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 36px 0; }
+</style>
+</head>
+<body>
+
+<h1>Skip Icon Options — Option A Layout</h1>
+
+<!-- OPTION 1 -->
+<div class="row">
+  <div class="label">Option 1</div>
+  <div class="opt-label">SF Symbols style (number outside arc)</div>
+  <div class="desc">Arc arrow with the number sitting beside/outside it — used in Apple Podcasts, clean separation between arrow and number.</div>
+  <div class="controls">
+    <button class="btn-pn">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+    </button>
+    <!-- Back 15: arc curving left, number to the right -->
+    <button class="btn-skip">
+      <svg viewBox="0 0 44 44" width="44" height="44" fill="none">
+        <!-- arc + arrowhead pointing left -->
+        <path d="M28 10 A12 12 0 1 0 32 28" stroke="white" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+        <polyline points="26,7 28,11 32,9" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <text x="22" y="26" text-anchor="middle" font-size="11" font-weight="800" font-family="-apple-system,sans-serif" fill="white" dominant-baseline="middle">15</text>
+      </svg>
+    </button>
+    <button class="btn-play">
+      <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+    </button>
+    <!-- Fwd 15 -->
+    <button class="btn-skip">
+      <svg viewBox="0 0 44 44" width="44" height="44" fill="none">
+        <path d="M16 10 A12 12 0 1 1 12 28" stroke="white" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+        <polyline points="18,7 16,11 12,9" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <text x="22" y="26" text-anchor="middle" font-size="11" font-weight="800" font-family="-apple-system,sans-serif" fill="white" dominant-baseline="middle">15</text>
+      </svg>
+    </button>
+    <button class="btn-pn">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zm8.5-6v6h2V6h-2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<hr>
+
+<!-- OPTION 2 -->
+<div class="row">
+  <div class="label">Option 2</div>
+  <div class="opt-label">Arrow + stacked number</div>
+  <div class="desc">Simple directional arrow icon with the number stacked below. Very readable, no arc needed — straightforward and bold.</div>
+  <div class="controls">
+    <button class="btn-pn">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+    </button>
+    <button class="btn-skip">
+      <div class="skip-text-stack">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+          <path d="M12 5V2L7 7l5 5V9c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+        </svg>
+        <span class="num">15</span>
+      </div>
+    </button>
+    <button class="btn-play">
+      <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+    </button>
+    <button class="btn-skip">
+      <div class="skip-text-stack">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" style="transform:scaleX(-1)">
+          <path d="M12 5V2L7 7l5 5V9c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+        </svg>
+        <span class="num">15</span>
+      </div>
+    </button>
+    <button class="btn-pn">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zm8.5-6v6h2V6h-2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<hr>
+
+<!-- OPTION 3 -->
+<div class="row">
+  <div class="label">Option 3</div>
+  <div class="opt-label">Pill labels inline</div>
+  <div class="desc">Keep the familiar pill label style from the current design, just moved inline with the controls. Same visual language users already know.</div>
+  <div class="controls">
+    <button class="btn-pn">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+    </button>
+    <button class="btn-skip" style="width:auto">
+      <div class="skip-pill">
+        <svg viewBox="0 0 18 18" width="14" height="14" fill="none">
+          <path d="M9 3C5.7 3 3 5.7 3 9s2.7 6 6 6 6-2.7 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+          <path d="M9 3L6.5 0.5M9 3l2.5-2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        −15s
+      </div>
+    </button>
+    <button class="btn-play">
+      <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+    </button>
+    <button class="btn-skip" style="width:auto">
+      <div class="skip-pill">
+        +15s
+        <svg viewBox="0 0 18 18" width="14" height="14" fill="none">
+          <path d="M9 3C12.3 3 15 5.7 15 9s-2.7 6-6 6-6-2.7-6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+          <path d="M9 3l2.5-2.5M9 3L6.5 0.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+      </div>
+    </button>
+    <button class="btn-pn">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zm8.5-6v6h2V6h-2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<hr>
+
+<!-- OPTION 4 -->
+<div class="row">
+  <div class="label">Option 4</div>
+  <div class="opt-label">Number + small arrow</div>
+  <div class="desc">Bold number is the hero — small arrow below indicates direction. Minimal, very readable at small sizes.</div>
+  <div class="controls">
+    <button class="btn-pn">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+    </button>
+    <button class="btn-skip">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+        <span style="font-size:15px;font-weight:800;line-height:1;letter-spacing:-0.02em">15</span>
+        <svg viewBox="0 0 16 10" width="16" height="10" fill="none">
+          <path d="M8 1 L2 5 L8 9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="2" y1="5" x2="14" y2="5" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </button>
+    <button class="btn-play">
+      <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+    </button>
+    <button class="btn-skip">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+        <span style="font-size:15px;font-weight:800;line-height:1;letter-spacing:-0.02em">15</span>
+        <svg viewBox="0 0 16 10" width="16" height="10" fill="none">
+          <path d="M8 1 L14 5 L8 9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="14" y1="5" x2="2" y2="5" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </button>
+    <button class="btn-pn">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zm8.5-6v6h2V6h-2z"/></svg>
+    </button>
+  </div>
+</div>
+
+</body>
+</html>

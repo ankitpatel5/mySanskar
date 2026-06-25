@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SVG Baby — waving hand preview</title>
+<style>
+  :root { --bg-0:#0a0a0b; --bg-1:#121214; --fg-0:#f5f5f7; --fg-2:#8b8b94; --accent:#1db954; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    background: var(--bg-0); color: var(--fg-0);
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; gap: 48px; flex-wrap: wrap; padding: 40px 16px;
+  }
+  .col { display:flex; flex-direction:column; align-items:center; gap:12px; }
+  .lbl { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--fg-2); }
+  .sub { font-size:11px; color:var(--fg-2); text-align:center; max-width:180px; line-height:1.5; }
+  .card {
+    background: var(--bg-1); border-radius:28px; padding:36px 32px;
+    display:flex; flex-direction:column; align-items:center; gap:14px;
+    width:240px; border:1px solid rgba(255,255,255,0.06);
+  }
+  .app-name { font-size:26px; font-weight:600; letter-spacing:-.02em; }
+  .tagline  { font-size:11px; color:var(--accent); text-transform:uppercase; letter-spacing:.08em; }
+</style>
+</head>
+<body>
+
+<!-- ── ORIGINAL PNG (whole image waving) ────────────────────── -->
+<div class="col">
+  <div class="lbl">Original PNG</div>
+  <div class="card">
+    <img src="baal.png" width="110" height="110" style="border-radius:24px; object-fit:contain;">
+    <div class="app-name">mySanskar</div>
+    <div class="tagline">Rooted in Bhakti</div>
+  </div>
+  <div class="sub">Static reference — the original asset</div>
+</div>
+
+<!-- ── SVG — only hand waves ────────────────────────────────── -->
+<div class="col">
+  <div class="lbl">SVG — only hand waves</div>
+  <div class="card">
+
+    <svg viewBox="0 0 200 200" width="110" height="110"
+         xmlns="http://www.w3.org/2000/svg" overflow="visible">
+
+      <!-- ░░ BACKGROUND PLATE ░░ -->
+      <rect width="200" height="200" rx="44" fill="#FEF7EC"/>
+
+      <!-- ░░ LEGS (cross-legged, behind body) ░░ -->
+      <ellipse cx="80"  cy="157" rx="33" ry="12" fill="#C0392B" transform="rotate(-13,80,157)"/>
+      <ellipse cx="116" cy="157" rx="33" ry="12" fill="#C0392B" transform="rotate(13,116,157)"/>
+
+      <!-- FEET -->
+      <ellipse cx="54"  cy="165" rx="12" ry="7" fill="#F5BF8A" transform="rotate(10,54,165)"/>
+      <ellipse cx="143" cy="165" rx="12" ry="7" fill="#F5BF8A" transform="rotate(-10,143,165)"/>
+
+      <!-- ░░ TORSO ░░ -->
+      <ellipse cx="97" cy="126" rx="30" ry="24" fill="#C0392B"/>
+
+      <!-- Neckline detail -->
+      <ellipse cx="97" cy="107" rx="9" ry="5.5" fill="#9B2D23"/>
+
+      <!-- ░░ LEFT ARM (static, goes down-left) ░░ -->
+      <path d="M 69 115 Q 56 130 50 146" stroke="#F5BF8A" stroke-width="14" stroke-linecap="round" fill="none"/>
+      <circle cx="49" cy="150" r="9" fill="#F5BF8A"/>
+
+      <!-- ░░ WAVING ARM — only this group animates ░░
+           Shoulder pivot at SVG coordinates (125, 107).
+           animateTransform rotates the group around that exact point. -->
+      <g id="waving-arm">
+        <!-- Upper arm -->
+        <path d="M 125 107 Q 132 92 136 77" stroke="#F5BF8A" stroke-width="14" stroke-linecap="round" fill="none"/>
+        <!-- Forearm -->
+        <path d="M 136 77 Q 140 64 139 51" stroke="#F5BF8A" stroke-width="12" stroke-linecap="round" fill="none"/>
+        <!-- Palm -->
+        <ellipse cx="138" cy="46" rx="10" ry="8" fill="#F5BF8A" transform="rotate(-15,138,46)"/>
+        <!-- Fingers -->
+        <line x1="131" y1="43" x2="128" y2="32" stroke="#F5BF8A" stroke-width="5.5" stroke-linecap="round"/>
+        <line x1="137" y1="41" x2="135" y2="29" stroke="#F5BF8A" stroke-width="5.5" stroke-linecap="round"/>
+        <line x1="142" y1="41" x2="142" y2="29" stroke="#F5BF8A" stroke-width="5.5" stroke-linecap="round"/>
+        <line x1="147" y1="43" x2="150" y2="33" stroke="#F5BF8A" stroke-width="5"   stroke-linecap="round"/>
+        <!-- Thumb -->
+        <line x1="129" y1="49" x2="122" y2="43" stroke="#F5BF8A" stroke-width="5"   stroke-linecap="round"/>
+
+        <!-- ✋ THE ANIMATION — rotates around shoulder (125, 107) -->
+        <animateTransform
+          attributeName="transform"
+          type="rotate"
+          values="0 125 107;
+                  -20 125 107;
+                   16 125 107;
+                  -20 125 107;
+                   16 125 107;
+                   -8 125 107;
+                    0 125 107;
+                    0 125 107"
+          keyTimes="0; 0.14; 0.24; 0.34; 0.44; 0.52; 0.58; 1"
+          dur="6s"
+          begin="1.5s"
+          repeatCount="indefinite"
+          calcMode="spline"
+          keySplines="
+            0.45 0 0.55 1;
+            0.45 0 0.55 1;
+            0.45 0 0.55 1;
+            0.45 0 0.55 1;
+            0.45 0 0.55 1;
+            0.45 0 0.55 1;
+            0.45 0 0.55 1"
+        />
+      </g>
+
+      <!-- Right shoulder cap — drawn AFTER arm so it covers the joint -->
+      <ellipse cx="125" cy="112" rx="13" ry="10" fill="#C0392B"/>
+      <!-- Left shoulder cap -->
+      <ellipse cx="69"  cy="112" rx="11" ry="9"  fill="#C0392B"/>
+
+      <!-- ░░ NECK ░░ -->
+      <rect x="88" y="98" width="16" height="13" rx="6" fill="#F5BF8A"/>
+
+      <!-- ░░ HEAD ░░ -->
+      <ellipse cx="96" cy="72" rx="30" ry="31" fill="#F5BF8A"/>
+
+      <!-- ░░ HAIR ░░ -->
+      <!-- Back hair (over head base, under face) -->
+      <ellipse cx="96" cy="55" rx="30" ry="19" fill="#180A00"/>
+      <!-- Hair bun (top-right) -->
+      <ellipse cx="118" cy="46" rx="14" ry="12" fill="#180A00"/>
+
+      <!-- Bow — left petal -->
+      <path d="M 114 42 C 108 32 110 25 115 34 L 113 42 Z" fill="#E74C3C"/>
+      <!-- Bow — right petal -->
+      <path d="M 118 42 C 124 32 122 25 117 34 L 119 42 Z" fill="#E74C3C"/>
+      <!-- Bow — centre knot -->
+      <ellipse cx="116" cy="41" rx="3.5" ry="3" fill="#C0392B"/>
+
+      <!-- ░░ FACE ░░ -->
+      <!-- Eyes -->
+      <ellipse cx="83"  cy="74" rx="5.5" ry="6" fill="#0A0400"/>
+      <ellipse cx="109" cy="74" rx="5.5" ry="6" fill="#0A0400"/>
+      <!-- Eye shine -->
+      <ellipse cx="85"  cy="72" rx="2" ry="2"   fill="white"/>
+      <ellipse cx="111" cy="72" rx="2" ry="2"   fill="white"/>
+      <!-- Bindi -->
+      <circle cx="96" cy="64" r="3" fill="#C0392B"/>
+      <!-- Cheek blush -->
+      <ellipse cx="71"  cy="83" rx="10" ry="6" fill="#FF7070" opacity="0.28"/>
+      <ellipse cx="121" cy="83" rx="10" ry="6" fill="#FF7070" opacity="0.28"/>
+      <!-- Nose -->
+      <ellipse cx="96" cy="79" rx="2.5" ry="1.5" fill="#D9956A" opacity="0.5"/>
+      <!-- Smile -->
+      <path d="M 84 88 Q 96 100 108 88"
+            stroke="#C0392B" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+
+      <!-- ░░ MUSICAL NOTE ♪ ░░ -->
+      <g transform="translate(152,88)" fill="#180A00" opacity="0.75">
+        <ellipse cx="0" cy="16" rx="6.5" ry="5" transform="rotate(-20,0,16)"/>
+        <line x1="5.5" y1="13" x2="5.5" y2="-4" stroke="#180A00" stroke-width="2.5"/>
+        <path d="M 5.5 -4 Q 16 0 14 9" stroke="#180A00" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      </g>
+
+    </svg>
+
+    <div class="app-name">mySanskar</div>
+    <div class="tagline">Rooted in Bhakti</div>
+  </div>
+  <div class="sub">White plate + body stay still.<br>Only the raised hand waves.</div>
+</div>
+
+</body>
+</html>

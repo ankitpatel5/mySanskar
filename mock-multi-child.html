@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Child UX Mockup</title>
+<style>
+  :root {
+    --bg-0: #0a0a0b; --bg-1: #121214; --bg-2: #1a1a1d; --bg-3: #232327;
+    --fg-0: #f5f5f7; --fg-1: #c9c9cf; --fg-2: #8b8b94; --fg-3: #5e5e66;
+    --accent: #1db954; --accent-soft: rgba(29,185,84,0.14); --line: rgba(255,255,255,0.06); --line-2: rgba(255,255,255,0.1);
+    --r-sm: 8px; --r-md: 12px; --r-lg: 18px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #050506;
+    color: var(--fg-0);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    padding: 40px 16px 80px;
+  }
+  h1 { font-size: 11px; font-weight: 700; color: var(--fg-3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 40px; text-align: center; }
+
+  /* ── Layout ── */
+  .screens {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 40px;
+    justify-content: center;
+  }
+  .screen-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .screen-label {
+    font-size: 11px; font-weight: 700; color: var(--fg-3);
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .screen-sub {
+    font-size: 11px; color: var(--fg-3); text-align: center; max-width: 260px; line-height: 1.5;
+    margin-top: -6px;
+  }
+
+  /* ── Phone shell ── */
+  .phone {
+    width: 320px;
+    background: var(--bg-0);
+    border-radius: 36px;
+    overflow: hidden;
+    border: 1.5px solid rgba(255,255,255,0.08);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+    position: relative;
+  }
+
+  /* ── Modal sheet ── */
+  .modal-sheet {
+    background: var(--bg-1);
+    border-radius: 24px 24px 0 0;
+    padding: 12px 0 32px;
+    min-height: 420px;
+  }
+  .sheet-handle {
+    width: 36px; height: 4px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+
+  /* ── Section labels ── */
+  .settings-section { padding: 0 20px 20px; }
+  .settings-section + .settings-section { border-top: 1px solid var(--line); padding-top: 16px; }
+  .section-label {
+    font-size: 11px; font-weight: 700; color: var(--fg-3);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: 12px;
+  }
+
+  /* ── Child cards (list view) ── */
+  .child-list { display: flex; flex-direction: column; gap: 8px; }
+  .child-card {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--bg-2);
+    border-radius: var(--r-md);
+    padding: 12px 14px;
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    transition: border-color .15s;
+    position: relative;
+  }
+  .child-card.active { border-color: var(--accent); background: rgba(29,185,84,0.07); }
+  .child-avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 800; flex-shrink: 0;
+    background: var(--bg-3);
+    color: var(--fg-1);
+  }
+  .child-card.active .child-avatar { background: var(--accent-soft); color: var(--accent); }
+  .child-card-info { flex: 1; min-width: 0; }
+  .child-card-name { font-size: 15px; font-weight: 600; color: var(--fg-0); }
+  .child-card-meta { font-size: 12px; color: var(--fg-2); margin-top: 1px; }
+  .child-card-active-badge {
+    font-size: 10px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-top: 2px;
+  }
+  .child-card-edit {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--fg-3); flex-shrink: 0;
+  }
+  .child-active-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+
+  /* ── Add child button ── */
+  .add-child-btn {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; padding: 11px 14px;
+    background: none;
+    border: 1.5px dashed rgba(255,255,255,0.12);
+    border-radius: var(--r-md);
+    color: var(--fg-2); font-size: 14px; font-weight: 600;
+    cursor: pointer; margin-top: 8px;
+    transition: border-color .15s, color .15s;
+  }
+  .add-child-btn svg { flex-shrink: 0; }
+
+  /* ── Save / Cancel ── */
+  .settings-save-btn {
+    display: block; width: calc(100% - 40px); margin: 16px 20px 0;
+    height: 48px; border-radius: 14px;
+    background: var(--accent); color: #fff;
+    font-size: 16px; font-weight: 700; border: none; cursor: pointer;
+  }
+  .settings-save-btn.disabled {
+    background: var(--bg-3); color: var(--fg-3);
+  }
+  .settings-cancel-btn {
+    display: block; width: calc(100% - 40px); margin: 8px 20px 0;
+    height: 48px; border-radius: 14px;
+    background: none; color: var(--fg-2);
+    font-size: 16px; font-weight: 600; border: none; cursor: pointer;
+    text-align: center; line-height: 48px;
+  }
+
+  /* ── Edit child form ── */
+  .child-field-group { margin-bottom: 14px; }
+  .child-field-label { font-size: 12px; font-weight: 600; color: var(--fg-2); margin-bottom: 6px; display: block; }
+  .ai-text-input {
+    width: 100%; height: 42px; border-radius: var(--r-md);
+    background: var(--bg-2); border: 1.5px solid var(--line-2);
+    color: var(--fg-0); font-size: 15px; padding: 0 12px;
+    outline: none;
+  }
+  .child-gender-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .child-gender-btn {
+    padding: 7px 13px; border-radius: 999px;
+    background: var(--bg-2); border: 1.5px solid var(--line-2);
+    color: var(--fg-2); font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .child-gender-btn.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+  /* Edit sheet header */
+  .edit-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px 16px;
+  }
+  .edit-header-title { font-size: 17px; font-weight: 700; color: var(--fg-0); }
+  .edit-header-delete {
+    font-size: 13px; font-weight: 600; color: #ff5b5b;
+    background: none; border: none; cursor: pointer;
+  }
+
+  /* ── Home screen ── */
+  .home-screen {
+    background: var(--bg-0);
+    padding: 0;
+    min-height: 560px;
+  }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar-title { font-size: 17px; font-weight: 700; }
+  .topbar-right { display: flex; align-items: center; gap: 8px; }
+
+  /* Active child switcher pill in topbar */
+  .active-child-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--bg-2); border-radius: 999px;
+    padding: 5px 10px 5px 6px;
+    border: 1px solid var(--line-2);
+    cursor: pointer;
+  }
+  .pill-avatar {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent);
+    font-size: 10px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pill-name { font-size: 12px; font-weight: 600; color: var(--fg-1); }
+  .pill-chevron { color: var(--fg-3); }
+
+  /* SOTD tile */
+  .home-content { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .sotd-tile {
+    background: linear-gradient(135deg, #1a2e1c 0%, #111 100%);
+    border: 1px solid rgba(29,185,84,0.2);
+    border-radius: 18px; padding: 18px;
+  }
+  .sotd-tag {
+    font-size: 10px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .sotd-title { font-size: 17px; font-weight: 700; color: var(--fg-0); line-height: 1.3; margin-bottom: 4px; }
+  .sotd-sub { font-size: 12px; color: var(--fg-2); }
+  .sotd-for {
+    display: inline-flex; align-items: center; gap: 5px;
+    margin-top: 10px;
+    background: rgba(255,255,255,0.06); border-radius: 999px;
+    padding: 4px 10px 4px 6px;
+    font-size: 11px; font-weight: 600; color: var(--fg-2);
+  }
+  .sotd-for-avatar {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent);
+    font-size: 8px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── Story generator chips ── */
+  .story-screen { background: var(--bg-0); padding: 16px; min-height: 320px; }
+  .story-field-label { font-size: 12px; font-weight: 700; color: var(--fg-2); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
+  .story-chips { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 8px; }
+  .story-chip {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 12px 6px 8px;
+    border-radius: 999px;
+    background: var(--bg-2); border: 1.5px solid var(--line-2);
+    font-size: 13px; font-weight: 600; color: var(--fg-2);
+    cursor: pointer; transition: all .15s;
+  }
+  .story-chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .story-chip-avatar {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--bg-3); color: var(--fg-2);
+    font-size: 9px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .story-chip.active .story-chip-avatar { background: var(--accent-soft); color: var(--accent); }
+  .story-chip-check { width: 14px; height: 14px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; }
+
+  /* ── Child switcher bottom sheet ── */
+  .switcher-sheet {
+    background: var(--bg-1);
+    border-radius: 24px 24px 0 0;
+    padding: 12px 0 32px;
+    min-height: 280px;
+  }
+  .switcher-title {
+    font-size: 13px; font-weight: 700; color: var(--fg-2);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    padding: 0 20px 14px;
+  }
+  .switcher-list { display: flex; flex-direction: column; }
+  .switcher-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 20px;
+    cursor: pointer;
+    border-top: 1px solid var(--line);
+  }
+  .switcher-item:first-of-type { border-top: none; }
+  .switcher-avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 800;
+    background: var(--bg-3); color: var(--fg-1);
+    flex-shrink: 0;
+  }
+  .switcher-avatar.active { background: var(--accent-soft); color: var(--accent); }
+  .switcher-info { flex: 1; }
+  .switcher-name { font-size: 15px; font-weight: 600; color: var(--fg-0); }
+  .switcher-meta { font-size: 12px; color: var(--fg-2); margin-top: 1px; }
+  .switcher-check { color: var(--accent); }
+  .switcher-add {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 20px;
+    border-top: 1px solid var(--line);
+    color: var(--fg-2); font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .switcher-add-icon {
+    width: 38px; height: 38px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-3); color: var(--fg-2);
+    flex-shrink: 0;
+  }
+
+  hr.divider { border: none; border-top: 1px solid rgba(255,255,255,0.04); margin: 48px 0; }
+
+  /* ── Annotations ── */
+  .annotation {
+    font-size: 11px; color: var(--fg-3); line-height: 1.6;
+    max-width: 280px; text-align: left;
+    background: rgba(255,255,255,0.03);
+    border-left: 2px solid rgba(255,255,255,0.08);
+    padding: 10px 12px; border-radius: 0 6px 6px 0;
+    margin-top: 4px;
+  }
+  .annotation b { color: var(--fg-1); }
+  .annotation-accent { border-left-color: var(--accent); }
+
+  .section-header {
+    font-size: 11px; font-weight: 700; color: var(--fg-3);
+    text-transform: uppercase; letter-spacing: 0.12em;
+    text-align: center; margin: 48px 0 24px;
+  }
+</style>
+</head>
+<body>
+
+<h1>mySanskar — Multi-Child UX Mockup · Active Child Model</h1>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="section-header">Settings — Child Profiles</div>
+
+<div class="screens">
+
+  <!-- SCREEN 1: Settings list view (2 children) -->
+  <div class="screen-wrap">
+    <div class="screen-label">A — Child list in Settings</div>
+    <div class="phone">
+      <div class="modal-sheet">
+        <div class="sheet-handle"></div>
+        <div class="settings-section">
+          <div class="section-label">My Children</div>
+          <div class="child-list">
+
+            <!-- Active child -->
+            <div class="child-card active">
+              <div class="child-avatar">A</div>
+              <div class="child-card-info">
+                <div class="child-card-name">Arjun</div>
+                <div class="child-card-meta">Boy · Age 7</div>
+                <div class="child-card-active-badge">● Active</div>
+              </div>
+              <div class="child-card-edit">
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14.7 3.3a1.5 1.5 0 0 1 2 2L6 16l-3 1 1-3L14.7 3.3z"/></svg>
+              </div>
+            </div>
+
+            <!-- Second child -->
+            <div class="child-card">
+              <div class="child-avatar">P</div>
+              <div class="child-card-info">
+                <div class="child-card-name">Priya</div>
+                <div class="child-card-meta">Girl · Age 5</div>
+              </div>
+              <div class="child-card-edit">
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14.7 3.3a1.5 1.5 0 0 1 2 2L6 16l-3 1 1-3L14.7 3.3z"/></svg>
+              </div>
+            </div>
+
+            <!-- Add -->
+            <button class="add-child-btn">
+              <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="10" y1="4" x2="10" y2="16"/><line x1="4" y1="10" x2="16" y2="10"/></svg>
+              Add a child
+            </button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="section-label">Default Story Language</div>
+          <div class="child-gender-btns">
+            <button class="child-gender-btn active">English</button>
+            <button class="child-gender-btn">ગુજરાતી</button>
+            <button class="child-gender-btn">Translit.</button>
+          </div>
+        </div>
+
+        <button class="settings-save-btn disabled">Save</button>
+        <div class="settings-cancel-btn">Cancel</div>
+      </div>
+    </div>
+    <div class="annotation annotation-accent">
+      <b>Tap a card</b> to make that child active.<br>
+      <b>Pencil icon</b> opens the edit form.<br>
+      Active child is highlighted with green border + "● Active" badge.
+    </div>
+  </div>
+
+  <!-- SCREEN 2: Edit child form -->
+  <div class="screen-wrap">
+    <div class="screen-label">B — Edit child (slide-in)</div>
+    <div class="phone">
+      <div class="modal-sheet">
+        <div class="sheet-handle"></div>
+        <div class="edit-header">
+          <div class="edit-header-title">Edit Child</div>
+          <button class="edit-header-delete">Delete</button>
+        </div>
+        <div class="settings-section" style="padding-top:0; border-top:none;">
+          <div class="child-field-group">
+            <label class="child-field-label">Name</label>
+            <input class="ai-text-input" type="text" value="Arjun" />
+          </div>
+          <div class="child-field-group">
+            <label class="child-field-label">Gender</label>
+            <div class="child-gender-btns">
+              <button class="child-gender-btn">Girl</button>
+              <button class="child-gender-btn active">Boy</button>
+              <button class="child-gender-btn">Prefer not to say</button>
+            </div>
+          </div>
+          <div class="child-field-group">
+            <label class="child-field-label">Date of Birth <span style="color:var(--fg-3);font-weight:400">(optional)</span></label>
+            <input class="ai-text-input" type="text" value="2017-03-12" />
+          </div>
+        </div>
+
+        <button class="settings-save-btn" style="margin-top:8px;">Save Changes</button>
+        <div class="settings-cancel-btn">Cancel</div>
+      </div>
+    </div>
+    <div class="annotation">
+      Same form as today — just scoped to one child.<br>
+      <b>Delete</b> (top-right, red) removes the child with a confirm prompt.<br>
+      Cannot delete the only remaining child.
+    </div>
+  </div>
+
+  <!-- SCREEN 3: Add child form -->
+  <div class="screen-wrap">
+    <div class="screen-label">C — Add child</div>
+    <div class="phone">
+      <div class="modal-sheet">
+        <div class="sheet-handle"></div>
+        <div class="edit-header">
+          <div class="edit-header-title">Add Child</div>
+        </div>
+        <div class="settings-section" style="padding-top:0; border-top:none;">
+          <div class="child-field-group">
+            <label class="child-field-label">Name</label>
+            <input class="ai-text-input" type="text" placeholder="Child's name" />
+          </div>
+          <div class="child-field-group">
+            <label class="child-field-label">Gender</label>
+            <div class="child-gender-btns">
+              <button class="child-gender-btn">Girl</button>
+              <button class="child-gender-btn">Boy</button>
+              <button class="child-gender-btn">Prefer not to say</button>
+            </div>
+          </div>
+          <div class="child-field-group">
+            <label class="child-field-label">Date of Birth <span style="color:var(--fg-3);font-weight:400">(optional)</span></label>
+            <input class="ai-text-input" type="text" placeholder="YYYY-MM-DD" />
+          </div>
+        </div>
+        <button class="settings-save-btn disabled">Add Child</button>
+        <div class="settings-cancel-btn">Cancel</div>
+      </div>
+    </div>
+    <div class="annotation">
+      <b>Add Child</b> button is disabled until a name is entered.<br>
+      Newly added child is <b>not</b> automatically made active — user stays on the list to decide.
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div class="section-header">Active Child Switcher</div>
+
+<div class="screens">
+
+  <!-- SCREEN 4: Topbar pill → opens switcher -->
+  <div class="screen-wrap">
+    <div class="screen-label">D — Topbar active child pill</div>
+    <div class="phone">
+      <div class="home-screen">
+        <div class="topbar">
+          <div class="topbar-title">mySanskar</div>
+          <div class="topbar-right">
+            <!-- Active child pill -->
+            <div class="active-child-pill">
+              <div class="pill-avatar">A</div>
+              <span class="pill-name">Arjun</span>
+              <svg class="pill-chevron" viewBox="0 0 12 8" width="10" height="6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l5 5 5-5"/></svg>
+            </div>
+            <!-- Settings icon -->
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </div>
+        </div>
+        <div class="home-content">
+          <div class="sotd-tile">
+            <div class="sotd-tag">
+              <svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor"><path d="M8 1l1.9 3.8 4.2.6-3 2.9.7 4.2L8 10.4l-3.8 2 .7-4.2-3-2.9 4.2-.6z"/></svg>
+              Story of the Day
+            </div>
+            <div class="sotd-title">The Brave Little Lamp</div>
+            <div class="sotd-sub">A story about courage and light</div>
+            <div class="sotd-for">
+              <div class="sotd-for-avatar">A</div>
+              For Arjun
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation annotation-accent">
+      <b>Active child pill</b> lives in the topbar — always visible.<br>
+      Tapping it opens the quick switcher sheet (Screen E).<br>
+      SOTD tile shows <b>"For Arjun"</b> so it's clear whose story this is.
+    </div>
+  </div>
+
+  <!-- SCREEN 5: Quick switcher sheet -->
+  <div class="screen-wrap">
+    <div class="screen-label">E — Quick switcher sheet</div>
+    <div class="phone">
+      <div style="background:var(--bg-0); height:200px; position:relative;">
+        <!-- Dimmed home behind -->
+        <div style="position:absolute;inset:0;background:rgba(0,0,0,0.5);"></div>
+      </div>
+      <div class="switcher-sheet">
+        <div class="sheet-handle" style="margin-bottom:16px;"></div>
+        <div class="switcher-title">Switch Child</div>
+        <div class="switcher-list">
+
+          <div class="switcher-item">
+            <div class="switcher-avatar active">A</div>
+            <div class="switcher-info">
+              <div class="switcher-name">Arjun</div>
+              <div class="switcher-meta">Boy · Age 7</div>
+            </div>
+            <svg class="switcher-check" viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="4 10 8 14 16 6"/></svg>
+          </div>
+
+          <div class="switcher-item">
+            <div class="switcher-avatar">P</div>
+            <div class="switcher-info">
+              <div class="switcher-name">Priya</div>
+              <div class="switcher-meta">Girl · Age 5</div>
+            </div>
+          </div>
+
+          <div class="switcher-add">
+            <div class="switcher-add-icon">
+              <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="10" y1="4" x2="10" y2="16"/><line x1="4" y1="10" x2="16" y2="10"/></svg>
+            </div>
+            Add a child
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      Lightweight bottom sheet — no nav required.<br>
+      Tap a child → instantly becomes active, sheet closes, home refreshes.<br>
+      <b>"Add a child"</b> shortcut at bottom opens the add form.
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div class="section-header">Story Generator — Multi-Child Chips</div>
+
+<div class="screens">
+
+  <!-- SCREEN 6: Multiple child chips in story generator -->
+  <div class="screen-wrap">
+    <div class="screen-label">F — Child chips in Story Generator</div>
+    <div class="phone">
+      <div class="story-screen">
+        <div style="margin-bottom:20px;">
+          <div class="story-field-label">Main character</div>
+          <input class="ai-text-input" type="text" placeholder="e.g. a young boy named Arjun…" style="margin-bottom:8px;" />
+          <!-- Both children as chips; active child pre-selected -->
+          <div class="story-chips">
+            <div class="story-chip active">
+              <div class="story-chip-check">
+                <svg viewBox="0 0 10 10" width="8" height="8" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><polyline points="2 5 4.5 7.5 8.5 2.5"/></svg>
+              </div>
+              <span>Arjun</span>
+            </div>
+            <div class="story-chip">
+              <div class="story-chip-avatar">P</div>
+              <span>Priya</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation annotation-accent">
+      One chip per child, always visible.<br>
+      <b>Active child</b> (Arjun) is pre-selected — green chip with checkmark.<br>
+      Tap Priya's chip to switch the story to her (deselects Arjun).<br>
+      Typing in the field deselects all chips, just like today.
+    </div>
+  </div>
+
+  <!-- SCREEN 7: Priya selected -->
+  <div class="screen-wrap">
+    <div class="screen-label">G — Priya selected for this story</div>
+    <div class="phone">
+      <div class="story-screen">
+        <div style="margin-bottom:20px;">
+          <div class="story-field-label">Main character</div>
+          <input class="ai-text-input" type="text" value="a girl named Priya" style="margin-bottom:8px;" />
+          <div class="story-chips">
+            <div class="story-chip">
+              <div class="story-chip-avatar">A</div>
+              <span>Arjun</span>
+            </div>
+            <div class="story-chip active">
+              <div class="story-chip-check">
+                <svg viewBox="0 0 10 10" width="8" height="8" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><polyline points="2 5 4.5 7.5 8.5 2.5"/></svg>
+              </div>
+              <span>Priya</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="annotation">
+      Tapping Priya's chip selects her and fills the character field.<br>
+      This does <b>not</b> change the active child globally — it's just for this story.<br>
+      The global active child stays as Arjun (SOTD unchanged).
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<hr class="divider">
+
+<!-- Key decisions callout -->
+<div style="max-width:640px;margin:0 auto;background:rgba(29,185,84,0.06);border:1px solid rgba(29,185,84,0.2);border-radius:16px;padding:24px 28px;">
+  <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px;">Open Decisions to Confirm</div>
+  <div style="display:flex;flex-direction:column;gap:14px;">
+    <div style="font-size:13px;color:var(--fg-1);line-height:1.6;">
+      <span style="font-weight:700;color:var(--fg-0);">1. Switcher placement</span><br>
+      Topbar pill (shown here) vs. profile icon in topbar that opens a combined account + child switcher. Topbar pill is faster to reach but adds visual weight.
+    </div>
+    <div style="font-size:13px;color:var(--fg-1);line-height:1.6;">
+      <span style="font-weight:700;color:var(--fg-0);">2. Story of the Day scope</span><br>
+      Generate SOTD for the active child only (shown here) — simple. Or generate for all children and show multiple tiles. Multiple tiles is more impressive but requires layout work.
+    </div>
+    <div style="font-size:13px;color:var(--fg-1);line-height:1.6;">
+      <span style="font-weight:700;color:var(--fg-0);">3. Saved stories — shared or per-child?</span><br>
+      Currently one pool. With multi-child, mixing stories gets confusing fast. Recommend tagging each story with a child ID and adding a filter row in the saved stories tab.
+    </div>
+    <div style="font-size:13px;color:var(--fg-1);line-height:1.6;">
+      <span style="font-weight:700;color:var(--fg-0);">4. Switching child → does SOTD regenerate?</span><br>
+      If Arjun's story is already cached for today and you switch to Priya, should the SOTD immediately start generating Priya's story, or wait for the next day?
+    </div>
+    <div style="font-size:13px;color:var(--fg-1);line-height:1.6;">
+      <span style="font-weight:700;color:var(--fg-0);">5. Max children</span><br>
+      Recommend capping at 5 to keep the switcher and chip list manageable.
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

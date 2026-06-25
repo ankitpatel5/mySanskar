@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0a0a0a;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  color: #fff;
+  padding: 0 0 60px;
+}
+
+.screen-label {
+  background: #1a1a2e;
+  color: #7b8cde;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 10px 20px;
+}
+
+.option-header {
+  padding: 20px 20px 12px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.option-letter {
+  font-size: 22px;
+  font-weight: 800;
+  color: #e8a838;
+}
+.option-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+.option-desc {
+  font-size: 12px;
+  color: #666;
+  padding: 0 20px 14px;
+  line-height: 1.5;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 0 20px;
+}
+
+/* Shared cover */
+.cover {
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  position: relative;
+}
+.cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cover-placeholder {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 52px;
+}
+.book-info { padding: 9px 10px 11px; }
+.book-title { font-size: 13px; font-weight: 600; color: #fff; line-height: 1.3; }
+.book-meta { font-size: 11px; color: #555; margin-top: 3px; }
+
+/* ─── OPTION A: Clean Elevated Card ─── */
+.tile-a {
+  background: #161616;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4);
+}
+.tile-a .cover { border-radius: 0; }
+
+/* ─── OPTION B: Accent Border Frame ─── */
+.tile-b {
+  background: #161616;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1.5px solid #e8a838;
+  box-shadow: 0 0 12px rgba(232,168,56,0.12);
+}
+
+/* ─── OPTION C: Book Spine ─── */
+.tile-c {
+  background: #161616;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #222;
+  display: flex;
+  flex-direction: row;
+}
+.tile-c .spine {
+  width: 8px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #e8a838, #c87d1a);
+  border-radius: 14px 0 0 14px;
+}
+.tile-c-inner { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.tile-c .cover { border-radius: 0; }
+
+/* ─── OPTION D: Photo Frame / Inset ─── */
+.tile-d {
+  background: #1a1a1a;
+  border-radius: 14px;
+  overflow: hidden;
+  padding: 8px 8px 0;
+  border: 1px solid #2a2a2a;
+}
+.tile-d .cover {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+.tile-d .book-info { padding: 8px 2px 10px; }
+
+/* ─── OPTION E: Gradient Glow ─── */
+.tile-e-wrap {
+  border-radius: 16px;
+  padding: 1.5px;
+  background: linear-gradient(135deg, #e8a838, #c87d1a, #1a1a1a, #e8a838);
+}
+.tile-e {
+  background: #161616;
+  border-radius: 14.5px;
+  overflow: hidden;
+}
+
+/* divider */
+.divider {
+  height: 1px;
+  background: #1a1a1a;
+  margin: 28px 0 0;
+}
+</style>
+</head>
+<body>
+
+<div class="screen-label">BOOK TILE DESIGN OPTIONS</div>
+
+<!-- ── OPTION A ── -->
+<div class="option-header">
+  <span class="option-letter">A</span>
+  <span class="option-name">Elevated Shadow</span>
+</div>
+<div class="option-desc">No border — depth comes from a strong drop shadow. Clean and minimal. Cover image bleeds to the edges.</div>
+<div class="grid">
+  <div class="tile-a">
+    <div class="cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#1a3a5c,#2d6a8f)">📖</div></div>
+    <div class="book-info"><div class="book-title">Simplicity Parenting</div><div class="book-meta">11 chapters</div></div>
+  </div>
+  <div class="tile-a">
+    <div class="cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#3a1a5c,#7a3a9f)">🧠</div></div>
+    <div class="book-info"><div class="book-title">Bright from the Start</div><div class="book-meta">8 chapters</div></div>
+  </div>
+  <div class="tile-a">
+    <div class="cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#1a4a2a,#2d8a4f)">💬</div></div>
+    <div class="book-info"><div class="book-title">How to Talk So Kids Listen</div><div class="book-meta">12 chapters</div></div>
+  </div>
+  <div class="tile-a">
+    <div class="cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#4a2a1a,#9f5a2d)">🌱</div></div>
+    <div class="book-info"><div class="book-title">The Whole-Brain Child</div><div class="book-meta">9 chapters</div></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ── OPTION B ── -->
+<div class="option-header">
+  <span class="option-letter">B</span>
+  <span class="option-name">Accent Border</span>
+</div>
+<div class="option-desc">Thin gold border on every tile. Consistent, branded feel. The glow hints at the accent color.</div>
+<div class="grid">
+  <div class="tile-b">
+    <div class="cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#1a3a5c,#2d6a8f)">📖</div></div>
+    <div class="book-info"><div class="book-title">Simplicity Parenting</div><div class="book-meta">11 chapters</div></div>
+  </div>
+  <div class="tile-b">
+    <div class="cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#3a1a5c,#7a3a9f)">🧠</div></div>
+    <div class="book-info"><div class="book-title">Bright from the Start</div><div class="book-meta">8 chapters</div></div>
+  </div>
+  <div class="tile-b">
+    <div class="cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#1a4a2a,#2d8a4f)">💬</div></div>
+    <div class="book-info"><div class="book-title">How to Talk So Kids Listen</div><div class="book-meta">12 chapters</div></div>
+  </div>
+  <div class="tile-b">
+    <div class="cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#4a2a1a,#9f5a2d)">🌱</div></div>
+    <div class="book-info"><div class="book-title">The Whole-Brain Child</div><div class="book-meta">9 chapters</div></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ── OPTION C ── -->
+<div class="option-header">
+  <span class="option-letter">C</span>
+  <span class="option-name">Book Spine</span>
+</div>
+<div class="option-desc">A vertical gold stripe on the left edge mimics a real book spine on a shelf. Feels literary and unique.</div>
+<div class="grid">
+  <div class="tile-c">
+    <div class="spine"></div>
+    <div class="tile-c-inner">
+      <div class="cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#1a3a5c,#2d6a8f)">📖</div></div>
+      <div class="book-info"><div class="book-title">Simplicity Parenting</div><div class="book-meta">11 chapters</div></div>
+    </div>
+  </div>
+  <div class="tile-c">
+    <div class="spine"></div>
+    <div class="tile-c-inner">
+      <div class="cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#3a1a5c,#7a3a9f)">🧠</div></div>
+      <div class="book-info"><div class="book-title">Bright from the Start</div><div class="book-meta">8 chapters</div></div>
+    </div>
+  </div>
+  <div class="tile-c">
+    <div class="spine"></div>
+    <div class="tile-c-inner">
+      <div class="cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#1a4a2a,#2d8a4f)">💬</div></div>
+      <div class="book-info"><div class="book-title">How to Talk So Kids Listen</div><div class="book-meta">12 chapters</div></div>
+    </div>
+  </div>
+  <div class="tile-c">
+    <div class="spine"></div>
+    <div class="tile-c-inner">
+      <div class="cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#4a2a1a,#9f5a2d)">🌱</div></div>
+      <div class="book-info"><div class="book-title">The Whole-Brain Child</div><div class="book-meta">9 chapters</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ── OPTION D ── -->
+<div class="option-header">
+  <span class="option-letter">D</span>
+  <span class="option-name">Photo Frame / Inset</span>
+</div>
+<div class="option-desc">The cover sits inside a padded frame like a framed photo. The inset + shadow gives it depth and a premium feel.</div>
+<div class="grid">
+  <div class="tile-d">
+    <div class="cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#1a3a5c,#2d6a8f)">📖</div></div>
+    <div class="book-info"><div class="book-title">Simplicity Parenting</div><div class="book-meta">11 chapters</div></div>
+  </div>
+  <div class="tile-d">
+    <div class="cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#3a1a5c,#7a3a9f)">🧠</div></div>
+    <div class="book-info"><div class="book-title">Bright from the Start</div><div class="book-meta">8 chapters</div></div>
+  </div>
+  <div class="tile-d">
+    <div class="cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#1a4a2a,#2d8a4f)">💬</div></div>
+    <div class="book-info"><div class="book-title">How to Talk So Kids Listen</div><div class="book-meta">12 chapters</div></div>
+  </div>
+  <div class="tile-d">
+    <div class="cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#4a2a1a,#9f5a2d)">🌱</div></div>
+    <div class="book-info"><div class="book-title">The Whole-Brain Child</div><div class="book-meta">9 chapters</div></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ── OPTION E ── -->
+<div class="option-header">
+  <span class="option-letter">E</span>
+  <span class="option-name">Gradient Border</span>
+</div>
+<div class="option-desc">A gradient border wraps the tile — gold fading to dark. Feels polished and premium without being heavy.</div>
+<div class="grid">
+  <div class="tile-e-wrap">
+    <div class="tile-e">
+      <div class="cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#1a3a5c,#2d6a8f)">📖</div></div>
+      <div class="book-info"><div class="book-title">Simplicity Parenting</div><div class="book-meta">11 chapters</div></div>
+    </div>
+  </div>
+  <div class="tile-e-wrap">
+    <div class="tile-e">
+      <div class="cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#3a1a5c,#7a3a9f)">🧠</div></div>
+      <div class="book-info"><div class="book-title">Bright from the Start</div><div class="book-meta">8 chapters</div></div>
+    </div>
+  </div>
+  <div class="tile-e-wrap">
+    <div class="tile-e">
+      <div class="cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#1a4a2a,#2d8a4f)">💬</div></div>
+      <div class="book-info"><div class="book-title">How to Talk So Kids Listen</div><div class="book-meta">12 chapters</div></div>
+    </div>
+  </div>
+  <div class="tile-e-wrap">
+    <div class="tile-e">
+      <div class="cover"><div class="cover-placeholder" style="background:linear-gradient(135deg,#4a2a1a,#9f5a2d)">🌱</div></div>
+      <div class="book-info"><div class="book-title">The Whole-Brain Child</div><div class="book-meta">9 chapters</div></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

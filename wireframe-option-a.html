@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Option A — Updated</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: #111;
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px 24px;
+    min-height: 100vh;
+    flex-wrap: wrap;
+  }
+
+  .phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .phone-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #666;
+  }
+  .phone {
+    width: 320px;
+    background: #0a0a0b;
+    border-radius: 36px;
+    padding: 20px 0 28px;
+    border: 1px solid #222;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+    overflow: hidden;
+  }
+
+  .section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #f5f5f7;
+    padding: 0 20px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 20px;
+  }
+  .ai-field { padding: 0 20px; margin-bottom: 18px; }
+  .ai-field-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #8b8b94;
+    margin-bottom: 8px;
+  }
+  .ai-optional { font-weight: 400; opacity: 0.6; }
+  .ai-text-input {
+    width: 100%;
+    background: #1a1a1d;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 11px 14px;
+    font-size: 14px;
+    color: #f5f5f7;
+    outline: none;
+    font-family: inherit;
+  }
+  .ai-text-input::placeholder { color: #5e5e66; }
+  .ai-text-input.filled { border-color: rgba(29,185,84,0.35); }
+
+  /* chip */
+  .chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .child-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #1a1a1d;
+    border: 1.5px solid rgba(255,255,255,0.12);
+    border-radius: 999px;
+    padding: 6px 12px 6px 8px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #c9c9cf;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .child-chip.selected {
+    background: rgba(29,185,84,0.12);
+    border-color: rgba(29,185,84,0.4);
+    color: #1db954;
+  }
+  .chip-avatar {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #5C3D1E, #966835);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+  .chip-check {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #1db954;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .divider { height: 1px; background: rgba(255,255,255,0.06); margin: 4px 20px 18px; }
+  .anno {
+    font-size: 11px;
+    color: #f5a623;
+    font-style: italic;
+    padding: 0 20px;
+    margin-bottom: 14px;
+    line-height: 1.4;
+    opacity: 0.9;
+  }
+  .anno-green { color: #1db954; font-style: normal; font-weight: 600; }
+  .state-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: rgba(255,255,255,0.06);
+    color: #8b8b94;
+    border-radius: 4px;
+    padding: 2px 7px;
+    margin: 0 20px 14px;
+  }
+  .state-tag.green { background: rgba(29,185,84,0.12); color: #1db954; }
+</style>
+</head>
+<body>
+
+<!-- ══════════ DEFAULT STATE ══════════ -->
+<div class="phone-wrap">
+  <div class="phone-label">Default (on open)</div>
+  <div class="phone">
+    <div class="section-title">Make your own story</div>
+
+    <div class="state-tag green">Chip pre-selected, field pre-filled</div>
+    <div class="ai-field">
+      <div class="ai-field-label">Main character <span class="ai-optional">(optional)</span></div>
+      <input class="ai-text-input filled" type="text" value="a boy named Aarav" />
+      <div class="chip-row">
+        <div class="child-chip selected">
+          <span class="chip-check">
+            <svg viewBox="0 0 12 12" width="9" height="9" fill="none" stroke="#0a0a0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg>
+          </span>
+          Aarav
+        </div>
+      </div>
+    </div>
+    <div class="anno"><span class="anno-green">Ready to go — no action needed.</span> Child name is pre-filled. Field is fully editable at any time.</div>
+  </div>
+</div>
+
+<!-- ══════════ EDITED STATE ══════════ -->
+<div class="phone-wrap">
+  <div class="phone-label">After editing field</div>
+  <div class="phone">
+    <div class="section-title">Make your own story</div>
+
+    <div class="state-tag">User typed → chip auto-deselects</div>
+    <div class="ai-field">
+      <div class="ai-field-label">Main character <span class="ai-optional">(optional)</span></div>
+      <input class="ai-text-input" type="text" value="a curious little squirrel" style="border-color:rgba(255,255,255,0.22);" />
+      <div class="chip-row">
+        <div class="child-chip">
+          <span class="chip-avatar">🧒</span>
+          Aarav
+        </div>
+      </div>
+    </div>
+    <div class="anno">Chip deselects as soon as user edits. Tap chip again to restore Aarav's name instantly.</div>
+  </div>
+</div>
+
+</body>
+</html>
