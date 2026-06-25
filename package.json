@@ -7,7 +7,7 @@
     "build": "node scripts/generate-config.js",
     "deploy:staging": "npx vercel && npx vercel alias mysanskar-staging.vercel.app",
     "deploy:prod": "npx vercel --prod",
-    "ship": "git push origin staging && git checkout main && git merge staging --ff-only && git push origin main && git checkout staging && npx vercel --prod && npm run build:ios && npm run build:android",
+    "ship": "bash scripts/ship-commit.sh && git push origin staging && git checkout main && git merge staging --ff-only && git push origin main && git checkout staging && npx vercel --prod && npm run build:ios && npm run build:android",
     "test": "vitest run",
     "test:watch": "vitest",
     "build:ios": "bash scripts/build-www.sh && npx cap sync ios",

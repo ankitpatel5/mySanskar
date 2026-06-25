@@ -14,11 +14,15 @@ Always do this automatically after making changes — don't wait to be asked.
 npm run ship
 ```
 This does everything:
-1. `git push origin staging` — pushes staging to GitHub
-2. Fast-forwards `main` to match staging
-3. `git push origin main` — pushes main to GitHub
-4. `npx vercel --prod` — deploys to mysanskar.vercel.app
-5. `npm run build:ios` — syncs web assets into the Xcode iOS project so the native app is in sync
+1. `bash scripts/ship-commit.sh` — auto-commits any pending working-tree changes
+   (Vercel deploys the working tree, but `git push` only moves committed work — without
+   this, prod updates while git stays frozen. Override the message with
+   `npm run ship --m="your message"`; defaults to a timestamp.)
+2. `git push origin staging` — pushes staging to GitHub
+3. Fast-forwards `main` to match staging
+4. `git push origin main` — pushes main to GitHub
+5. `npx vercel --prod` — deploys to mysanskar.vercel.app
+6. `npm run build:ios` / `build:android` — syncs web assets into the native projects
 
 **Never skip staging. Never push straight to prod without the user's explicit go-ahead.**
 
