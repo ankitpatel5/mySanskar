@@ -1006,10 +1006,99 @@
 
     <div id="settings-modal" class="modal hidden">
       <div class="modal-backdrop"></div>
-      <div class="modal-sheet">
+      <div class="modal-sheet settings-sheet">
         <div class="sheet-handle"></div>
-        <div class="settings-section">
-          <div class="settings-section-label">My Child</div>
+        <!-- ROOT PAGE -->
+        <div class="settings-page" id="settings-root">
+          <div class="settings-head">
+            <span class="settings-title">Settings</span>
+            <button class="settings-close" id="settings-close" aria-label="Close settings">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div class="settings-group-label">Account</div>
+          <div class="settings-group">
+            <button class="settings-row settings-row-nav" id="settings-account-row">
+              <div class="settings-row-avatar" id="settings-account-avatar"></div>
+              <div class="settings-row-main">
+                <div class="settings-row-title" id="settings-account-name">Account</div>
+                <div class="settings-row-sub" id="settings-account-email">—</div>
+              </div>
+              <svg class="settings-row-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+
+          <div class="settings-group-label">Child</div>
+          <div class="settings-group">
+            <button class="settings-row settings-row-nav" id="settings-child-row">
+              <div class="settings-row-icon">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              </div>
+              <div class="settings-row-main">
+                <div class="settings-row-title" id="settings-child-summary">Add your child</div>
+                <div class="settings-row-sub">Personalises generated stories</div>
+              </div>
+              <svg class="settings-row-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+
+          <div class="settings-group-label">Preferences</div>
+          <div class="settings-group">
+            <div class="settings-row settings-row-stacked">
+              <div class="settings-row-title">Story language</div>
+              <div class="settings-lang-row">
+                <button class="settings-lang-btn active" data-lang="en">English</button>
+                <button class="settings-lang-btn" data-lang="gu">ગુજરાતી</button>
+                <button class="settings-lang-btn" data-lang="trans">Transliteration</button>
+              </div>
+            </div>
+            <div class="settings-row settings-row-stacked">
+              <div class="settings-row-title">Appearance</div>
+              <div class="settings-theme-row">
+                <button class="settings-theme-btn" data-theme-choice="dark">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+                  Dark
+                </button>
+                <button class="settings-theme-btn" data-theme-choice="light">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                  Light
+                </button>
+              </div>
+            </div>
+            <div class="settings-row">
+              <div class="settings-row-main">
+                <div class="settings-row-title">Audiobooks tab</div>
+                <div class="settings-row-sub">Curated books for parents</div>
+              </div>
+              <button class="settings-feature-toggle" id="audiobooks-toggle" role="switch" aria-checked="false">
+                <span class="settings-feature-toggle-dot"></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="settings-group-label">Storage</div>
+          <div class="settings-group" id="settings-storage-group">
+            <button class="settings-row settings-row-nav" id="settings-refresh">
+              <div class="settings-row-icon">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
+              </div>
+              <div class="settings-row-main">
+                <div class="settings-row-title">Resync music library</div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- CHILD EDIT PAGE -->
+        <div class="settings-page hidden" id="settings-page-child">
+          <div class="settings-head">
+            <button class="settings-back" id="settings-child-back" aria-label="Back">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <span class="settings-title">Child</span>
+            <span class="settings-head-spacer"></span>
+          </div>
           <div class="child-profile-form">
             <div class="child-field-group">
               <label class="child-field-label" for="child-name-input">Name</label>
@@ -1021,7 +1110,6 @@
               <div class="child-gender-btns">
                 <button class="child-gender-btn" data-gender="girl">Girl</button>
                 <button class="child-gender-btn" data-gender="boy">Boy</button>
-                <button class="child-gender-btn" data-gender="child">Prefer not to say</button>
               </div>
             </div>
             <div class="child-field-group">
@@ -1029,82 +1117,46 @@
               <input id="child-dob-input" class="ai-text-input child-dob-input" type="date" />
             </div>
           </div>
-          <div class="settings-section-hint">Used to personalise generated stories.</div>
+          <div class="settings-section-hint">Changes save automatically and personalise generated stories.</div>
         </div>
-        <div class="settings-section">
-          <div class="settings-section-label">Default Story Language</div>
-          <div class="settings-lang-row">
-            <button class="settings-lang-btn active" data-lang="en">English</button>
-            <button class="settings-lang-btn" data-lang="gu">ગુજરાતી</button>
-            <button class="settings-lang-btn" data-lang="trans">Transliteration</button>
-          </div>
-          <div class="settings-section-hint">Stories will open in this language by default.</div>
-        </div>
-        <div class="settings-section">
-          <div class="settings-section-label">Appearance</div>
-          <div class="settings-theme-row">
-            <button class="settings-theme-btn" data-theme-choice="dark">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
-              Dark
+
+        <!-- ACCOUNT PAGE -->
+        <div class="settings-page hidden" id="settings-page-account">
+          <div class="settings-head">
+            <button class="settings-back" id="settings-account-back" aria-label="Back">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
-            <button class="settings-theme-btn" data-theme-choice="light">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-              Light
-            </button>
+            <span class="settings-title">Account</span>
+            <span class="settings-head-spacer"></span>
           </div>
-        </div>
-        <div class="settings-section settings-advanced-section">
-          <button class="settings-advanced-toggle" id="settings-advanced-toggle" aria-expanded="false">
-            <span>Advanced</span>
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          <div class="settings-account-head">
+            <div class="settings-account-avatar-lg" id="user-menu-avatar"></div>
+            <div class="settings-account-meta">
+              <div class="settings-account-name-lg" id="user-menu-name">—</div>
+              <div class="settings-account-email-lg" id="user-menu-email">—</div>
+            </div>
+          </div>
+          <button class="modal-item primary" id="guest-create-account-btn" style="display:none">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+            Create a free account
           </button>
-          <div class="settings-advanced-body hidden" id="settings-advanced-body">
-            <div class="settings-feature-row">
-              <div class="settings-feature-info">
-                <div class="settings-feature-label">🎧 Parenting Audiobooks</div>
-                <div class="settings-feature-sub">Adds an Audiobooks tab with curated books for parents</div>
-              </div>
-              <button class="settings-feature-toggle" id="audiobooks-toggle" role="switch" aria-checked="false">
-                <span class="settings-feature-toggle-dot"></span>
+          <button class="modal-item danger" id="signout-btn">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Sign out
+          </button>
+          <div class="settings-advanced-section" id="account-advanced-section">
+            <button class="settings-advanced-toggle" id="account-advanced-toggle" aria-expanded="false">
+              <span>Advanced</span>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="settings-advanced-body hidden" id="account-advanced-body">
+              <button class="settings-delete-account-btn" id="delete-account-btn">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                Delete account
               </button>
             </div>
-            <button class="modal-item" id="settings-refresh">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
-              Resync Music Library
-            </button>
           </div>
         </div>
-        <button class="settings-save-btn" id="settings-save-btn" disabled>Save</button>
-        <button class="modal-item cancel" id="settings-cancel">Cancel</button>
-        <div class="settings-danger-zone" id="settings-danger-zone">
-          <button class="settings-delete-account-btn" id="delete-account-btn">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-            Delete Account
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div id="user-menu" class="modal hidden">
-      <div class="modal-backdrop"></div>
-      <div class="modal-sheet">
-        <div class="sheet-handle"></div>
-        <div class="user-menu-head">
-          <div class="user-menu-avatar" id="user-menu-avatar"></div>
-          <div class="user-menu-info">
-            <div class="user-menu-name" id="user-menu-name">—</div>
-            <div class="user-menu-email" id="user-menu-email">—</div>
-          </div>
-        </div>
-        <button class="modal-item primary" id="guest-create-account-btn" style="display:none">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-          Create a free account
-        </button>
-        <button class="modal-item danger" id="signout-btn">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          Sign out
-        </button>
-        <button class="modal-item cancel" id="user-menu-cancel">Cancel</button>
       </div>
     </div>
 

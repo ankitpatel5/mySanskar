@@ -684,6 +684,9 @@
       const signoutBtn = $('signout-btn');
       if (createBtn) createBtn.style.display = '';
       if (signoutBtn) signoutBtn.textContent = 'Sign in';
+      // No account to delete as a guest — hide the Advanced/Delete disclosure
+      const advSection = $('account-advanced-section');
+      if (advSection) advSection.style.display = 'none';
       return;
     }
 
@@ -694,6 +697,8 @@
     const signoutBtn = $('signout-btn');
     if (createBtn) createBtn.style.display = 'none';
     if (signoutBtn) signoutBtn.textContent = 'Sign out';
+    const advSection = $('account-advanced-section');
+    if (advSection) advSection.style.display = '';
 
     const el = $('user-avatar-el');
     const menuAvatar = $('user-menu-avatar');
@@ -5702,15 +5707,15 @@ ${numbered}`;
       btn.addEventListener('click', () => applyTheme(btn.dataset.themeChoice));
     });
 
-    // User menu
+    // Avatar → open Settings directly on the Account page (same sheet, no resize)
     $('user-btn').addEventListener('click', () => {
       updateUserUI();
-      showModal('user-menu');
+      openSettings('account');
     });
     $('signout-btn').addEventListener('click', () => {
-      closeModal('user-menu');
       if (isGuestMode() || !state.user) {
         // Guests (or double-tap after guest redirect) → back to sign-in screen
+        closeModal('settings-modal');
         promptGuestSignIn();
         return;
       }
@@ -5721,18 +5726,16 @@ ${numbered}`;
         { confirmLabel: 'Sign out', danger: false }
       );
     });
-    // "Create a free account" button in user menu (visible only for guests)
+    // "Create a free account" button (visible only for guests)
     const guestCreateBtn = $('guest-create-account-btn');
     if (guestCreateBtn) {
       guestCreateBtn.addEventListener('click', () => {
-        closeModal('user-menu');
+        closeModal('settings-modal');
         promptGuestSignIn();
       });
     }
-    $('user-menu-cancel').addEventListener('click', () => closeModal('user-menu'));
-    $('user-menu').addEventListener('click', (e) => { if (!e.target.closest('.modal-sheet')) closeModal('user-menu'); });
 
-    // Delete account button (in Settings)
+    // Delete account button (in the account menu, behind Advanced)
     const deleteAccountBtn = $('delete-account-btn');
     if (deleteAccountBtn) {
       deleteAccountBtn.addEventListener('click', () => {
@@ -5750,62 +5753,94 @@ ${numbered}`;
       btn.addEventListener('click', () => loadAdminData(btn.dataset.atab));
     });
 
-    // Settings modal
-    $('settings-btn').addEventListener('click', () => {
-      // Sync audiobooks toggle state when settings opens
+    // ── Settings sheet ────────────────────────────────────────
+    // Lock the sheet to one consistent height = the root page's content (the
+    // tallest page), capped at 85vh. Apply the stored height (no re-measure).
+    let _settingsRootH = 0;
+    function applySettingsHeight() {
+      const sheet = document.querySelector('#settings-modal .modal-sheet');
+      if (!sheet || !_settingsRootH) return;
+      sheet.style.height = Math.min(_settingsRootH, Math.round(window.innerHeight * 0.85)) + 'px';
+    }
+    // Measure the root page's natural height (must be called while root is visible).
+    function measureSettingsRootHeight() {
+      const sheet = document.querySelector('#settings-modal .modal-sheet');
+      if (!sheet) return;
+      sheet.style.height = 'auto';
+      _settingsRootH = sheet.scrollHeight;
+      applySettingsHeight();
+    }
+
+    // Switch between the root sheet and the sub-pages (child, account).
+    // Height stays fixed to the root measurement, so pages never resize.
+    function showSettingsPage(which) {
+      const pages = { root: 'settings-root', child: 'settings-page-child', account: 'settings-page-account' };
+      Object.entries(pages).forEach(([key, id]) => {
+        const el = $(id);
+        if (el) el.classList.toggle('hidden', key !== which);
+      });
+    }
+
+    // Re-clamp to the viewport if it changes while the sheet is open.
+    window.addEventListener('resize', () => {
+      const modal = $('settings-modal');
+      if (modal && !modal.classList.contains('hidden')) applySettingsHeight();
+    });
+    // "Name, age" summary for the Child row (age omitted if no DOB).
+    function childSummaryText(cp) {
+      if (!cp || !cp.name) return null;
+      let age = '';
+      if (cp.dob) {
+        const d = new Date(cp.dob);
+        if (!isNaN(d.getTime())) {
+          const yrs = Math.floor((Date.now() - d.getTime()) / (365.25 * 24 * 3600 * 1000));
+          if (yrs >= 0 && yrs < 25) age = `, ${yrs}`;
+        }
+      }
+      return `${cp.name}${age}`;
+    }
+    function refreshChildSummaryRow() {
+      const el = $('settings-child-summary');
+      if (!el) return;
+      const summary = isGuestMode() ? null : childSummaryText(getChildProfile());
+      el.textContent = summary || (isGuestMode() ? 'Sign in to personalise stories' : 'Add your child');
+      el.classList.toggle('settings-row-placeholder', !summary);
+    }
+    function refreshAccountRow() {
+      const nameEl  = $('settings-account-name');
+      const emailEl = $('settings-account-email');
+      const avEl    = $('settings-account-avatar');
+      if (isGuestMode()) {
+        if (nameEl)  nameEl.textContent  = 'Guest';
+        if (emailEl) emailEl.textContent = 'Sign up free to save your data';
+        if (avEl)    avEl.textContent    = '?';
+      } else {
+        const u  = state.user || {};
+        const nm = u.displayName || (u.email ? u.email.split('@')[0] : 'Account');
+        if (nameEl)  nameEl.textContent  = nm;
+        if (emailEl) emailEl.textContent = u.email || '';
+        if (avEl)    avEl.textContent    = (nm[0] || 'A').toUpperCase();
+      }
+    }
+
+    // Settings modal — populate everything, then show the requested page.
+    function openSettings(page) {
+      showSettingsPage('root'); // root visible so we can measure its height below
+
+      // Audiobooks toggle reflects current state
       const abToggleEl = $('audiobooks-toggle');
       if (abToggleEl) abToggleEl.setAttribute('aria-checked', state.audiobooksEnabled ? 'true' : 'false');
 
-      // Guest mode: show locked child profile section
-      const guestLockEl = $('settings-guest-lock');
-      const childProfileForm = document.querySelector('.child-profile-form');
-      const settingsSaveBtn  = $('settings-save-btn');
-      const settingsHint     = document.querySelector('.settings-section-hint');
+      // Account + Child summary rows
+      refreshAccountRow();
+      refreshChildSummaryRow();
 
-      if (isGuestMode()) {
-        if (!guestLockEl && childProfileForm) {
-          const lockBanner = document.createElement('div');
-          lockBanner.id        = 'settings-guest-lock';
-          lockBanner.className = 'settings-guest-lock';
-          lockBanner.innerHTML = `
-            <div class="settings-guest-lock-icon">🔒</div>
-            <div class="settings-guest-lock-text">
-              <div class="settings-guest-lock-title">Child Profile</div>
-              <div class="settings-guest-lock-sub">Sign in to personalise stories for your child</div>
-            </div>
-            <button class="settings-guest-lock-btn" id="settings-guest-cta">Sign up free</button>`;
-          childProfileForm.parentNode.insertBefore(lockBanner, childProfileForm);
-        }
-        if (childProfileForm) childProfileForm.style.display = 'none';
-        if (settingsSaveBtn) settingsSaveBtn.style.display   = 'none';
-        if (settingsHint)    settingsHint.style.display      = 'none';
-        // Hide delete account button for guests (no account to delete)
-        const dangerZone = $('settings-danger-zone');
-        if (dangerZone) dangerZone.style.display = 'none';
-        showModal('settings-modal');
-        // Wire CTA button
-        const ctaBtn = $('settings-guest-cta');
-        if (ctaBtn && !ctaBtn.dataset.wired) {
-          ctaBtn.dataset.wired = '1';
-          ctaBtn.addEventListener('click', () => promptGuestSignIn());
-        }
-        return;
-      }
-
-      // Restore hidden elements if switching from guest to account (shouldn't happen
-      // in one session, but guard for safety)
-      if (guestLockEl) guestLockEl.style.display = 'none';
-      if (childProfileForm) childProfileForm.style.display = '';
-      if (settingsSaveBtn) settingsSaveBtn.style.display   = '';
-      if (settingsHint)    settingsHint.style.display      = '';
-      const dangerZone = $('settings-danger-zone');
-      if (dangerZone) dangerZone.style.display = '';
-
-      // Reflect current default lang selection before opening
+      // Reflect current default language + theme selection
       const curLang = getDefaultStoryLang();
-      document.querySelectorAll('.settings-lang-btn').forEach((b) => {
-        b.classList.toggle('active', b.dataset.lang === curLang);
-      });
+      document.querySelectorAll('.settings-lang-btn').forEach((b) =>
+        b.classList.toggle('active', b.dataset.lang === curLang));
+      document.querySelectorAll('.settings-theme-btn').forEach((b) =>
+        b.classList.toggle('active', b.dataset.themeChoice === currentTheme()));
 
       // Populate child profile fields from localStorage (instant)
       const cp = getChildProfile();
@@ -5815,20 +5850,18 @@ ${numbered}`;
         b.classList.toggle('active', b.dataset.gender === cp.gender)
       );
 
-      // Inject Downloads section (native only, once)
+      // Inject Downloads into the Storage group (native only, once)
       if (isNative() && !$('settings-downloads-section')) {
-        const dlSection = document.createElement('div');
-        dlSection.id        = 'settings-downloads-section';
-        dlSection.className = 'settings-section';
-        dlSection.innerHTML = `
-          <div class="settings-section-label">Downloads</div>
+        const storage = $('settings-storage-group');
+        const dlGroup = document.createElement('div');
+        dlGroup.id = 'settings-downloads-section';
+        dlGroup.innerHTML = `
           <div id="settings-dl-list" class="settings-dl-list"></div>
-          <button class="modal-item danger hidden" id="settings-dl-clear-btn">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-            Remove All Downloads
+          <button class="settings-row settings-row-danger hidden" id="settings-dl-clear-btn">
+            <div class="settings-row-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></div>
+            <div class="settings-row-main"><div class="settings-row-title">Remove all downloads</div></div>
           </button>`;
-        const cancelBtn = $('settings-cancel');
-        cancelBtn.parentNode.insertBefore(dlSection, cancelBtn);
+        if (storage) storage.appendChild(dlGroup);
         $('settings-dl-clear-btn').addEventListener('click', async () => {
           const keys = await dlKeys();
           await Promise.all(keys.map(k => removeDownload(k)));
@@ -5840,7 +5873,8 @@ ${numbered}`;
       renderDlSettingsSection();
 
       showModal('settings-modal');
-      snapshotSettings(); // capture state so Cancel can revert
+      measureSettingsRootHeight();   // lock height to root content (tallest page)
+      showSettingsPage(page || 'root'); // then navigate to the requested page
 
       // Also pull fresh from Firestore in case localStorage is empty (e.g. new domain/device)
       if (state.user && !cp.name) {
@@ -5858,67 +5892,16 @@ ${numbered}`;
             localStorage.setItem('drift.childGender', gender);
             localStorage.setItem('drift.childDob',    dob);
             refreshChildChip();
+            refreshChildSummaryRow();
           })
           .catch(() => {});
       }
-    });
-
-    // Child profile — gender buttons (UI only, no auto-save)
-    document.querySelectorAll('.child-gender-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.child-gender-btn').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-        checkSettingsDirty();
-      });
-    });
-
-    // Settings — snapshot for cancel revert (child profile + story language)
-    let _settingsSnapshot = null;
-    function snapshotSettings() {
-      _settingsSnapshot = {
-        name:   $('child-name-input').value,
-        gender: document.querySelector('.child-gender-btn.active')?.dataset.gender || '',
-        dob:    $('child-dob-input').value,
-        lang:   document.querySelector('.settings-lang-btn.active')?.dataset.lang || getDefaultStoryLang(),
-      };
-      // Reset Save button to disabled after snapshot (fresh save or modal open)
-      const saveBtn = $('settings-save-btn');
-      if (saveBtn) { saveBtn.disabled = true; }
     }
-    function revertSettings() {
-      if (!_settingsSnapshot) return;
-      $('child-name-input').value = _settingsSnapshot.name;
-      $('child-dob-input').value  = _settingsSnapshot.dob;
-      document.querySelectorAll('.child-gender-btn').forEach((b) =>
-        b.classList.toggle('active', b.dataset.gender === _settingsSnapshot.gender)
-      );
-      document.querySelectorAll('.settings-lang-btn').forEach((b) =>
-        b.classList.toggle('active', b.dataset.lang === _settingsSnapshot.lang)
-      );
-      const saveBtn = $('settings-save-btn');
-      if (saveBtn) { saveBtn.disabled = true; }
-    }
-    function checkSettingsDirty() {
-      if (!_settingsSnapshot) return;
-      const name   = $('child-name-input').value;
-      const dob    = $('child-dob-input').value;
-      const gender = document.querySelector('.child-gender-btn.active')?.dataset.gender || '';
-      const lang   = document.querySelector('.settings-lang-btn.active')?.dataset.lang || '';
-      const dirty  = name   !== _settingsSnapshot.name   ||
-                     dob    !== _settingsSnapshot.dob    ||
-                     gender !== _settingsSnapshot.gender ||
-                     lang   !== _settingsSnapshot.lang;
-      const saveBtn = $('settings-save-btn');
-      if (saveBtn) { saveBtn.disabled = !dirty; }
-    }
+    $('settings-btn').addEventListener('click', () => openSettings('root'));
 
-    // Wire dirty-check to name and dob inputs
-    $('child-name-input').addEventListener('input', checkSettingsDirty);
-    $('child-dob-input').addEventListener('change', checkSettingsDirty);
-
-    // Settings Save button — commits child profile + story language
-    $('settings-save-btn').addEventListener('click', () => {
-      if ($('settings-save-btn').disabled) return;
+    // ── Child profile: instant-apply (no Save button) ─────────
+    let _childSaveTimer = null;
+    function saveChildNow() {
       const gender = document.querySelector('.child-gender-btn.active')?.dataset.gender || '';
       saveChildProfile({
         name:   ($('child-name-input').value || '').trim(),
@@ -5926,11 +5909,24 @@ ${numbered}`;
         dob:    ($('child-dob-input').value  || '').trim(),
       });
       refreshChildChip();
+      refreshChildSummaryRow();
+    }
+    $('child-name-input').addEventListener('input', () => {
+      clearTimeout(_childSaveTimer);
+      _childSaveTimer = setTimeout(saveChildNow, 500);
+    });
+    $('child-dob-input').addEventListener('change', saveChildNow);
+    document.querySelectorAll('.child-gender-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.child-gender-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        saveChildNow();
+      });
+    });
 
-      // Commit story language
-      const lang = document.querySelector('.settings-lang-btn.active')?.dataset.lang || 'en';
+    // ── Story language: applies immediately on tap ────────────
+    function commitStoryLang(lang) {
       setDefaultStoryLang(lang);
-      // Sync story list lang toggle
       const listLang = (lang === 'gu') ? 'gu' : 'en';
       state.storyListLang = listLang;
       try { localStorage.setItem('drift.storyListLang', listLang); } catch {}
@@ -5938,25 +5934,41 @@ ${numbered}`;
         b.classList.toggle('active', b.dataset.lang === listLang)
       );
       if (state.currentCatId) renderStoryList(state.currentCatId, $('story-search-input')?.value || '');
-
-      closeModal('settings-modal');
-      toast('Settings saved');
+    }
+    document.querySelectorAll('.settings-lang-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.settings-lang-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        commitStoryLang(btn.dataset.lang);
+      });
     });
 
-    // Cancel / close — revert unsaved changes and close modal
-    function closeSettings() {
-      revertSettings(); // discard any unsaved edits
-      closeModal('settings-modal');
-    }
-    $('settings-cancel').addEventListener('click', closeSettings);
-    $('settings-modal').addEventListener('click', (e) => { if (!e.target.closest('.modal-sheet')) closeSettings(); });
+    // ── Sheet navigation + close ──────────────────────────────
+    $('settings-close').addEventListener('click', () => closeModal('settings-modal'));
+    $('settings-modal').addEventListener('click', (e) => { if (!e.target.closest('.modal-sheet')) closeModal('settings-modal'); });
 
-    // Advanced section toggle
-    $('settings-advanced-toggle').addEventListener('click', () => {
-      const body = $('settings-advanced-body');
-      const btn  = $('settings-advanced-toggle');
-      const open = body.classList.toggle('hidden');
-      btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+    $('settings-child-row').addEventListener('click', () => {
+      if (isGuestMode()) { closeModal('settings-modal'); promptGuestSignIn(); return; }
+      showSettingsPage('child');
+    });
+    $('settings-child-back').addEventListener('click', () => {
+      refreshChildSummaryRow();
+      showSettingsPage('root');
+    });
+
+    // Account row → in-sheet account page (sign out, delete live there)
+    $('settings-account-row').addEventListener('click', () => {
+      updateUserUI();
+      showSettingsPage('account');
+    });
+    $('settings-account-back').addEventListener('click', () => showSettingsPage('root'));
+
+    // Account → Advanced disclosure (reveals Delete account)
+    $('account-advanced-toggle').addEventListener('click', () => {
+      const body = $('account-advanced-body');
+      const btn  = $('account-advanced-toggle');
+      const hidden = body.classList.toggle('hidden');
+      btn.setAttribute('aria-expanded', hidden ? 'false' : 'true');
     });
 
     // Story list language toggle (EN / ગુ)
@@ -5971,14 +5983,6 @@ ${numbered}`;
       });
     });
 
-    // Default story language picker inside settings (UI-only — committed on Save)
-    document.querySelectorAll('.settings-lang-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.settings-lang-btn').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-        checkSettingsDirty();
-      });
-    });
     // Audiobooks toggle
     const abToggle = $('audiobooks-toggle');
     if (abToggle) {
