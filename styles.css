@@ -497,6 +497,95 @@ input { font-family: inherit; color: inherit; }
   flex-direction: column;
   gap: 14px;
 }
+
+/* ── Nitya — quick-play shortcuts (framed card, flat rows) ─── */
+.nitya-section { padding: 4px 20px 8px; }
+.nitya-card {
+  background: #241c10;
+  border: 1px solid rgba(232, 163, 61, 0.20);
+  border-radius: 16px;
+  padding: 4px 14px 8px;
+}
+.nitya-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 12px 0 6px;
+}
+.nitya-title { font-family: var(--font-display); font-size: 18px; font-weight: 500; color: var(--fg-0); }
+.nitya-sub { font-size: 12px; color: var(--fg-3); margin-top: 1px; }
+.nitya-edit-btn { font-size: 13px; font-weight: 500; color: var(--accent); background: none; padding: 4px; }
+.nitya-list { display: flex; flex-direction: column; }
+.nitya-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  cursor: pointer;
+}
+.nitya-row:active { background: var(--hover-overlay); }
+.nitya-row-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nitya-row-main { flex: 1; min-width: 0; }
+.nitya-row-title { font-size: 14px; font-weight: 500; color: var(--fg-0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nitya-row-sub { font-size: 12px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.nitya-row-play {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--play-btn-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding-left: 2px;
+}
+.nitya-row-remove { display: none; color: var(--danger); flex-shrink: 0; align-items: center; }
+.nitya-list.nitya-editing .nitya-row { cursor: default; }
+.nitya-list.nitya-editing .nitya-row-remove { display: flex; }
+.nitya-list.nitya-editing .nitya-row-play { display: none; }
+.nitya-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 12px 0 6px;
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 500;
+  background: none;
+  width: 100%;
+}
+.nitya-add:active { opacity: 0.6; }
+/* Nitya add picker */
+.nitya-picker-search { margin: 4px 0 10px; }
+.nitya-picker-results { max-height: 52vh; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.nitya-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 6px;
+  background: none;
+  text-align: left;
+  width: 100%;
+  border-radius: 10px;
+}
+.nitya-picker-row:active { background: var(--hover-overlay); }
+.nitya-picker-row > svg:last-child { color: var(--accent); flex-shrink: 0; }
+.nitya-picker-empty { padding: 24px; text-align: center; color: var(--fg-3); font-size: 13px; }
 /* Base tile */
 .home-tile {
   border-radius: var(--r-lg);
@@ -509,12 +598,14 @@ input { font-family: inherit; color: inherit; }
 }
 .home-tile:active { transform: scale(0.985); opacity: 0.9; }
 .home-tile-icon {
-  font-size: 2rem;
   flex-shrink: 0;
   width: 44px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
 }
+.home-tile-icon svg { width: 26px; height: 26px; }
 .home-tile-body { flex: 1; min-width: 0; }
 .home-tile-label {
   font-size: 0.68rem;
@@ -547,27 +638,32 @@ input { font-family: inherit; color: inherit; }
   color: #F5D882;
 }
 /*
-  Home tile colour palette — earthy pastels
-  Each tile type gets its own class; colours are chosen to harmonise.
-  ┌─────────────────────────────────────────────────────────────────┐
-  │  .ekadashi-tile  — saffron / warm ochre  (spiritual, fasting)  │
-  │  .routine-tile   — sage / muted green    (daily rhythm)        │
-  │  .story-tile     — dusty rose / mauve    (narrative, warmth)   │
-  └─────────────────────────────────────────────────────────────────┘
+  Home tile colours — soft tints over the warm-dark base. Each category gets a
+  gentle wash + a matching line-icon colour, harmonised with the saffron brand.
+  ┌──────────────────────────────────────────────────────────────┐
+  │  .ekadashi-tile — violet  (vrat / moon / night)             │
+  │  .story-tile    — rose    (narrative / warmth)              │
+  │  Nitya          — saffron (daily devotion) — see .nitya-card │
+  └──────────────────────────────────────────────────────────────┘
 */
 .ekadashi-tile {
-  background: linear-gradient(135deg, #5C3D1E 0%, #966835 100%);
-  color: #F5E8CC;
+  background: #201a2c;
+  border: 1px solid rgba(150, 130, 220, 0.20);
+  color: #ece8f5;
 }
-.routine-tile {
-  background: linear-gradient(135deg, #384D38 0%, #5C7D58 100%);
-  color: #DFF0DA;
-}
-.story-tile {
-  background: linear-gradient(135deg, #52333F 0%, #835262 100%);
-  color: #F2DDE4;
+.ekadashi-tile .home-tile-icon { color: #b9a8e0; }
+.ekadashi-tile .home-tile-label { color: #9d93b5; opacity: 1; }
+.story-tile,
+.sotd-setup-tile {
+  background: #2a1820;
+  border: 1px solid rgba(224, 119, 154, 0.20);
+  color: #f5e8ec;
   cursor: pointer;
 }
+.story-tile .home-tile-icon,
+.sotd-setup-tile .home-tile-icon { color: #e0779a; }
+.story-tile .home-tile-label,
+.sotd-setup-tile .home-tile-label { color: #b5909c; opacity: 1; }
 /* ── SOTD tile — taller, vertical layout, longer preview ── */
 .sotd-tile {
   display: block;           /* override flex row */
@@ -584,10 +680,8 @@ input { font-family: inherit; color: inherit; }
   gap: 10px;
   margin-bottom: 2px;
 }
-.sotd-tile .home-tile-icon {
-  font-size: 1.4rem;
-  width: auto;
-}
+.sotd-tile .home-tile-icon { width: auto; }
+.sotd-tile .home-tile-icon svg { width: 20px; height: 20px; }
 .sotd-tile .home-tile-label {
   margin-bottom: 0;
 }

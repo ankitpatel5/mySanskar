@@ -112,13 +112,13 @@
         <section id="view-home" class="view hidden">
           <div class="home-header">
             <p class="home-date" id="home-date"></p>
-            <h2 class="home-greeting">Jay Swaminarayan 🙏</h2>
           </div>
+
           <div class="home-tiles" id="home-tiles">
 
             <!-- Ekadashi tile -->
             <div class="home-tile ekadashi-tile hidden" id="ekadashi-tile">
-              <div class="home-tile-icon">🕊️</div>
+              <div class="home-tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg></div>
               <div class="home-tile-body">
                 <div class="home-tile-label">Upcoming Fast</div>
                 <div class="home-tile-title" id="ekadashi-name">—</div>
@@ -128,7 +128,7 @@
 
             <!-- Ekadashi tile skeleton (shown while loading) -->
             <div class="home-tile ekadashi-tile home-tile-skeleton" id="ekadashi-skeleton">
-              <div class="home-tile-icon">🕊️</div>
+              <div class="home-tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg></div>
               <div class="home-tile-body">
                 <div class="home-tile-label">Upcoming Fast</div>
                 <div class="home-tile-title skeleton-line" style="width:60%"></div>
@@ -140,7 +140,7 @@
             <div class="home-tile story-tile sotd-tile hidden" id="sotd-tile">
               <div class="sotd-tile-inner">
                 <div class="sotd-tile-top">
-                  <div class="home-tile-icon">📖</div>
+                  <div class="home-tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
                   <div class="home-tile-label">Today's Story</div>
                 </div>
                 <div class="home-tile-title sotd-title" id="sotd-title">—</div>
@@ -152,7 +152,7 @@
             <div class="home-tile story-tile sotd-tile sotd-loading-tile hidden" id="sotd-skeleton">
               <div class="sotd-tile-inner">
                 <div class="sotd-tile-top">
-                  <div class="home-tile-icon">✨</div>
+                  <div class="home-tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
                   <div class="home-tile-label">Today's Story</div>
                 </div>
                 <div class="home-tile-title sotd-title" id="sotd-loading-title">Writing a story…</div>
@@ -162,7 +162,7 @@
 
             <!-- Story of the Day — no child configured -->
             <div class="home-tile sotd-setup-tile hidden" id="sotd-setup-tile">
-              <div class="home-tile-icon">✨</div>
+              <div class="home-tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
               <div class="home-tile-body">
                 <div class="home-tile-label">Today's Story</div>
                 <div class="home-tile-title">A story just for them</div>
@@ -170,6 +170,20 @@
               </div>
             </div>
 
+          </div>
+
+          <!-- Nitya — quick-play shortcuts (own frame, below the daily tiles) -->
+          <div class="nitya-section hidden" id="nitya-section">
+            <div class="nitya-card">
+              <div class="nitya-head">
+                <div class="nitya-head-text">
+                  <div class="nitya-title">Nitya</div>
+                  <div class="nitya-sub">Your daily plays</div>
+                </div>
+                <button class="nitya-edit-btn" id="nitya-edit-btn">Edit</button>
+              </div>
+              <div class="nitya-list" id="nitya-list"></div>
+            </div>
           </div>
         </section>
 
@@ -1185,6 +1199,24 @@
             <div class="settings-row-main"><div class="settings-row-title">Remove all downloads</div></div>
           </button>
         </div>
+      </div>
+    </div>
+
+    <div id="nitya-picker" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-sheet">
+        <div class="sheet-handle"></div>
+        <div class="settings-head">
+          <span class="settings-title">Add to Nitya</span>
+          <button class="settings-close" id="nitya-picker-close" aria-label="Close">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="search-wrap nitya-picker-search">
+          <svg class="search-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="nitya-picker-input" type="text" placeholder="Search songs" autocomplete="off" />
+        </div>
+        <div class="nitya-picker-results" id="nitya-picker-results"></div>
       </div>
     </div>
 

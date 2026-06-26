@@ -25,6 +25,7 @@
     activeTab: 'drift.activeTab',
     activeMusicSubTab: 'drift.activeMusicSubTab',
     audiobooksEnabled: 'drift.audiobooksEnabled',
+    nitya: 'drift.nitya',
   };
 
   // ============== THEME ==============
@@ -55,6 +56,7 @@
     library: null,
     flatTracks: [],
     trackById: {},
+    nitya: null,        // array of { id, name } quick-play shortcuts; null = not yet seeded
     playlists: [],
     queue: [],
     history: [],
@@ -524,6 +526,7 @@
     } catch { state.playCounts = {}; }
     state.libraryView = localStorage.getItem(LS.libraryView) || 'list';
     state.audiobooksEnabled = localStorage.getItem(LS.audiobooksEnabled) === '1';
+    loadNitya();
     applyAudiobooksTab();
     const savedTab = localStorage.getItem(LS.activeTab);
     const validTabs = ['music', 'stories', 'home', ...(state.audiobooksEnabled ? ['audiobooks'] : [])];
@@ -1130,6 +1133,8 @@
     if (state.currentTrackId && state.trackById[state.currentTrackId]) {
       updateNowPlayingUI(state.trackById[state.currentTrackId], true);
     }
+    // Library is now ready — (re)render Nitya so shortcuts resolve + defaults seed.
+    if (state.currentTab === 'home') renderNitya();
   }
 
   // ============== COLOR HASHING ==============
@@ -1656,6 +1661,7 @@
   }
 
   function refreshPlayingIndicators() {
+    updateNityaButtons(); // keep Nitya play/pause icons in sync with playback
     // Re-render bars on visible track rows
     document.querySelectorAll('.track-row').forEach((row) => {
       const isThis = row.dataset.trackId === state.currentTrackId;
@@ -1912,10 +1918,163 @@
       });
     }
     loadEkadashiTile();
+    renderNitya();
 
     // loadStoryOfDay() handles skeleton show/hide synchronously before its first
     // await, so there is no blank gap or flash — no pre-show needed here.
     loadStoryOfDay();
+  }
+
+  // ============== NITYA — quick-play shortcuts ==============
+  // Patterns used to seed sensible defaults the first time (Aarti, Full Chesta).
+  const NITYA_DEFAULTS = [/a+rti/i, /full\s*chesta|chesta/i, /sahajanand\s*namavali|namavali/i];
+  let _nityaEditing = false;
+  const NITYA_MUSIC_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+  const NITYA_PLAY_SVG  = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>';
+  const NITYA_PAUSE_SVG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>';
+
+  function loadNitya() {
+    try {
+      const raw = localStorage.getItem(LS.nitya);
+      state.nitya = raw ? JSON.parse(raw) : null;
+    } catch { state.nitya = null; }
+  }
+  function saveNitya() {
+    try { localStorage.setItem(LS.nitya, JSON.stringify(state.nitya || [])); } catch {}
+  }
+  function seedNityaDefaults() {
+    if (state.nitya !== null) return;               // already configured (even if empty)
+    if (!state.flatTracks || !state.flatTracks.length) return; // wait for library
+    const picks = [];
+    NITYA_DEFAULTS.forEach((re) => {
+      const t = state.flatTracks.find((tr) => re.test(tr.name));
+      if (t && !picks.some((p) => p.id === t.id)) picks.push({ id: t.id, name: t.name });
+    });
+    state.nitya = picks;
+    saveNitya();
+  }
+  // One-time upgrade: add Sahajanand Namavali Path to users who were seeded before
+  // it became a default. Flagged so a user who later removes it isn't re-given it.
+  function ensureNityaUpgrades() {
+    if (localStorage.getItem('drift.nitya.v2') === '1') return;
+    if (!state.flatTracks || !state.flatTracks.length) return;
+    if (state.nitya === null) return; // fresh users already get it via seedNityaDefaults
+    const re = /sahajanand\s*namavali|namavali/i;
+    const t = state.flatTracks.find((tr) => re.test(tr.name));
+    if (t && !state.nitya.some((s) => s.id === t.id)) {
+      state.nitya.push({ id: t.id, name: t.name });
+      saveNitya();
+    }
+    localStorage.setItem('drift.nitya.v2', '1');
+  }
+  function nityaToggle(id) {
+    if (_nityaEditing) return;
+    if (state.currentTrackId === id) togglePlay();
+    else playFromContext(id, 'single');
+  }
+  function updateNityaButtons() {
+    document.querySelectorAll('.nitya-row-play[data-track-id]').forEach((btn) => {
+      const isThis = btn.dataset.trackId === state.currentTrackId;
+      const playing = isThis && state.playing;
+      btn.innerHTML = playing ? NITYA_PAUSE_SVG : NITYA_PLAY_SVG;
+      btn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+      btn.style.paddingLeft = playing ? '0' : '2px';
+    });
+  }
+  function renderNitya() {
+    const section = $('nitya-section');
+    const list = $('nitya-list');
+    if (!section || !list) return;
+    seedNityaDefaults();
+    ensureNityaUpgrades();
+    const libReady = !!(state.flatTracks && state.flatTracks.length);
+    section.classList.toggle('hidden', !libReady);
+    if (!libReady) return;
+
+    const items = (state.nitya || []).filter((s) => state.trackById[s.id]);
+    list.innerHTML = '';
+    list.classList.toggle('nitya-editing', _nityaEditing);
+
+    items.forEach((s) => {
+      const t = state.trackById[s.id];
+      const row = document.createElement('div');
+      row.className = 'nitya-row';
+      row.innerHTML = `
+        <button class="nitya-row-remove" aria-label="Remove from Nitya">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        </button>
+        <div class="nitya-row-icon">${NITYA_MUSIC_SVG}</div>
+        <div class="nitya-row-main">
+          <div class="nitya-row-title">${escapeHtml(t.name)}</div>
+          <div class="nitya-row-sub">${escapeHtml(t.albumName || '')}</div>
+        </div>
+        <button class="nitya-row-play" data-track-id="${s.id}" aria-label="Play">${NITYA_PLAY_SVG}</button>`;
+      row.querySelector('.nitya-row-remove').addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.nitya = (state.nitya || []).filter((x) => x.id !== s.id);
+        saveNitya();
+        renderNitya();
+      });
+      row.querySelector('.nitya-row-play').addEventListener('click', (e) => { e.stopPropagation(); nityaToggle(s.id); });
+      row.addEventListener('click', () => nityaToggle(s.id));
+      list.appendChild(row);
+    });
+
+    const add = document.createElement('button');
+    add.className = 'nitya-add';
+    add.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add more`;
+    add.addEventListener('click', openNityaPicker);
+    list.appendChild(add);
+
+    const editBtn = $('nitya-edit-btn');
+    if (editBtn) {
+      editBtn.textContent = _nityaEditing ? 'Done' : 'Edit';
+      editBtn.style.visibility = items.length ? '' : 'hidden';
+    }
+    updateNityaButtons();
+  }
+  function toggleNityaEdit() { _nityaEditing = !_nityaEditing; renderNitya(); }
+
+  function openNityaPicker() {
+    const input = $('nitya-picker-input');
+    if (input) input.value = '';
+    renderNityaPicker('');
+    showModal('nitya-picker');
+    setTimeout(() => { const i = $('nitya-picker-input'); if (i) i.focus(); }, 120);
+  }
+  function renderNityaPicker(query) {
+    const results = $('nitya-picker-results');
+    if (!results) return;
+    const q = (query || '').trim().toLowerCase();
+    const existing = new Set((state.nitya || []).map((s) => s.id));
+    let matches = (state.flatTracks || []).filter((t) => !existing.has(t.id));
+    if (q) matches = matches.filter((t) => (`${t.name} ${t.albumName || ''}`).toLowerCase().includes(q));
+    matches = matches.slice(0, 50);
+    results.innerHTML = '';
+    if (!matches.length) {
+      results.innerHTML = '<div class="nitya-picker-empty">No songs found.</div>';
+      return;
+    }
+    matches.forEach((t) => {
+      const row = document.createElement('button');
+      row.className = 'nitya-picker-row';
+      row.innerHTML = `
+        <div class="nitya-row-icon">${NITYA_MUSIC_SVG}</div>
+        <div class="nitya-row-main">
+          <div class="nitya-row-title">${escapeHtml(t.name)}</div>
+          <div class="nitya-row-sub">${escapeHtml(t.albumName || '')}</div>
+        </div>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+      row.addEventListener('click', () => {
+        state.nitya = state.nitya || [];
+        state.nitya.push({ id: t.id, name: t.name });
+        saveNitya();
+        renderNitya();
+        closeModal('nitya-picker');
+        toast('Added to Nitya');
+      });
+      results.appendChild(row);
+    });
   }
 
   async function loadEkadashiTile() {
@@ -5707,6 +5866,12 @@ ${numbered}`;
 
     // Brand logo → home tab
     $('brand-home-btn').addEventListener('click', () => switchTab('home'));
+
+    // Nitya quick-play shortcuts
+    $('nitya-edit-btn').addEventListener('click', toggleNityaEdit);
+    $('nitya-picker-close').addEventListener('click', () => closeModal('nitya-picker'));
+    $('nitya-picker').addEventListener('click', (e) => { if (!e.target.closest('.modal-sheet')) closeModal('nitya-picker'); });
+    $('nitya-picker-input').addEventListener('input', (e) => renderNityaPicker(e.target.value));
 
     // Theme toggle (lives in Settings → Appearance)
     applyTheme(currentTheme()); // sync active state + status-bar color on boot
