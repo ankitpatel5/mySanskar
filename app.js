@@ -7631,40 +7631,30 @@ ${numbered}`;
       if (btn) btn.textContent = `${_abSpeed}×`;
     });
 
-    // Seek on progress bar tap
-    // Scrubber: full pointer drag + tap-to-seek. Listeners live on the padded
-    // wrap (larger hit area) but positions are computed against the visible bar.
-    const progressWrap = $('ab-player-progress-wrap');
-    const progressBar  = $('ab-player-progress');
-    if (progressWrap && progressBar) {
-      const scrubToX = (clientX, commit) => {
-        if (!_abAudio || !_abAudio.duration) return;
+    // Seek: native <input type="range">. iOS handles touch drag for us.
+    //  'input'  fires continuously while dragging → live preview, no audio seek yet
+    //  'change' fires on release → commit the seek
+    const range = $('ab-player-range');
+    if (range) {
+      const rangePct = () => Math.max(0, Math.min(1, (+range.value) / (+range.max || 1000)));
+      const chBounds = () => {
         const ch = _abBook?.chapters[_abChapterIdx];
         const chStart = ch?.startTime ?? 0;
-        const chEnd   = ch?.endTime   ?? _abAudio.duration;
-        const chDur   = Math.max(0.001, chEnd - chStart);
-        const rect = progressBar.getBoundingClientRect();
-        const pct  = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-        abUpdateProgressBar(pct * chDur, chDur); // live visual while dragging
-        if (commit) _abAudio.currentTime = chStart + pct * chDur;
+        const chEnd   = ch?.endTime   ?? (_abAudio?.duration || 0);
+        return { chStart, chDur: Math.max(0.001, chEnd - chStart) };
       };
-      progressWrap.addEventListener('pointerdown', (e) => {
+      range.addEventListener('input', () => {
         if (!_abAudio || !_abAudio.duration) return;
         _abScrubbing = true;
-        try { progressWrap.setPointerCapture(e.pointerId); } catch {}
-        scrubToX(e.clientX, false);
-        e.preventDefault();
+        const { chDur } = chBounds();
+        abUpdateProgressBar(rangePct() * chDur, chDur); // live time labels + fill
       });
-      progressWrap.addEventListener('pointermove', (e) => {
-        if (_abScrubbing) scrubToX(e.clientX, false);
-      });
-      const endScrub = (e) => {
-        if (!_abScrubbing) return;
+      range.addEventListener('change', () => {
+        if (!_abAudio || !_abAudio.duration) { _abScrubbing = false; return; }
+        const { chStart, chDur } = chBounds();
+        _abAudio.currentTime = chStart + rangePct() * chDur;
         _abScrubbing = false;
-        scrubToX(e.clientX, true); // commit the final seek position
-      };
-      progressWrap.addEventListener('pointerup', endScrub);
-      progressWrap.addEventListener('pointercancel', () => { _abScrubbing = false; });
+      });
     }
   }
 
@@ -7719,11 +7709,13 @@ ${numbered}`;
   }
 
   function abUpdateProgressBar(pos, dur) {
-    const pct = dur > 0 ? pos / dur : 0;
-    const fill = $('ab-player-progress-fill');
-    const dot  = $('ab-player-progress-dot');
-    if (fill) fill.style.width = `${pct * 100}%`;
-    if (dot)  dot.style.left   = `calc(${pct * 100}% - 8px)`;
+    const pct = dur > 0 ? Math.max(0, Math.min(1, pos / dur)) : 0;
+    const range = $('ab-player-range');
+    if (range) {
+      // Don't yank the thumb out from under the user's finger mid-drag.
+      if (!_abScrubbing) range.value = String(Math.round(pct * (+range.max || 1000)));
+      range.style.setProperty('--pct', `${pct * 100}%`);
+    }
     const elapsed = $('ab-player-elapsed');
     const remain  = $('ab-player-remain');
     if (elapsed) elapsed.textContent = fmtTime(pos);
