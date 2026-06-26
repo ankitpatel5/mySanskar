@@ -1034,10 +1034,13 @@
   function renderDlSettingsSection() {
     const list    = $('settings-dl-list');
     const clearBtn = $('settings-dl-clear-btn');
-    if (!list) return;
+    const countEl = $('settings-dl-count');
     const downloaded = Object.keys(_dlState).filter(k => _dlState[k] === 'done');
+    // Update the count on the Storage → Downloads nav row
+    if (countEl) countEl.textContent = downloaded.length ? `${downloaded.length}` : 'None';
+    if (!list) return;
     if (!downloaded.length) {
-      list.innerHTML = '<div class="settings-dl-empty">No offline downloads yet. Use the ⋯ menu on any track to download it.</div>';
+      list.innerHTML = '<div class="settings-dl-empty">No offline downloads yet. Use the ⋯ menu on any song or chapter to save it for offline.</div>';
       if (clearBtn) clearBtn.classList.add('hidden');
       return;
     }
@@ -1053,11 +1056,15 @@
     downloaded.forEach(fileId => {
       const name = dlDisplayName(fileId);
       const row = document.createElement('div');
-      row.className = 'settings-dl-row';
+      row.className = 'settings-row settings-dl-item';
       row.innerHTML = `
-        <span class="dl-dot"></span>
-        <span class="settings-dl-name">${escapeHtml(name)}</span>
-        <button class="settings-dl-remove" aria-label="Remove">✕</button>`;
+        <div class="settings-row-icon settings-dl-icon">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        </div>
+        <div class="settings-row-main"><div class="settings-row-title">${escapeHtml(name)}</div><div class="settings-row-sub">Available offline</div></div>
+        <button class="settings-dl-remove" aria-label="Remove download">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>`;
       row.querySelector('.settings-dl-remove').addEventListener('click', async () => {
         await removeDownload(fileId);
         renderDlSettingsSection();
@@ -5774,7 +5781,7 @@ ${numbered}`;
     // Switch between the root sheet and the sub-pages (child, account).
     // Height stays fixed to the root measurement, so pages never resize.
     function showSettingsPage(which) {
-      const pages = { root: 'settings-root', child: 'settings-page-child', account: 'settings-page-account' };
+      const pages = { root: 'settings-root', child: 'settings-page-child', account: 'settings-page-account', downloads: 'settings-page-downloads' };
       Object.entries(pages).forEach(([key, id]) => {
         const el = $(id);
         if (el) el.classList.toggle('hidden', key !== which);
@@ -5850,26 +5857,9 @@ ${numbered}`;
         b.classList.toggle('active', b.dataset.gender === cp.gender)
       );
 
-      // Inject Downloads into the Storage group (native only, once)
-      if (isNative() && !$('settings-downloads-section')) {
-        const storage = $('settings-storage-group');
-        const dlGroup = document.createElement('div');
-        dlGroup.id = 'settings-downloads-section';
-        dlGroup.innerHTML = `
-          <div id="settings-dl-list" class="settings-dl-list"></div>
-          <button class="settings-row settings-row-danger hidden" id="settings-dl-clear-btn">
-            <div class="settings-row-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></div>
-            <div class="settings-row-main"><div class="settings-row-title">Remove all downloads</div></div>
-          </button>`;
-        if (storage) storage.appendChild(dlGroup);
-        $('settings-dl-clear-btn').addEventListener('click', async () => {
-          const keys = await dlKeys();
-          await Promise.all(keys.map(k => removeDownload(k)));
-          toast('All downloads removed');
-          renderDlSettingsSection();
-          renderLibrary();
-        });
-      }
+      // Downloads row is native-only; its dedicated page lists the items
+      const dlRow = $('settings-downloads-row');
+      if (dlRow) dlRow.style.display = isNative() ? '' : 'none';
       renderDlSettingsSection();
 
       showModal('settings-modal');
@@ -5962,6 +5952,21 @@ ${numbered}`;
       showSettingsPage('account');
     });
     $('settings-account-back').addEventListener('click', () => showSettingsPage('root'));
+
+    // Downloads row → in-sheet downloads list page
+    $('settings-downloads-row').addEventListener('click', () => {
+      renderDlSettingsSection();
+      showSettingsPage('downloads');
+    });
+    $('settings-downloads-back').addEventListener('click', () => showSettingsPage('root'));
+    $('settings-dl-clear-btn').addEventListener('click', async () => {
+      const keys = await dlKeys();
+      await Promise.all(keys.map(k => removeDownload(k)));
+      toast('All downloads removed');
+      renderDlSettingsSection();
+      renderLibrary();
+      showSettingsPage('root');
+    });
 
     // Account → Advanced disclosure (reveals Delete account)
     $('account-advanced-toggle').addEventListener('click', () => {

@@ -1122,19 +1122,30 @@ button.ab-dl-dot:hover::before {
 .ab-dl-btn:hover { color: var(--accent); background: var(--hover-overlay); }
 .ab-dl-btn:disabled { opacity: 0.4; pointer-events: none; }
 
-/* Settings downloads section */
-.settings-dl-list { padding: 4px 0 8px; }
-.settings-dl-empty { font-size: 0.8rem; color: var(--fg-3); line-height: 1.5; padding: 4px 0 8px; }
-.settings-dl-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
+/* Settings downloads — each item is a standard settings row */
+.settings-dl-empty {
+  font-size: 13px;
+  color: var(--fg-3);
+  line-height: 1.5;
+  padding: 13px 14px;
   border-bottom: 1px solid var(--line);
 }
-.settings-dl-row:last-child { border-bottom: none; }
-.settings-dl-name { flex: 1; font-size: 0.88rem; color: var(--fg-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.settings-dl-remove { background: none; border: none; color: var(--fg-3); cursor: pointer; padding: 4px 6px; font-size: 0.85rem; }
+.settings-dl-list .settings-dl-item:last-child { border-bottom: none; }
+.settings-dl-icon { background: var(--accent-soft); color: var(--accent); }
+.settings-dl-remove {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-3);
+  border: none;
+  color: var(--fg-2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.settings-dl-remove:active { background: var(--danger); color: #fff; }
 .playing-bars {
   display: inline-flex;
   gap: 2px;
@@ -2796,6 +2807,14 @@ button.ab-dl-dot:hover::before {
   flex-shrink: 0;
 }
 .settings-row-chevron { color: var(--fg-3); flex-shrink: 0; }
+.settings-row-value { font-size: 14px; color: var(--fg-3); flex-shrink: 0; }
+/* Standalone danger row (Remove all downloads) — looks like a one-row group */
+.settings-dl-clear {
+  margin-top: 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
 .settings-row-danger .settings-row-icon { background: rgba(255,91,91,0.12); color: var(--danger); }
 .settings-row-danger .settings-row-title { color: var(--danger); }
 /* Stacked rows host a segmented control (language, appearance) under a label */
