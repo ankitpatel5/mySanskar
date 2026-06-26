@@ -28,17 +28,19 @@
   };
 
   // ============== THEME ==============
-  const MOON_SVG = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>`;
-  const SUN_SVG  = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
-
   function currentTheme() {
     return document.documentElement.getAttribute('data-theme') || 'dark';
   }
   function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem(LS.theme, theme);
-    const btn = $('theme-btn');
-    if (btn) btn.innerHTML = theme === 'dark' ? SUN_SVG : MOON_SVG;
+    // Reflect the choice on the Settings appearance toggle.
+    document.querySelectorAll('.settings-theme-btn').forEach((b) => {
+      b.classList.toggle('active', b.dataset.themeChoice === theme);
+    });
+    // Keep the iOS status-bar / PWA chrome color in sync with the theme.
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', theme === 'dark' ? '#0d0b07' : '#f6f3ec');
   }
   function toggleTheme() {
     applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
@@ -5694,9 +5696,11 @@ ${numbered}`;
     // Brand logo → home tab
     $('brand-home-btn').addEventListener('click', () => switchTab('home'));
 
-    // Theme toggle
-    applyTheme(currentTheme()); // set correct icon on boot
-    $('theme-btn').addEventListener('click', toggleTheme);
+    // Theme toggle (lives in Settings → Appearance)
+    applyTheme(currentTheme()); // sync active state + status-bar color on boot
+    document.querySelectorAll('.settings-theme-btn').forEach((btn) => {
+      btn.addEventListener('click', () => applyTheme(btn.dataset.themeChoice));
+    });
 
     // User menu
     $('user-btn').addEventListener('click', () => {
@@ -6893,6 +6897,7 @@ ${numbered}`;
   let _abChapterIdx = 0;     // currently playing chapter index
   let _abAudio     = null;   // separate Audio element — never touches music player
   let _abPlaying   = false;
+  let _abScrubbing = false;  // true while the user is dragging the scrubber thumb
   let _abSpeed     = 1;
   let _abProgress  = {};     // { [bookId]: { [fileId]: { position, duration } } } — in-memory cache
   let _abSaveTimer = null;
@@ -7582,10 +7587,18 @@ ${numbered}`;
     }
 
     // Update player UI
+    const total      = _abBook.chapters.length;
+    const isVirtual  = ch.realId != null || ch.startTime != null;
     const trackEl = $('ab-player-track');
-    if (trackEl) trackEl.textContent = ch.name;
+    // Virtual parts share one file — show the book title, not "Part 3" (which is in the sub).
+    if (trackEl) trackEl.textContent = isVirtual ? _abBook.name : ch.name;
     const subEl = $('ab-player-sub');
-    if (subEl) subEl.textContent = `Chapter ${idx + 1} of ${_abBook.chapters.length}`;
+    if (subEl) {
+      // A single un-split chapter has no meaningful "1 of 1" — leave it blank.
+      subEl.textContent = total <= 1
+        ? ''
+        : `${isVirtual ? 'Part' : 'Chapter'} ${idx + 1} of ${total}`;
+    }
     abUpdatePlayBtn();
     abUpdateProgressBar(0, 0);
     renderAbChapters();
@@ -7619,22 +7632,45 @@ ${numbered}`;
     });
 
     // Seek on progress bar tap
-    const progressBar = $('ab-player-progress');
-    if (progressBar) {
-      progressBar.addEventListener('click', (e) => {
+    // Scrubber: full pointer drag + tap-to-seek. Listeners live on the padded
+    // wrap (larger hit area) but positions are computed against the visible bar.
+    const progressWrap = $('ab-player-progress-wrap');
+    const progressBar  = $('ab-player-progress');
+    if (progressWrap && progressBar) {
+      const scrubToX = (clientX, commit) => {
         if (!_abAudio || !_abAudio.duration) return;
         const ch = _abBook?.chapters[_abChapterIdx];
         const chStart = ch?.startTime ?? 0;
         const chEnd   = ch?.endTime   ?? _abAudio.duration;
+        const chDur   = Math.max(0.001, chEnd - chStart);
         const rect = progressBar.getBoundingClientRect();
-        const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        _abAudio.currentTime = chStart + pct * (chEnd - chStart);
+        const pct  = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+        abUpdateProgressBar(pct * chDur, chDur); // live visual while dragging
+        if (commit) _abAudio.currentTime = chStart + pct * chDur;
+      };
+      progressWrap.addEventListener('pointerdown', (e) => {
+        if (!_abAudio || !_abAudio.duration) return;
+        _abScrubbing = true;
+        try { progressWrap.setPointerCapture(e.pointerId); } catch {}
+        scrubToX(e.clientX, false);
+        e.preventDefault();
       });
+      progressWrap.addEventListener('pointermove', (e) => {
+        if (_abScrubbing) scrubToX(e.clientX, false);
+      });
+      const endScrub = (e) => {
+        if (!_abScrubbing) return;
+        _abScrubbing = false;
+        scrubToX(e.clientX, true); // commit the final seek position
+      };
+      progressWrap.addEventListener('pointerup', endScrub);
+      progressWrap.addEventListener('pointercancel', () => { _abScrubbing = false; });
     }
   }
 
   function abOnTimeUpdate() {
     if (!_abAudio || !_abBook) return;
+    if (_abScrubbing) return; // don't let playback updates fight an active drag
     const pos = _abAudio.currentTime;
     const dur = _abAudio.duration || 0;
     const ch  = _abBook.chapters[_abChapterIdx];
@@ -7687,7 +7723,7 @@ ${numbered}`;
     const fill = $('ab-player-progress-fill');
     const dot  = $('ab-player-progress-dot');
     if (fill) fill.style.width = `${pct * 100}%`;
-    if (dot)  dot.style.left   = `calc(${pct * 100}% - 5px)`;
+    if (dot)  dot.style.left   = `calc(${pct * 100}% - 8px)`;
     const elapsed = $('ab-player-elapsed');
     const remain  = $('ab-player-remain');
     if (elapsed) elapsed.textContent = fmtTime(pos);

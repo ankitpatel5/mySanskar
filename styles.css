@@ -2517,6 +2517,35 @@ button.ab-dl-dot:hover::before {
   background: var(--accent);
   color: #fff;
 }
+/* Appearance theme toggle — segmented, mirrors the language row */
+.settings-theme-row {
+  display: flex;
+  background: var(--bg-3);
+  border-radius: 22px;
+  padding: 3px;
+  gap: 2px;
+}
+.settings-theme-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: none;
+  border: none;
+  border-radius: 19px;
+  padding: 9px 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg-3);
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+.settings-theme-btn svg { width: 16px; height: 16px; }
+.settings-theme-btn.active {
+  background: var(--accent);
+  color: var(--play-btn-color);
+}
 .settings-section-hint {
   font-size: 12px;
   color: var(--fg-4);
@@ -4477,78 +4506,96 @@ button.ab-dl-dot:hover::before {
 .ab-more-details-body.open { max-height: 400px; padding: 12px 14px; }
 .ab-description { font-size: 13px; color: var(--text2); line-height: 1.65; }
 .ab-description-source { font-size: 11px; color: var(--text3); font-style: italic; margin-top: 8px; }
+/* #5 — Cap the detail column so the player never stretches into a void on
+   wide screens (iPad / landscape). Centered; full-width on phones. */
+#view-audiobook-detail {
+  max-width: 640px;
+  margin-inline: auto;
+  padding-inline: 0;
+}
 /* Player */
 .ab-player {
   margin: 0 20px 14px;
   background: var(--surface2);
   border-radius: 14px;
-  padding: 14px 16px;
+  padding: 16px 18px;
   border: 1px solid var(--line-1);
 }
-.ab-player-track { font-size: 13px; font-weight: 600; color: var(--text1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ab-player-sub { font-size: 11px; color: var(--text3); margin-top: 2px; margin-bottom: 10px; }
-.ab-player-progress-wrap { margin-bottom: 4px; }
+.ab-player-track { font-size: 14px; font-weight: 600; color: var(--text1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ab-player-sub { font-size: 11px; color: var(--text3); margin-top: 3px; margin-bottom: 14px; min-height: 13px; }
+.ab-player-progress-wrap {
+  margin-bottom: 7px;
+  padding: 10px 0;          /* taller hit area for easier grabbing */
+  touch-action: none;        /* let pointer drag scrub instead of scrolling the page */
+  cursor: pointer;
+}
 .ab-player-progress {
-  height: 3px;
-  background: var(--surface3, #2a2a2a);
-  border-radius: 2px;
+  height: 6px;
+  background: var(--bg-3);
+  border-radius: 3px;
   position: relative;
   cursor: pointer;
 }
-.ab-player-progress-fill { height: 100%; background: var(--accent); border-radius: 2px; pointer-events: none; }
+.ab-player-progress-fill { height: 100%; background: var(--accent); border-radius: 3px; pointer-events: none; }
 .ab-player-progress-dot {
   position: absolute;
-  width: 10px;
-  height: 10px;
-  background: var(--accent);
+  width: 16px;
+  height: 16px;
+  background: var(--fg-0);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
   border-radius: 50%;
-  top: -3.5px;
+  top: -5px;
   pointer-events: none;
 }
 .ab-player-times {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text3);
-  margin-bottom: 12px;
+  margin-bottom: 18px;
 }
+/* #7 — Centered, grouped controls (no longer flung edge-to-edge), with the
+   play button visually dominant and skip/speed demoted. */
 .ab-player-controls {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 20px;
 }
 .ab-ctrl-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  color: var(--text2);
+  color: var(--text3);
   font-size: 10px;
   font-weight: 600;
   cursor: pointer;
   padding: 4px;
 }
-.ab-ctrl-btn svg { color: var(--text1); }
+.ab-ctrl-btn svg { color: var(--text2); width: 24px; height: 24px; }
 .ab-play-btn {
-  width: 48px;
-  height: 48px;
+  width: 62px;
+  height: 62px;
   border-radius: 50%;
   background: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #000;
+  color: var(--play-btn-color);
   cursor: pointer;
-  transition: opacity 0.12s;
+  transition: transform 0.12s, opacity 0.12s;
 }
-.ab-play-btn:active { opacity: 0.8; }
+.ab-play-btn svg { width: 28px; height: 28px; }
+.ab-play-btn:active { transform: scale(0.94); opacity: 0.9; }
 .ab-speed-btn {
-  background: var(--surface3, #2a2a2a);
-  color: var(--accent);
+  background: transparent;
+  color: var(--text2);
   font-size: 12px;
   font-weight: 700;
-  padding: 6px 10px;
-  border-radius: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
   cursor: pointer;
   min-width: 44px;
   text-align: center;
