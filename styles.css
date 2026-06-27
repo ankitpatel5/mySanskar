@@ -681,23 +681,28 @@ input { font-family: inherit; color: inherit; }
 .guj-hub-name { font-size: 14px; font-weight: 500; color: var(--fg-0); margin-top: auto; padding-top: 12px; }
 .guj-hub-count { font-size: 11px; color: var(--fg-3); margin-top: 2px; }
 
-/* Letter / number tiles — script as hero, one-tap speaker */
+/* Letter / number tiles — glyph hero, with a centered listen button below
+   (stacked so the speaker never collides with wide glyphs like આ / ઔ). */
 .guj-letter-tile {
   background: var(--bg-1, #161310);
   border: 0.5px solid var(--line);
   border-radius: 14px;
-  padding: 16px 14px;
-  text-align: center;
-  position: relative;
+  padding: 18px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 .guj-letter-tile:active { background: var(--bg-2); }
-.guj-letter-glyph { display: block; font-size: 46px; font-weight: 500; color: var(--fg-0); line-height: 1.05; }
-.guj-letter-translit { display: block; font-size: 14px; color: var(--fg-2); margin-top: 5px; }
+.guj-letter-glyph { font-size: 48px; font-weight: 500; color: var(--fg-0); line-height: 1.1; }
+.guj-letter-translit { font-size: 14px; color: var(--fg-2); }
 .guj-letter-listen {
-  position: absolute; top: 8px; right: 8px;
+  position: static;
+  margin-top: 8px;
   width: 40px; height: 40px; border-radius: 50%;
   background: var(--accent); color: var(--play-btn-color);
   display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
 }
 .guj-letter-listen svg { width: 19px; height: 19px; }
 .guj-letter-listen:active { opacity: 0.85; }

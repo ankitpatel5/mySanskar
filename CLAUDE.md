@@ -36,6 +36,23 @@ This does everything:
 - Both are **automatically included** in `npm run ship`, so every prod deploy keeps both native projects in sync
 - After `ship`, rebuild in Xcode or Android Studio to get a simulator/device build with the latest changes
 
+## iOS native builds — ALWAYS verify the bundle (don't trust incremental builds)
+
+`npm run build:ios` correctly syncs `www/` → `ios/App/App/public/`, BUT a subsequent
+`xcodebuild` with an existing `-derivedDataPath` can do an **incremental build that does
+NOT re-copy the updated `public/` resources** — so the installed `.app` ships STALE web
+assets (old `sw.js` cache version, missing new files) even though the install "succeeds".
+This silently shipped a build with no Learn Gujarati feature once.
+
+**Rule — before installing any device build, verify the actual `.app` bundle:**
+```bash
+APP="ios/App/App/build/Build/Products/Debug-iphoneos/App.app"   # or wherever -derivedDataPath points
+grep -m1 "CACHE =" "$APP/public/sw.js"        # must equal the current sw.js cache version
+ls "$APP/public/<any-new-file>.js"            # new feature files must be PRESENT
+```
+If the bundle is stale: `rm -rf ios/App/build` then `xcodebuild clean …` and full rebuild.
+Never tell the user "installed" until the bundle is verified to contain the expected assets.
+
 ## iOS App Store Submission — Checklist (do this EVERY time the user mentions building/archiving for iOS app review)
 
 When the user says anything like "build for iOS submission", "archive for App Store", "submit for review", or "generate an iOS build for approval", ALWAYS walk through this:
