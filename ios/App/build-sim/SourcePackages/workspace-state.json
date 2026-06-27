@@ -1,0 +1,202 @@
+{
+  "object" : {
+    "artifacts" : [
+      {
+        "kind" : {
+          "xcframework" : {
+
+          }
+        },
+        "packageRef" : {
+          "identity" : "capacitor-swift-pm",
+          "kind" : "remoteSourceControl",
+          "location" : "https://github.com/ionic-team/capacitor-swift-pm.git",
+          "name" : "capacitor-swift-pm"
+        },
+        "path" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/SourcePackages/artifacts/capacitor-swift-pm/Capacitor/Capacitor.xcframework",
+        "source" : {
+          "checksum" : "ab16c1187895c9d15692fca2ad8e483adb89cd76803a4069a220ba934a3bb190",
+          "type" : "remote",
+          "url" : "https://github.com/ionic-team/capacitor-swift-pm/releases/download/8.3.4/Capacitor.xcframework.zip"
+        },
+        "targetName" : "Capacitor"
+      },
+      {
+        "kind" : {
+          "xcframework" : {
+
+          }
+        },
+        "packageRef" : {
+          "identity" : "capacitor-swift-pm",
+          "kind" : "remoteSourceControl",
+          "location" : "https://github.com/ionic-team/capacitor-swift-pm.git",
+          "name" : "capacitor-swift-pm"
+        },
+        "path" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/SourcePackages/artifacts/capacitor-swift-pm/Cordova/Cordova.xcframework",
+        "source" : {
+          "checksum" : "700b28ca65630f512d03ecc13c855e870424ce2aa3030479c10ca6cbc1002d12",
+          "type" : "remote",
+          "url" : "https://github.com/ionic-team/capacitor-swift-pm/releases/download/8.3.4/Cordova.xcframework.zip"
+        },
+        "targetName" : "Cordova"
+      }
+    ],
+    "dependencies" : [
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "app-check",
+          "kind" : "remoteSourceControl",
+          "location" : "https://github.com/google/app-check.git",
+          "name" : "app-check"
+        },
+        "state" : {
+          "checkoutState" : {
+            "revision" : "61b85103a1aeed8218f17c794687781505fbbef5",
+            "version" : "11.2.0"
+          },
+          "name" : "sourceControlCheckout"
+        },
+        "subpath" : "app-check"
+      },
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "appauth-ios",
+          "kind" : "remoteSourceControl",
+          "location" : "https://github.com/openid/AppAuth-iOS.git",
+          "name" : "AppAuth-iOS"
+        },
+        "state" : {
+          "checkoutState" : {
+            "revision" : "145104f5ea9d58ae21b60add007c33c1cc0c948e",
+            "version" : "2.0.0"
+          },
+          "name" : "sourceControlCheckout"
+        },
+        "subpath" : "AppAuth-iOS"
+      },
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "capacitor-swift-pm",
+          "kind" : "remoteSourceControl",
+          "location" : "https://github.com/ionic-team/capacitor-swift-pm.git",
+          "name" : "capacitor-swift-pm"
+        },
+        "state" : {
+          "checkoutState" : {
+            "revision" : "992959f0467c781eb6a1637e69d87481238c3672",
+            "version" : "8.3.4"
+          },
+          "name" : "sourceControlCheckout"
+        },
+        "subpath" : "capacitor-swift-pm"
+      },
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "capapp-spm",
+          "kind" : "fileSystem",
+          "location" : "/Users/ankit/Documents/AI Projects/drift/ios/App/CapApp-SPM",
+          "name" : "CapApp-SPM"
+        },
+        "state" : {
+          "name" : "fileSystem",
+          "path" : "/Users/ankit/Documents/AI Projects/drift/ios/App/CapApp-SPM"
+        },
+        "subpath" : "capapp-spm"
+      },
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "googlesignin-ios",
+          "kind" : "remoteSourceControl",
+          "location" : "https://github.com/google/GoogleSignIn-iOS",
+          "name" : "GoogleSignIn-iOS"
+        },
+        "state" : {
+          "checkoutState" : {
+            "revision" : "913b4005ea26aebe1c97d54e35ad82a515924c71",
+            "version" : "9.1.0"
+          },
+          "name" : "sourceControlCheckout"
+        },
+        "subpath" : "GoogleSignIn-iOS"
+      },
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "googleutilities",
+          "kind" : "remoteSourceControl",
+          "location" : "https://github.com/google/GoogleUtilities.git",
+          "name" : "GoogleUtilities"
+        },
+        "state" : {
+          "checkoutState" : {
+            "revision" : "60da361632d0de02786f709bdc0c4df340f7613e",
+            "version" : "8.1.0"
+          },
+          "name" : "sourceControlCheckout"
+        },
+        "subpath" : "GoogleUtilities"
+      },
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "gtm-session-fetcher",
+          "kind" : "remoteSourceControl",
+          "location" : "https://github.com/google/gtm-session-fetcher.git",
+          "name" : "gtm-session-fetcher"
+        },
+        "state" : {
+          "checkoutState" : {
+            "revision" : "a2ab612cb980066ee56d90d60d8462992c07f24b",
+            "version" : "3.5.0"
+          },
+          "name" : "sourceControlCheckout"
+        },
+        "subpath" : "gtm-session-fetcher"
+      },
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "gtmappauth",
+          "kind" : "remoteSourceControl",
+          "location" : "https://github.com/google/GTMAppAuth.git",
+          "name" : "GTMAppAuth"
+        },
+        "state" : {
+          "checkoutState" : {
+            "revision" : "56e0ccf09a6dd29dc7e68bdf729598240ca8aa16",
+            "version" : "5.0.0"
+          },
+          "name" : "sourceControlCheckout"
+        },
+        "subpath" : "GTMAppAuth"
+      },
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "promises",
+          "kind" : "remoteSourceControl",
+          "location" : "https://github.com/google/promises.git",
+          "name" : "promises"
+        },
+        "state" : {
+          "checkoutState" : {
+            "revision" : "540318ecedd63d883069ae7f1ed811a2df00b6ac",
+            "version" : "2.4.0"
+          },
+          "name" : "sourceControlCheckout"
+        },
+        "subpath" : "promises"
+      }
+    ],
+    "prebuilts" : [
+
+    ]
+  },
+  "version" : 7
+}

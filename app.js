@@ -190,6 +190,7 @@
     syncAudiobooksSettingFromFirestore();
     syncAudiobookProgressFromFirestore();
     initDownloads();
+    checkForUpdate();
     checkShareParam();
 
     // Skip auth-dependent setup when booting from the localStorage cache snapshot.
@@ -1919,10 +1920,100 @@
     }
     loadEkadashiTile();
     renderNitya();
+    renderUpdateBanner();
 
     // loadStoryOfDay() handles skeleton show/hide synchronously before its first
     // await, so there is no blank gap or flash — no pre-show needed here.
     loadStoryOfDay();
+  }
+
+  // ============== APP UPDATE CHECK (native only) ==============
+  // The installed version is baked into window.APP_BUILD at native build time.
+  // The latest released version comes from a manifest we host and bump per release.
+  const APP_VERSION_MANIFEST = 'https://mysanskar.vercel.app/app-version.json';
+  const ANDROID_PACKAGE = 'com.ankit.mysanskar';
+  let _updateInfo = null; // { latest, url } when an update is available
+
+  function appVersion() { return (window.APP_BUILD && window.APP_BUILD.version) || null; }
+  function appBuildNum() { return (window.APP_BUILD && window.APP_BUILD.build) || null; }
+  function platformKey() {
+    const p = window.Capacitor?.getPlatform?.();
+    return (p === 'ios' || p === 'android') ? p : null;
+  }
+  // Semver-ish compare: returns 1 if a>b, -1 if a<b, 0 if equal. Tolerates "1.3.0" vs "1.3".
+  function cmpVersion(a, b) {
+    const pa = String(a).split('.').map((n) => parseInt(n, 10) || 0);
+    const pb = String(b).split('.').map((n) => parseInt(n, 10) || 0);
+    const len = Math.max(pa.length, pb.length);
+    for (let i = 0; i < len; i++) {
+      const x = pa[i] || 0, y = pb[i] || 0;
+      if (x > y) return 1;
+      if (x < y) return -1;
+    }
+    return 0;
+  }
+  function storeUrlFor(plat, cfg) {
+    if (plat === 'ios') {
+      const id = cfg && cfg.appStoreId;
+      // Direct deep link to the (unlisted) App Store product page.
+      return id ? `itms-apps://apps.apple.com/app/id${id}` : 'itms-apps://';
+    }
+    return `market://details?id=${ANDROID_PACKAGE}`;
+  }
+  function openStore() {
+    if (!_updateInfo || !_updateInfo.url) return;
+    try { window.open(_updateInfo.url, '_system'); }
+    catch { window.location.href = _updateInfo.url; }
+  }
+
+  // Fetch the manifest and decide whether an update is available.
+  async function checkForUpdate() {
+    const plat = platformKey();
+    const cur  = appVersion();
+    if (!plat || !cur) return; // web / unknown version → nothing to check
+    try {
+      const res = await fetch(`${APP_VERSION_MANIFEST}?t=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      const cfg  = data[plat];
+      if (!cfg || !cfg.latest) return;
+      if (cmpVersion(cfg.latest, cur) > 0) {
+        _updateInfo = { latest: cfg.latest, url: storeUrlFor(plat, cfg) };
+      } else {
+        _updateInfo = null;
+      }
+    } catch { /* offline / parse error → stay quiet */ }
+    renderUpdateBanner();
+    renderSettingsAbout();
+  }
+
+  function renderUpdateBanner() {
+    const banner = $('update-banner');
+    if (!banner) return;
+    const dismissed = localStorage.getItem('drift.updateDismissed');
+    const show = !!_updateInfo && _updateInfo.latest !== dismissed;
+    banner.classList.toggle('hidden', !show);
+    if (show) {
+      const sub = $('update-banner-sub');
+      if (sub) sub.textContent = `Version ${_updateInfo.latest} is ready`;
+    }
+  }
+
+  // Settings → About: show the installed version + update status (native only).
+  function renderSettingsAbout() {
+    const label  = $('settings-about-label');
+    const group  = $('settings-about-group');
+    const verEl  = $('settings-version-value');
+    const statEl = $('settings-update-status');
+    const native = !!appVersion();
+    if (label) label.classList.toggle('hidden', !native);
+    if (group) group.classList.toggle('hidden', !native);
+    if (!native) return;
+    if (verEl) verEl.textContent = appBuildNum() ? `${appVersion()} (${appBuildNum()})` : appVersion();
+    if (statEl) {
+      statEl.textContent = _updateInfo ? `${_updateInfo.latest} available` : 'Up to date';
+      statEl.classList.toggle('settings-update-available', !!_updateInfo);
+    }
   }
 
   // ============== NITYA — quick-play shortcuts ==============
@@ -5091,6 +5182,7 @@ ${numbered}`;
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && state.user) {
         checkBlockedStatus(user.uid);
+        checkForUpdate(); // re-check when the app returns to the foreground
       }
     });
   }
@@ -5876,6 +5968,22 @@ ${numbered}`;
     // Brand logo → home tab
     $('brand-home-btn').addEventListener('click', () => switchTab('home'));
 
+    // Update banner — tap to open the store, × to dismiss this version
+    $('update-banner').addEventListener('click', openStore);
+    $('update-banner-close').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (_updateInfo) localStorage.setItem('drift.updateDismissed', _updateInfo.latest);
+      renderUpdateBanner();
+    });
+    // Settings → Check for updates row
+    $('settings-update-row').addEventListener('click', async () => {
+      if (_updateInfo) { openStore(); return; }
+      const statEl = $('settings-update-status');
+      if (statEl) statEl.textContent = 'Checking…';
+      await checkForUpdate();
+      if (!_updateInfo) toast('You’re on the latest version');
+    });
+
     // Nitya quick-play shortcuts
     $('nitya-edit-btn').addEventListener('click', toggleNityaEdit);
     $('nitya-picker-close').addEventListener('click', () => closeModal('nitya-picker'));
@@ -6015,6 +6123,7 @@ ${numbered}`;
       // Account + Child summary rows
       refreshAccountRow();
       refreshChildSummaryRow();
+      renderSettingsAbout();
 
       // Reflect current default language + theme selection
       const curLang = getDefaultStoryLang();

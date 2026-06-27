@@ -14,6 +14,7 @@ echo "→ Copying web files…"
 FILES=(
   index.html
   app.js
+  app-build.js
   styles.css
   stories-data.js
   translations-data.js
@@ -36,6 +37,17 @@ done
 # Copy icons directory
 if [ -d "$ROOT/icons" ]; then
   cp -r "$ROOT/icons" "$DEST/icons"
+fi
+
+# Inject the real installed version into www/app-build.js, read from the Xcode
+# project so it always matches the build the user is shipping. (Native bundles
+# load these bundled assets; this keeps the in-app version display accurate.)
+PBXPROJ="$ROOT/ios/App/App.xcodeproj/project.pbxproj"
+if [ -f "$PBXPROJ" ]; then
+  VER=$(grep -m1 'MARKETING_VERSION' "$PBXPROJ" | sed 's/.*= *//; s/;//' | tr -d ' ')
+  BLD=$(grep -m1 'CURRENT_PROJECT_VERSION' "$PBXPROJ" | sed 's/.*= *//; s/;//' | tr -d ' ')
+  printf 'window.APP_BUILD = { version: "%s", build: "%s" };\n' "$VER" "$BLD" > "$DEST/app-build.js"
+  echo "  ✓ app-build.js stamped with v$VER ($BLD)"
 fi
 
 # Copy config.js if present (API keys — gitignored, never committed)
