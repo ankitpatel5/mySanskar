@@ -17,6 +17,7 @@ FILES=(
   app-build.js
   styles.css
   stories-data.js
+  gujarati-data-content.js
   translations-data.js
   title-translations.js
   firebase-config.js

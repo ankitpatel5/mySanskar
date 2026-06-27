@@ -303,10 +303,40 @@
         <!-- Story Time: Category grid -->
         <section id="view-stories" class="view hidden">
           <div class="view-header">
-            <h2 class="view-title">Story Time</h2>
+            <h2 class="view-title">Learn</h2>
           </div>
-          <p class="view-sub story-tab-sub">Jay Swaminarayan — choose a category to begin</p>
+          <div class="learn-section-label">Language</div>
+          <div class="guj-hero-wrap" id="guj-hero"></div>
+          <div class="learn-section-label">Stories</div>
           <div class="story-cats" id="story-cats"></div>
+          <div class="learn-section-label">Conversations</div>
+          <div class="story-cats" id="conv-cats"></div>
+        </section>
+
+        <!-- Learn Gujarati: hub of subsections -->
+        <section id="view-gujarati-hub" class="view hidden">
+          <button class="back-btn" id="guj-hub-back" aria-label="Back">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="view-header"><h2 class="view-title">Learn Gujarati</h2></div>
+          <div class="guj-hub-grid" id="guj-hub-grid"></div>
+        </section>
+
+        <!-- Learn Gujarati: a section (letter/topic grid OR pack list) -->
+        <section id="view-gujarati-section" class="view hidden">
+          <button class="back-btn" id="guj-section-back" aria-label="Back">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="view-header"><div><h2 class="view-title" id="guj-section-title">—</h2><p class="view-sub" id="guj-section-sub"></p></div></div>
+          <div id="guj-section-body"></div>
+        </section>
+
+        <!-- Learn Gujarati: detail (flashcards / verb cards / sentence table) -->
+        <section id="view-gujarati-detail" class="view hidden">
+          <button class="back-btn" id="guj-detail-back" aria-label="Back">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div id="guj-detail-body"></div>
         </section>
 
         <!-- AI Stories: Generator -->
@@ -790,7 +820,7 @@
         </button>
         <button class="tab" data-tab="stories">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-          <span>Stories</span>
+          <span>Learn</span>
         </button>
         <button class="tab hidden" data-tab="audiobooks" id="audiobooks-tab-btn">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
@@ -1363,6 +1393,7 @@
   <script src="firebase-config.js"></script>
   <script src="config.js"></script>
   <script src="stories-data.js"></script>
+  <script src="gujarati-data-content.js"></script>
   <script src="lottie.min.js"></script>
   <script src="translations-data.js"></script>
   <script src="title-translations.js"></script>

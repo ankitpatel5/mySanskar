@@ -2500,6 +2500,7 @@
   // ============== STORY TIME ==============
 
   function renderStoryCategories() {
+    renderGujHero();
     const data = window.STORIES_DATA;
     if (!data) return;
     const container = $('story-cats');
@@ -2520,8 +2521,10 @@
       container.appendChild(card);
     });
 
-    // Conversation Starters card
-    if (window.CONVERSATION_STARTERS) {
+    // Conversation Starters card — its own "Conversations" section
+    const convContainer = $('conv-cats');
+    if (convContainer) convContainer.innerHTML = '';
+    if (window.CONVERSATION_STARTERS && convContainer) {
       const convCard = document.createElement('div');
       convCard.className = 'story-cat-card';
       convCard.style.background = 'linear-gradient(135deg, #5B8FD6, #7B5EC8)';
@@ -2541,7 +2544,7 @@
         }
         openConversationAges();
       });
-      container.appendChild(convCard);
+      convContainer.appendChild(convCard);
     }
 
     // AI Stories card
@@ -2563,6 +2566,195 @@
       openAIStories();
     });
     container.appendChild(aiCard);
+  }
+
+  // ============== LEARN GUJARATI ==============
+  const GUJ_META = {
+    vowels:     { label: 'Vowels',      kind: 'grid', glyph: 'અ',  unit: 'letters' },
+    consonants: { label: 'Consonants',  kind: 'grid', glyph: 'ક',  unit: 'letters' },
+    numbers:    { label: 'Numbers',     kind: 'grid', glyph: '૧',  unit: 'numbers' },
+    vocabulary: { label: 'Vocabulary',  kind: 'grid', icon: 'books', unit: 'topics' },
+    verbs:      { label: 'Verbs',       kind: 'verbs', icon: 'run',  unit: 'verbs' },
+    sentences:  { label: 'Sentences',   kind: 'sentences', icon: 'chat', unit: 'sentences' },
+  };
+  const GUJ_ICONS = {
+    books: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+    run:   '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4" r="1"/><path d="M4 17l5-1 2-4 4 3 3 1M11 12l-1 5 3 4M14 7l-2 3"/></svg>',
+    chat:  '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg>',
+  };
+  const SPEAKER = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+  const PLAY_TRI = '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>';
+
+  let _gujAudio = null;
+  function gujPlay(url) {
+    if (!url) return;
+    if (!_gujAudio) _gujAudio = new Audio();
+    if (!audio.paused) audio.pause();            // pause music
+    if (_abAudio && !_abAudio.paused) abPause();  // pause audiobook
+    try { _gujAudio.pause(); _gujAudio.src = url; _gujAudio.currentTime = 0; _gujAudio.play().catch(() => {}); } catch {}
+  }
+
+  // Hero entry on the Learn tab
+  function renderGujHero() {
+    const el = $('guj-hero');
+    if (!el || !window.GUJARATI_DATA) return;
+    el.innerHTML = `
+      <button class="guj-hero" id="guj-hero-btn">
+        <span class="guj-hero-mark">અ<br>ક<br>૧</span>
+        <span class="guj-hero-text">
+          <span class="guj-hero-title">Learn Gujarati</span>
+          <span class="guj-hero-sub">Letters, words, verbs &amp; sentences</span>
+        </span>
+        <span class="guj-hero-arrow"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+      </button>`;
+    $('guj-hero-btn').addEventListener('click', openGujHub);
+  }
+
+  function openGujHub() {
+    const grid = $('guj-hub-grid');
+    const data = window.GUJARATI_DATA;
+    if (!grid || !data) return;
+    grid.innerHTML = '';
+    Object.keys(GUJ_META).forEach((key) => {
+      const m = GUJ_META[key];
+      const d = data[key];
+      const count = d.items ? d.items.length : d.packs ? d.packs.length : d.sets ? d.sets.length : 0;
+      const unit = (m.kind === 'verbs') ? `${d.packs.reduce((n, p) => n + p.verbs.length, 0)} verbs`
+        : (m.kind === 'sentences') ? `${d.sets.reduce((n, s) => n + s.rows.length, 0)} sentences`
+        : `${count} ${m.unit}`;
+      const head = m.glyph ? `<span class="guj-hub-glyph">${m.glyph}</span>` : `<span class="guj-hub-ic">${GUJ_ICONS[m.icon]}</span>`;
+      const card = document.createElement('button');
+      card.className = 'guj-hub-card';
+      card.innerHTML = `${head}<span class="guj-hub-name">${m.label}</span><span class="guj-hub-count">${unit}</span>`;
+      card.addEventListener('click', () => openGujSection(key));
+      grid.appendChild(card);
+    });
+    switchView('view-gujarati-hub');
+    $('content').scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  function openGujSection(key) {
+    const m = GUJ_META[key];
+    const d = window.GUJARATI_DATA[key];
+    _gujKey = key;
+    $('guj-section-title').textContent = m.label;
+    const body = $('guj-section-body');
+    body.innerHTML = '';
+    const sub = $('guj-section-sub');
+
+    if (m.kind === 'grid') {
+      sub.textContent = `Tap a ${m.unit.replace(/s$/, '')} to learn`;
+      const grid = document.createElement('div');
+      grid.className = 'guj-grid';
+      d.items.forEach((it, idx) => {
+        const isTopic = key === 'vocabulary';
+        const tile = document.createElement('button');
+        tile.className = isTopic ? 'guj-topic-tile' : 'guj-letter-tile';
+        if (isTopic) {
+          tile.innerHTML = `<span class="guj-topic-guj">${escapeHtml(it.gujarati)}</span><span class="guj-topic-eng">${escapeHtml(it.translit || it.english || '')}</span><span class="guj-topic-arrow">${PLAY_TRI}</span>`;
+        } else {
+          tile.innerHTML = `<span class="guj-letter-glyph">${escapeHtml(it.gujarati)}</span><span class="guj-letter-translit">${escapeHtml(it.translit || '')}</span>${it.audio ? `<span class="guj-letter-listen" data-audio="1">${SPEAKER}</span>` : ''}`;
+        }
+        tile.addEventListener('click', (e) => {
+          if (e.target.closest('[data-audio]')) { e.stopPropagation(); gujPlay(it.audio); return; }
+          openGujDetail(key, idx);
+        });
+        grid.appendChild(tile);
+      });
+      body.appendChild(grid);
+    } else if (m.kind === 'verbs') {
+      sub.textContent = 'Choose a set';
+      body.appendChild(buildPackList(d.packs.map((p, i) => ({ label: p.pack.replace('part-', 'Set '), count: `${p.verbs.length} verbs`, idx: i })), (i) => openGujDetail('verbs', i)));
+    } else if (m.kind === 'sentences') {
+      sub.textContent = 'Choose a set';
+      body.appendChild(buildPackList(d.sets.map((s, i) => ({ label: s.set.replace('set-', 'Set '), count: `${s.rows.length} sentences`, idx: i })), (i) => openGujDetail('sentences', i)));
+    }
+    switchView('view-gujarati-section');
+    $('content').scrollTo({ top: 0, behavior: 'instant' });
+  }
+  let _gujKey = null;
+
+  function buildPackList(items, onTap) {
+    const wrap = document.createElement('div');
+    wrap.className = 'guj-pack-list';
+    items.forEach((it) => {
+      const row = document.createElement('button');
+      row.className = 'guj-pack-row';
+      row.innerHTML = `<span class="guj-pack-name">${it.label}</span><span class="guj-pack-count">${it.count}</span><svg class="guj-pack-chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+      row.addEventListener('click', () => onTap(it.idx));
+      wrap.appendChild(row);
+    });
+    return wrap;
+  }
+
+  function openGujDetail(key, idx) {
+    const d = window.GUJARATI_DATA[key];
+    const body = $('guj-detail-body');
+    body.innerHTML = '';
+
+    if (key === 'verbs' || key === 'sentences') {
+      const pack = key === 'verbs' ? d.packs[idx] : d.sets[idx];
+      const title = (key === 'verbs' ? pack.pack : pack.set).replace(/-/, ' ').replace(/^\w/, c => c.toUpperCase());
+      body.appendChild(detailHeader(title, ''));
+      if (key === 'verbs') {
+        pack.verbs.forEach((v) => body.appendChild(verbCard(v)));
+      } else {
+        pack.rows.forEach((r) => body.appendChild(sentenceRow(r)));
+      }
+    } else {
+      const it = d.items[idx];
+      const hero = document.createElement('div');
+      hero.className = 'guj-detail-hero';
+      hero.innerHTML = `<div class="guj-detail-glyph">${escapeHtml(it.gujarati)}</div>${it.audio ? `<button class="guj-hear-btn" id="guj-hear">${SPEAKER}<span>Hear "${escapeHtml(it.translit || '')}"</span></button>` : ''}`;
+      body.appendChild(detailHeader('', ''));
+      body.appendChild(hero);
+      if (it.audio) hero.querySelector('#guj-hear').addEventListener('click', () => gujPlay(it.audio));
+      const grid = document.createElement('div');
+      grid.className = 'guj-flash-grid';
+      (it.words || []).forEach((w) => grid.appendChild(flashCard(w)));
+      body.appendChild(grid);
+    }
+    switchView('view-gujarati-detail');
+    $('content').scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  function detailHeader(title) {
+    const h = document.createElement('div');
+    h.className = 'guj-detail-head';
+    if (title) h.innerHTML = `<span class="guj-detail-title">${escapeHtml(title)}</span>`;
+    return h;
+  }
+  function flashCard(w) {
+    const c = document.createElement('button');
+    c.className = 'guj-flash';
+    c.innerHTML = `
+      <span class="guj-flash-img">${w.image ? `<img src="${w.image}" alt="${escapeHtml(w.english)}" loading="lazy">` : ''}${w.audio ? `<span class="guj-flash-play">${PLAY_TRI}</span>` : ''}</span>
+      <span class="guj-flash-word">${escapeHtml(w.gujarati)}</span>
+      <span class="guj-flash-sub">${escapeHtml([w.translit, w.english].filter(Boolean).join(' · '))}</span>`;
+    c.addEventListener('click', () => gujPlay(w.audio));
+    return c;
+  }
+  function verbCard(v) {
+    const c = document.createElement('div');
+    c.className = 'guj-verb-card';
+    const labels = ['Present', 'Past', 'Future'];
+    const head = `<div class="guj-verb-head">${v.image ? `<img src="${v.image}" alt="" loading="lazy">` : ''}<span>${escapeHtml(v.tenses?.[0]?.english || '')}</span></div>`;
+    const rows = (v.tenses || []).map((t, i) => `
+      <button class="guj-verb-row" data-audio="${t.audio || ''}">
+        <span class="guj-verb-tense">${labels[i] || ''}</span>
+        <span class="guj-verb-word">${escapeHtml(t.gujarati)} <span class="guj-verb-translit">${escapeHtml(t.translit || '')}</span></span>
+        <span class="guj-verb-play">${PLAY_TRI}</span>
+      </button>`).join('');
+    c.innerHTML = head + rows;
+    c.querySelectorAll('.guj-verb-row').forEach((r) => r.addEventListener('click', () => gujPlay(r.dataset.audio)));
+    return c;
+  }
+  function sentenceRow(r) {
+    const row = document.createElement('button');
+    row.className = 'guj-sentence-row';
+    row.innerHTML = `<span class="guj-sentence-main"><span class="guj-sentence-guj">${escapeHtml(r.gujarati)}</span><span class="guj-sentence-eng">${escapeHtml(r.english)}</span></span><span class="guj-verb-play">${PLAY_TRI}</span>`;
+    row.addEventListener('click', () => gujPlay(r.audio));
+    return row;
   }
 
   function openStoryCategory(catId) {
@@ -6452,6 +6644,11 @@ ${numbered}`;
 
     // ── Story Time ──────────────────────────────────────
     $('conv-ages-back').addEventListener('click', () => switchTab('stories'));
+
+    // Learn Gujarati navigation
+    $('guj-hub-back').addEventListener('click', () => switchTab('stories'));
+    $('guj-section-back').addEventListener('click', () => openGujHub());
+    $('guj-detail-back').addEventListener('click', () => { if (_gujKey) openGujSection(_gujKey); else openGujHub(); });
 
     // Audiobooks back + more details toggle
     $('ab-resync-btn').addEventListener('click', async () => {
