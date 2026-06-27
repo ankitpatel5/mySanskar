@@ -1927,7 +1927,9 @@
 
   // ============== NITYA — quick-play shortcuts ==============
   // Patterns used to seed sensible defaults the first time (Aarti, Full Chesta).
-  const NITYA_DEFAULTS = [/a+rti/i, /full\s*chesta|chesta/i, /sahajanand\s*namavali|namavali/i];
+  // Defaults seeded for new users — the Namavali default is the "Path" version
+  // specifically (not the "Musical" one).
+  const NITYA_DEFAULTS = [/a+rti/i, /full\s*chesta|chesta/i, /namavali.*path|path.*namavali/i];
   let _nityaEditing = false;
   const NITYA_MUSIC_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
   const NITYA_PLAY_SVG  = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>';
@@ -1956,16 +1958,23 @@
   // One-time upgrade: add Sahajanand Namavali Path to users who were seeded before
   // it became a default. Flagged so a user who later removes it isn't re-given it.
   function ensureNityaUpgrades() {
-    if (localStorage.getItem('drift.nitya.v2') === '1') return;
     if (!state.flatTracks || !state.flatTracks.length) return;
-    if (state.nitya === null) return; // fresh users already get it via seedNityaDefaults
-    const re = /sahajanand\s*namavali|namavali/i;
-    const t = state.flatTracks.find((tr) => re.test(tr.name));
-    if (t && !state.nitya.some((s) => s.id === t.id)) {
-      state.nitya.push({ id: t.id, name: t.name });
+    if (state.nitya === null) return; // fresh users get correct defaults via seedNityaDefaults
+
+    // v3 — correct the Sahajanand Namavali default: drop the "Musical" version an
+    // earlier build seeded, and ensure the "Path" version is present instead.
+    if (localStorage.getItem('drift.nitya.v3') !== '1') {
+      state.nitya = state.nitya.filter((s) => !(/namavali/i.test(s.name) && /musical/i.test(s.name)));
+      const pathRe = /namavali.*path|path.*namavali/i;
+      if (!state.nitya.some((s) => pathRe.test(s.name))) {
+        const t = state.flatTracks.find((tr) => pathRe.test(tr.name));
+        if (t && !state.nitya.some((s) => s.id === t.id)) {
+          state.nitya.push({ id: t.id, name: t.name });
+        }
+      }
       saveNitya();
+      localStorage.setItem('drift.nitya.v3', '1');
     }
-    localStorage.setItem('drift.nitya.v2', '1');
   }
   function nityaToggle(id) {
     if (_nityaEditing) return;
