@@ -2610,22 +2610,62 @@
     $('guj-hero-btn').addEventListener('click', openGujHub);
   }
 
+  // ── Quiet progress (gentle gamification) ──────────────────
+  // Tracks which items per subsection the learner has opened, shown as a soft
+  // teal ring on each hub card. Persisted locally.
+  let _gujProgress = null;
+  function ensureGujProgress() {
+    if (_gujProgress === null) {
+      try { _gujProgress = JSON.parse(localStorage.getItem('drift.gujProgress') || '{}'); }
+      catch { _gujProgress = {}; }
+    }
+    return _gujProgress;
+  }
+  function gujTotal(key) {
+    const d = window.GUJARATI_DATA[key];
+    return d.items ? d.items.length : d.packs ? d.packs.length : d.sets ? d.sets.length : 0;
+  }
+  function gujDone(key) {
+    const p = ensureGujProgress();
+    return Array.isArray(p[key]) ? p[key].length : 0;
+  }
+  function markGujDone(key, idx) {
+    const p = ensureGujProgress();
+    if (!p[key]) p[key] = [];
+    if (!p[key].includes(idx)) {
+      p[key].push(idx);
+      try { localStorage.setItem('drift.gujProgress', JSON.stringify(p)); } catch {}
+    }
+  }
+  function gujRing(pct) {
+    const C = 94.25, off = C * (1 - Math.max(0, Math.min(1, pct)));
+    const done = pct >= 1;
+    return `<svg class="guj-ring" viewBox="0 0 36 36" width="26" height="26" aria-hidden="true">
+      <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3"/>
+      <circle cx="18" cy="18" r="15" fill="none" stroke="#3fb999" stroke-width="3" stroke-dasharray="${C}" stroke-dashoffset="${off}" stroke-linecap="round" transform="rotate(-90 18 18)"/>
+      ${done ? '<path d="M13 18.5l3.2 3.2L23 15" fill="none" stroke="#3fb999" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' : ''}
+    </svg>`;
+  }
+
   function openGujHub() {
     const grid = $('guj-hub-grid');
     const data = window.GUJARATI_DATA;
     if (!grid || !data) return;
+    ensureGujProgress();
     grid.innerHTML = '';
     Object.keys(GUJ_META).forEach((key) => {
       const m = GUJ_META[key];
       const d = data[key];
-      const count = d.items ? d.items.length : d.packs ? d.packs.length : d.sets ? d.sets.length : 0;
+      const total = gujTotal(key);
+      const done  = gujDone(key);
       const unit = (m.kind === 'verbs') ? `${d.packs.reduce((n, p) => n + p.verbs.length, 0)} verbs`
         : (m.kind === 'sentences') ? `${d.sets.reduce((n, s) => n + s.rows.length, 0)} sentences`
-        : `${count} ${m.unit}`;
+        : `${total} ${m.unit}`;
       const head = m.glyph ? `<span class="guj-hub-glyph">${m.glyph}</span>` : `<span class="guj-hub-ic">${GUJ_ICONS[m.icon]}</span>`;
+      const countLine = done > 0 ? `${done} / ${total} done` : unit;
       const card = document.createElement('button');
       card.className = 'guj-hub-card';
-      card.innerHTML = `${head}<span class="guj-hub-name">${m.label}</span><span class="guj-hub-count">${unit}</span>`;
+      card.innerHTML = `<span class="guj-hub-top">${head}${gujRing(total ? done / total : 0)}</span><span class="guj-hub-name">${m.label}</span><span class="guj-hub-count">${countLine}</span>`;
       card.addEventListener('click', () => openGujSection(key));
       grid.appendChild(card);
     });
@@ -2688,6 +2728,7 @@
   }
 
   function openGujDetail(key, idx) {
+    markGujDone(key, idx); // opening an item counts toward subsection progress
     const d = window.GUJARATI_DATA[key];
     const body = $('guj-detail-body');
     body.innerHTML = '';

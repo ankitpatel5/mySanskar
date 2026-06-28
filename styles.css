@@ -685,8 +685,10 @@ input { font-family: inherit; color: inherit; }
   flex-direction: column;
 }
 .guj-hub-card:active { background: var(--bg-2); }
+.guj-hub-top { display: flex; align-items: flex-start; justify-content: space-between; }
 .guj-hub-glyph { font-size: 30px; font-weight: 500; color: var(--fg-0); line-height: 1; }
 .guj-hub-ic { color: #3fb999; display: block; }
+.guj-ring { flex-shrink: 0; }
 .guj-hub-name { font-size: 14px; font-weight: 500; color: var(--fg-0); margin-top: auto; padding-top: 12px; }
 .guj-hub-count { font-size: 11px; color: var(--fg-3); margin-top: 2px; }
 
