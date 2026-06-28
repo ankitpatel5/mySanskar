@@ -189,6 +189,8 @@
     loadConvTalked();
     syncAudiobooksSettingFromFirestore();
     syncAudiobookProgressFromFirestore();
+    syncGujProgressFromFirestore();
+    syncNityaFromFirestore();
     initDownloads();
     checkForUpdate();
     checkShareParam();
@@ -2034,9 +2036,37 @@
   }
   function saveNitya() {
     try { localStorage.setItem(LS.nitya, JSON.stringify(state.nitya || [])); } catch {}
+    saveNityaToFirestore();
+  }
+  // Cross-device sync (Firestore, per user). The shortcut list is curated/ordered,
+  // so the cloud copy is authoritative on load; a local-only list seeds the cloud.
+  function nityaRef() { return state.user ? window.fbDb.doc(`users/${state.user.uid}/settings/nitya`) : null; }
+  let _nityaSynced = false;
+  let _nityaSaveTimer = null;
+  function saveNityaToFirestore() {
+    const ref = nityaRef(); if (!ref || state.nitya == null) return;
+    clearTimeout(_nityaSaveTimer);
+    _nityaSaveTimer = setTimeout(() => {
+      ref.set({ items: state.nitya || [] }, { merge: true }).catch((e) => console.warn('nitya save failed', e));
+    }, 800);
+  }
+  async function syncNityaFromFirestore() {
+    const ref = nityaRef(); if (!ref) return;
+    try {
+      const doc = await ref.get();
+      if (doc.exists && Array.isArray(doc.data().items)) {
+        state.nitya = doc.data().items;                 // cloud is authoritative
+        try { localStorage.setItem(LS.nitya, JSON.stringify(state.nitya)); } catch {}
+      } else if (state.nitya && state.nitya.length) {
+        ref.set({ items: state.nitya }, { merge: true }).catch(() => {}); // seed cloud from local
+      }
+      _nityaSynced = true;   // unblock default-seeding for brand-new users
+      renderNitya();         // adopt cloud / allow seeding now
+    } catch (e) { _nityaSynced = true; console.warn('nitya sync failed', e); }
   }
   function seedNityaDefaults() {
     if (state.nitya !== null) return;               // already configured (even if empty)
+    if (state.user && !_nityaSynced) return;        // wait for cloud check first (avoid clobbering curated list)
     if (!state.flatTracks || !state.flatTracks.length) return; // wait for library
     const picks = [];
     NITYA_DEFAULTS.forEach((re) => {
@@ -2635,7 +2665,37 @@
     if (!p[key].includes(idx)) {
       p[key].push(idx);
       try { localStorage.setItem('drift.gujProgress', JSON.stringify(p)); } catch {}
+      saveGujProgressToFirestore();
     }
+  }
+  // Cross-device sync (Firestore, per user) — merged with local so progress is
+  // never lost across devices.
+  function gujProgressRef() { return state.user ? window.fbDb.doc(`users/${state.user.uid}/settings/gujProgress`) : null; }
+  let _gujSaveTimer = null;
+  function saveGujProgressToFirestore() {
+    const ref = gujProgressRef(); if (!ref) return;
+    clearTimeout(_gujSaveTimer);
+    _gujSaveTimer = setTimeout(() => {
+      ref.set({ progress: ensureGujProgress() }, { merge: true }).catch((e) => console.warn('guj progress save failed', e));
+    }, 800);
+  }
+  async function syncGujProgressFromFirestore() {
+    const ref = gujProgressRef(); if (!ref) return;
+    try {
+      const doc = await ref.get();
+      const remote = (doc.exists && doc.data().progress) ? doc.data().progress : {};
+      const local = ensureGujProgress();
+      const merged = {};
+      let localGrew = false;
+      new Set([...Object.keys(local), ...Object.keys(remote)]).forEach((k) => {
+        merged[k] = [...new Set([...(local[k] || []), ...(remote[k] || [])])];
+        if (merged[k].length > (remote[k] || []).length) localGrew = true;
+      });
+      _gujProgress = merged;
+      try { localStorage.setItem('drift.gujProgress', JSON.stringify(merged)); } catch {}
+      if (localGrew) ref.set({ progress: merged }, { merge: true }).catch(() => {}); // push local-only items up
+      if (!$('view-gujarati-hub').classList.contains('hidden')) openGujHub(); // refresh rings if visible
+    } catch (e) { console.warn('guj progress sync failed', e); }
   }
   function gujRing(pct) {
     const C = 94.25, off = C * (1 - Math.max(0, Math.min(1, pct)));
