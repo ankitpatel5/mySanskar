@@ -2728,9 +2728,14 @@
     const c = document.createElement('button');
     c.className = 'guj-flash';
     c.innerHTML = `
-      <span class="guj-flash-img">${w.image ? `<img src="${w.image}" alt="${escapeHtml(w.english)}" loading="lazy">` : ''}${w.audio ? `<span class="guj-flash-play">${PLAY_TRI}</span>` : ''}</span>
-      <span class="guj-flash-word">${escapeHtml(w.gujarati)}</span>
-      <span class="guj-flash-sub">${escapeHtml([w.translit, w.english].filter(Boolean).join(' · '))}</span>`;
+      <span class="guj-flash-img">${w.image ? `<img src="${w.image}" alt="${escapeHtml(w.english)}" loading="lazy">` : ''}</span>
+      <span class="guj-flash-body">
+        <span class="guj-flash-text">
+          <span class="guj-flash-word">${escapeHtml(w.gujarati)}</span>
+          <span class="guj-flash-sub">${escapeHtml([w.translit, w.english].filter(Boolean).join(' · '))}</span>
+        </span>
+        ${w.audio ? `<span class="guj-flash-playbtn">${PLAY_TRI}</span>` : ''}
+      </span>`;
     c.addEventListener('click', () => gujPlay(w.audio));
     return c;
   }

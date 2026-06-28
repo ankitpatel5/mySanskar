@@ -666,9 +666,13 @@ input { font-family: inherit; color: inherit; }
 
 .guj-hub-grid, .guj-grid, .guj-flash-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* Fixed ~160px tiles that add columns on wider screens (never 2 giant ones);
+     capped + centered so the grid itself can't sprawl regardless of the view. */
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 10px;
-  padding: 0 20px 24px;
+  max-width: 540px;
+  margin: 0 auto;
+  padding: 0 0 24px;   /* .view already provides the 20px side padding */
 }
 .guj-hub-card {
   background: var(--bg-1, #161310);
@@ -780,15 +784,22 @@ input { font-family: inherit; color: inherit; }
   padding: 10px;
 }
 .guj-flash-img img { width: 100%; height: 100%; object-fit: contain; }
-.guj-flash-play {
-  position: absolute; bottom: 12px; right: 12px;
-  width: 34px; height: 34px; border-radius: 50%;
+/* Bottom row: text left, play button right (no overlay on the image → never clipped) */
+.guj-flash-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 12px;
+}
+.guj-flash-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.guj-flash-word { font-size: 20px; font-weight: 500; color: var(--fg-0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.guj-flash-sub { font-size: 13px; color: var(--fg-2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.guj-flash-playbtn {
+  width: 36px; height: 36px; border-radius: 50%;
   background: var(--accent); color: var(--play-btn-color);
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  flex-shrink: 0;
 }
-.guj-flash-word { font-size: 22px; font-weight: 500; color: var(--fg-0); padding: 11px 12px 0; }
-.guj-flash-sub { font-size: 14px; color: var(--fg-2); padding: 3px 12px 13px; }
 
 /* Verb cards */
 .guj-verb-card {
