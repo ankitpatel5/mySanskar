@@ -3932,6 +3932,18 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
       ? `The main character is: ${character}.`
       : 'Choose a fitting main character — a curious child, a kind animal, a wise elder, or a young friend.';
 
+    // Randomized fresh setting to break the model's habit of defaulting to
+    // gardens/plants for abstract values (seeds, sprouts, blooms).
+    const SETTINGS = [
+      'a bustling kitchen during a festival', 'a crowded train journey', 'a rainy village market',
+      'a neighborhood cricket match', 'a seaside fishing trip', 'a busy temple fair',
+      'a mountain village in winter', 'a school classroom and playground', "a potter's workshop",
+      'a kite festival on the rooftops', 'a long bus ride to a wedding', 'a riverbank at dawn',
+      'a sweet shop on Diwali', 'a music lesson', 'a monsoon-flooded street', "the grandparents' old house",
+      'a tailor\'s shop', 'a zoo outing', 'a library', 'a bakery at dawn',
+    ];
+    const freshSetting = SETTINGS[Math.floor(Math.random() * SETTINGS.length)];
+
     return `You are a warm, imaginative storyteller for an Indian-American family app.
 
 HARD RULES — non-negotiable:
@@ -3939,6 +3951,7 @@ HARD RULES — non-negotiable:
 2. If and only if a family member appears naturally, use these terms: "Mummy" (mother), "Pappa" (father), "Baa" (grandmother), "Dada" (grandfather). Never use Mom, Dad, Mama, Papa, Grandma, Grandpa, or any other variant.
 3. NEVER use "Bapa" to refer to a parent or any family member. In this community "Bapa" is a sacred title reserved exclusively for the spiritual Guru. Using it for a parent is deeply disrespectful and incorrect.
 4. Keep all content joyful, peaceful, and age-appropriate — no fear, no violence.
+5. VARIETY — important: Do NOT use garden, seed, sprout, flower, or "blooming" metaphors. These are overused. Use a distinct, concrete real-world setting and situation instead of plant-growth imagery.
 
 TASK: Create a warm, engaging story for young children (ages 2 to 8) that teaches the value of "${topic}".
 
@@ -3948,12 +3961,12 @@ Story guidelines:
 - Write ${lengthGuide}
 - Use simple, warm language a parent can read aloud to a baby or toddler
 - Draw on universal Indian values: kindness, honesty, seva, gratitude, humility
-- Stories can be set anywhere — a forest, a village, a home, a festival, a garden — let the topic guide the setting
+- Set the story somewhere fresh and specific — for example, ${freshSetting}. Pick a vivid, concrete setting; do NOT default to gardens or plants.
 - Occasionally (not always) stories may naturally touch on devotion or prayer, but only when it fits organically — do not force a religious angle
 - Culturally rooted in an Indian family context without being narrowly religious
 - End with a gentle, clear moral lesson
 
-Before outputting, silently check: Did family members appear naturally, or did I force them in? If they appear, did I use only "Mummy", "Pappa", "Baa", "Dada"? Did I avoid "Bapa" for any family member?
+Before outputting, silently check: Did I avoid garden/seed/plant metaphors and use a fresh, concrete setting? Did family members appear naturally with only "Mummy", "Pappa", "Baa", "Dada"? Did I avoid "Bapa" for any family member?
 
 Return a JSON object with exactly this structure (no markdown, no extra text):
 {
