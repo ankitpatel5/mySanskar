@@ -1677,6 +1677,22 @@ button.ab-dl-dot:hover::before {
 }
 .mini-tog-btn:hover { color: var(--fg-0); }
 .mini-tog-btn.active { color: var(--accent); }
+/* Repeat-one "1" badge — shared by the mini and sheet repeat buttons */
+.mini-tog-btn.repeat-one, .sheet-side.repeat-one { position: relative; }
+.mini-tog-btn.repeat-one::after, .sheet-side.repeat-one::after {
+  content: '1';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 8px;
+  font-weight: 800;
+  color: var(--accent);
+  background: var(--mini-player-bg, var(--bg-1));
+  border-radius: 50%;
+  width: 11px; height: 11px;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
 .mini-lyrics-btn:not(.hidden) { color: #4ade80; }
 .mini-lyrics-btn:hover { color: #86efac !important; }
 .mini-seek-input {
@@ -4447,10 +4463,10 @@ button.ab-dl-dot:hover::before {
   justify-content: center;
   flex-shrink: 0;
 }
-.ob-icon-music   { background: rgba(74, 222, 128, 0.12); }  /* green  */
-.ob-icon-stories { background: rgba(251, 146, 60, 0.14); }  /* amber  */
-.ob-icon-custom  { background: rgba(167, 139, 250, 0.14); } /* purple */
-.ob-icon-convo   { background: rgba(52, 211, 153, 0.12); }  /* teal   */
+.ob-icon-music   { background: rgba(232, 163, 61, 0.12); }  /* saffron    */
+.ob-icon-stories { background: rgba(251, 146, 60, 0.14); }  /* amber/diya */
+.ob-icon-custom  { background: rgba(245, 200, 66, 0.14); }  /* warm gold  */
+.ob-icon-convo   { background: rgba(232, 163, 61, 0.12); }  /* saffron    */
 /* legacy alias kept for safety */
 .ob-icon-home    { background: rgba(251, 146, 60, 0.14); }
 .ob-card-title {
@@ -4919,27 +4935,21 @@ button.ab-dl-dot:hover::before {
 }
 .ab-book-cover img { width: 100%; height: 100%; object-fit: cover; }
 .ab-book-info { padding: 8px 2px 10px; }
-.ab-progress-ring {
+.ab-book-bar-wrap {
   position: absolute;
-  bottom: 8px;
-  right: 8px;
-  width: 32px;
-  height: 32px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: rgba(0,0,0,0.45);
 }
-.ab-progress-ring svg { transform: rotate(-90deg); }
-.ab-ring-bg { fill: none; stroke: rgba(0,0,0,0.55); stroke-width: 3; }
-.ab-ring-fill { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; }
-.ab-ring-fill.done { stroke: #4caf68; }
-.ab-ring-pct {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 8px;
-  font-weight: 700;
-  color: #fff;
+.ab-book-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 0 2px 2px 0;
+  transition: width .3s ease;
 }
+.ab-book-bar-fill.done { background: #4caf68; border-radius: 0; }
 .ab-book-info { padding: 9px 10px 11px; }
 .ab-book-title {
   font-size: 13px;
@@ -5112,11 +5122,17 @@ button.ab-dl-dot:hover::before {
 }
 /* #7 — Centered, grouped controls (no longer flung edge-to-edge), with the
    play button visually dominant and skip/speed demoted. */
+.ab-player-accessories {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 4px 14px;
+}
 .ab-player-controls {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20px;
+  gap: 18px;
 }
 .ab-ctrl-btn {
   display: flex;
@@ -5156,6 +5172,74 @@ button.ab-dl-dot:hover::before {
   min-width: 44px;
   text-align: center;
 }
+.ab-sleep-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  cursor: pointer;
+  min-width: 44px;
+  justify-content: center;
+}
+.ab-sleep-btn.active {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+/* Any sleep trigger (incl. the music extra button) goes accent when armed */
+.js-sleep-btn.active { color: var(--accent); }
+.ab-sleep-btn.active svg { color: var(--accent); }
+.ab-sleep-btn #ab-sleep-label:empty { display: none; }
+
+/* Sleep timer sheet */
+.ab-sleep-sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(0,0,0,0.5);
+}
+.ab-sleep-sheet.hidden { display: none; }
+.ab-sleep-panel {
+  width: 100%;
+  background: var(--bg-elev);
+  border-radius: 18px 18px 0 0;
+  padding: 10px 12px calc(20px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line-2);
+}
+.ab-sleep-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: 8px 10px 10px;
+}
+.ab-sleep-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 10px;
+  font-size: 16px;
+  color: var(--text1);
+  background: transparent;
+  cursor: pointer;
+  border-bottom: 1px solid var(--line-1);
+}
+.ab-sleep-opt:last-child { border-bottom: 0; }
+.ab-sleep-opt:active { background: var(--bg-3); }
+.ab-sleep-opt.ab-sleep-off { color: var(--text3); }
+.ab-sleep-check { color: var(--accent); opacity: 0; }
+.ab-sleep-opt.selected .ab-sleep-check { opacity: 1; }
+.ab-sleep-opt.selected { color: var(--accent); }
+
 /* Chapter list */
 .ab-chapters {
   padding: 0 20px 140px;

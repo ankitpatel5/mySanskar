@@ -17,6 +17,7 @@
     queue: 'drift.queue',
     lastTrack: 'drift.lastTrack',
     loop: 'drift.loop',
+    repeat: 'drift.repeat',
     shuffle: 'drift.shuffle',
     playCounts: 'drift.playCounts',
     libraryView: 'drift.libraryView',
@@ -61,7 +62,7 @@
     queue: [],
     history: [],
     currentTrackId: null,
-    loop: false,
+    repeat: 'off',   // 'off' | 'all' | 'one'
     shuffle: false,
     playing: false,
     currentSource: { kind: 'none', payload: null },
@@ -520,7 +521,9 @@
       state.queue = JSON.parse(localStorage.getItem(LS.queue) || '[]');
       if (!Array.isArray(state.queue)) state.queue = [];
     } catch { state.queue = []; }
-    state.loop = localStorage.getItem(LS.loop) === '1';
+    // Migrate legacy boolean loop → tri-state repeat ('1' meant repeat-one).
+    state.repeat = localStorage.getItem(LS.repeat)
+      || (localStorage.getItem(LS.loop) === '1' ? 'one' : 'off');
     state.shuffle = localStorage.getItem(LS.shuffle) === '1';
     state.currentTrackId = localStorage.getItem(LS.lastTrack) || null;
     try {
@@ -546,7 +549,7 @@
     try {
       if (key === 'playlists') localStorage.setItem(LS.playlists, JSON.stringify(state.playlists));
       else if (key === 'queue') localStorage.setItem(LS.queue, JSON.stringify(state.queue));
-      else if (key === 'loop') localStorage.setItem(LS.loop, state.loop ? '1' : '0');
+      else if (key === 'repeat') localStorage.setItem(LS.repeat, state.repeat);
       else if (key === 'shuffle') localStorage.setItem(LS.shuffle, state.shuffle ? '1' : '0');
       else if (key === 'lastTrack') {
         if (state.currentTrackId) localStorage.setItem(LS.lastTrack, state.currentTrackId);
@@ -1333,7 +1336,9 @@
       const t = state.trackById[state.currentTrackId];
       if (t) toast(`Couldn't play "${t.name}"`);
     });
-    audio.loop = state.loop;
+    // Repeat is handled manually in handleTrackEnded so the 'ended' event always
+    // fires (needed for queue/shuffle/sleep logic) — never use native audio.loop.
+    audio.loop = false;
 
     if ('mediaSession' in navigator) {
       navigator.mediaSession.setActionHandler('play', () => togglePlay());
@@ -1399,7 +1404,12 @@
   }
 
   function handleTrackEnded() {
-    if (state.loop) {
+    // Sleep timer set to "end of track" wins over everything — stop here.
+    if (sleepShouldStopAtItemEnd()) {
+      audio.pause();
+      return;
+    }
+    if (state.repeat === 'one') {
       audio.currentTime = 0;
       audio.play();
       return;
@@ -1425,6 +1435,8 @@
         else { do { nextIdx = Math.floor(Math.random() * ids.length); } while (nextIdx === i); }
       } else {
         nextIdx = i + 1;
+        // Repeat-all: wrap from the last track back to the first.
+        if (nextIdx >= ids.length && state.repeat === 'all') nextIdx = 0;
       }
       if (nextIdx >= 0 && nextIdx < ids.length) {
         playTrack(ids[nextIdx]);
@@ -1692,18 +1704,26 @@
     });
   }
 
-  // ============== LOOP / SHUFFLE TOGGLES ==============
+  // ============== REPEAT / SHUFFLE TOGGLES ==============
+  const REPEAT_CYCLE = { off: 'all', all: 'one', one: 'off' };
   function toggleLoop() {
-    state.loop = !state.loop;
-    audio.loop = state.loop;
-    persist('loop');
+    state.repeat = REPEAT_CYCLE[state.repeat] || 'all';
+    persist('repeat');
     updateLoopUI();
-    toast(state.loop ? 'Loop on' : 'Loop off');
+    toast(state.repeat === 'all' ? 'Repeat all'
+        : state.repeat === 'one' ? 'Repeat one'
+        : 'Repeat off');
   }
   function updateLoopUI() {
-    $('sheet-loop').classList.toggle('active', state.loop);
-    const ml = $('mini-loop');
-    if (ml) ml.classList.toggle('active', state.loop);
+    const on  = state.repeat !== 'off';
+    const one = state.repeat === 'one';
+    [$('sheet-loop'), $('mini-loop')].forEach(btn => {
+      if (!btn) return;
+      btn.classList.toggle('active', on);
+      btn.classList.toggle('repeat-one', one);
+      btn.setAttribute('aria-label',
+        on ? (one ? 'Repeat one' : 'Repeat all') : 'Repeat off');
+    });
   }
   function toggleShuffle() {
     state.shuffle = !state.shuffle;
@@ -7081,6 +7101,7 @@ ${numbered}`;
     $('sheet-loop').addEventListener('click', toggleLoop);
     $('sheet-shuffle').addEventListener('click', toggleShuffle);
     $('sheet-queue').addEventListener('click', () => { closePlayerSheet(); switchTab('queue'); });
+    wireSleepSheet('music-sleep-sheet', 'music-sleep-btn');
     $('sheet-lyrics-btn').addEventListener('click', () => {
       const t = state.trackById[state.currentTrackId];
       if (t) openLyricsSheet(t);
@@ -7507,6 +7528,15 @@ ${numbered}`;
   let _abPlaying   = false;
   let _abScrubbing = false;  // true while the user is dragging the scrubber thumb
   let _abSpeed     = 1;
+
+  // ── Sleep timer (shared by music + audiobook players) ─────────
+  // _sleepMode: null (off) | 'eoc' (end of current track/chapter) | minutes (number)
+  let _sleepMode     = null;
+  let _sleepDeadline = 0;     // epoch ms when a timed countdown fires (timed modes only)
+  let _sleepTick     = null;  // setInterval handle for the 1s countdown
+  let _sleepFadeAudio = null; // the audio element being faded out
+  let _sleepFadeFromVol = 1;  // volume captured when the fade began (to restore later)
+  const SLEEP_FADE_MS = 15000; // fade audio to silence over the last 15s
   let _abProgress  = {};     // { [bookId]: { [fileId]: { position, duration } } } — in-memory cache
   let _abSaveTimer = null;
 
@@ -7913,29 +7943,27 @@ ${numbered}`;
       const pct = abBookProgress(book.id, book);
       const pctPct = Math.round(pct * 100);
       const done = pct >= 0.95;
-      const circumference = 75.4;
-      const offset = circumference * (1 - Math.min(pct, 1));
       const tile = document.createElement('div');
       tile.className = 'ab-book-tile';
-      const ringHtml = pctPct > 0 ? `
-        <div class="ab-progress-ring">
-          <svg viewBox="0 0 32 32" width="32" height="32">
-            <circle class="ab-ring-bg" cx="16" cy="16" r="12" stroke-dasharray="${circumference}"/>
-            <circle class="ab-ring-fill${done ? ' done' : ''}" cx="16" cy="16" r="12"
-              stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
-          </svg>
-          <div class="ab-ring-pct">${done ? '✓' : pctPct + '%'}</div>
+      // Single linear progress bar — same metaphor as the Continue Listening rail.
+      const barHtml = pctPct > 0 ? `
+        <div class="ab-book-bar-wrap">
+          <div class="ab-book-bar-fill${done ? ' done' : ''}" style="width:${done ? 100 : pctPct}%"></div>
         </div>` : '';
+      const chapterCount = `${book.chapters.length} chapter${book.chapters.length !== 1 ? 's' : ''}`;
+      const metaText = done
+        ? '✓ Finished'
+        : (pctPct > 0 ? `${pctPct}% complete` : chapterCount);
       tile.innerHTML = `
         <div class="ab-book-cover">
           ${book.coverFileId
             ? `<img src="${abCoverUrl(book.coverFileId)}" alt="${book.name}" loading="lazy">`
             : `<div class="ab-cover-placeholder" style="background:${abCoverGradient(book.name)}">📖</div>`}
-          ${ringHtml}
+          ${barHtml}
         </div>
         <div class="ab-book-info">
           <div class="ab-book-title">${book.name}</div>
-          <div class="ab-book-meta">${book.chapters.length} chapter${book.chapters.length !== 1 ? 's' : ''}</div>
+          <div class="ab-book-meta">${metaText}</div>
         </div>`;
       tile.addEventListener('click', () => openAudiobook(book, abLastChapterIdx(book)));
       grid.appendChild(tile);
@@ -8231,6 +8259,12 @@ ${numbered}`;
     $('ab-prev-btn').addEventListener('click', () => {
       if (_abBook && _abChapterIdx > 0) abLoadChapter(_abChapterIdx - 1, _abPlaying);
     });
+    const abNextBtn = $('ab-next-btn');
+    if (abNextBtn) abNextBtn.addEventListener('click', () => {
+      if (_abBook && _abChapterIdx < _abBook.chapters.length - 1) {
+        abLoadChapter(_abChapterIdx + 1, _abPlaying);
+      }
+    });
     $('ab-speed-btn').addEventListener('click', () => {
       const next = AB_SPEED_STEPS[(AB_SPEED_STEPS.indexOf(_abSpeed) + 1) % AB_SPEED_STEPS.length];
       _abSpeed = next;
@@ -8238,6 +8272,9 @@ ${numbered}`;
       const btn = $('ab-speed-btn');
       if (btn) btn.textContent = `${_abSpeed}×`;
     });
+
+    // Sleep timer (shared engine)
+    wireSleepSheet('ab-sleep-sheet', 'ab-sleep-btn');
 
     // Seek: native <input type="range">. iOS handles touch drag for us.
     //  'input'  fires continuously while dragging → live preview, no audio seek yet
@@ -8286,6 +8323,12 @@ ${numbered}`;
         // Listening sees accurate progress even after a page reload.
         saveAbProgress(_abBook.id, ch.id, chDur, chDur);
         flushAbProgressToFirestore(_abBook.id);
+        // End-of-chapter sleep timer: stop at this part boundary instead of advancing.
+        if (sleepShouldStopAtItemEnd()) {
+          _abAudio.pause();
+          toast('😴 Sleep timer — paused');
+          return;
+        }
         abLoadChapter(_abChapterIdx + 1, true);
       }
       return;
@@ -8306,6 +8349,13 @@ ${numbered}`;
       const chEnd   = ch.endTime   ?? _abAudio.duration;
       const chDur   = chEnd - chStart;
       saveAbProgress(_abBook.id, ch.id, chDur, chDur);
+    }
+    // End-of-chapter sleep timer: stop here instead of advancing.
+    if (sleepShouldStopAtItemEnd()) {
+      _abPlaying = false;
+      abUpdatePlayBtn();
+      toast('😴 Sleep timer — paused');
+      return;
     }
     if (_abChapterIdx < _abBook.chapters.length - 1) {
       abLoadChapter(_abChapterIdx + 1, true);
@@ -8342,6 +8392,112 @@ ${numbered}`;
     if (_abAudio && _abPlaying) _abAudio.pause();
     // Flush current position to Firestore immediately so hard refresh works
     flushAbProgressToFirestore();
+  }
+
+  // ── Sleep timer engine (shared by music + audiobook) ──────────
+  // The timer acts on whichever player is currently active. Starting one player
+  // pauses the other, so at most one is playing at a time.
+  function sleepActiveAudio() {
+    if (_abAudio && _abPlaying) return _abAudio;
+    if (audio && !audio.paused) return audio;
+    return (_abAudio && _abAudio.src) ? _abAudio : audio;
+  }
+  function sleepPauseActive() {
+    if (_abAudio && _abPlaying) { _abAudio.pause(); return true; }
+    if (audio && !audio.paused) { audio.pause(); return true; }
+    return false;
+  }
+
+  function setSleep(mode) {
+    clearSleepInternal();
+    if (mode === 'off' || mode == null) { _sleepMode = null; updateSleepUI(); return; }
+    _sleepMode = mode; // 'eoc' or a number of minutes
+    if (mode !== 'eoc') {
+      _sleepDeadline = Date.now() + Number(mode) * 60000;
+      _sleepTick = setInterval(sleepCountdownTick, 1000);
+    }
+    updateSleepUI();
+  }
+
+  // Clears timer + interval and restores any faded volume, without touching state/UI labels.
+  function clearSleepInternal() {
+    if (_sleepTick) { clearInterval(_sleepTick); _sleepTick = null; }
+    _sleepDeadline = 0;
+    if (_sleepFadeAudio) { _sleepFadeAudio.volume = _sleepFadeFromVol; _sleepFadeAudio = null; }
+  }
+
+  function clearSleep() { clearSleepInternal(); _sleepMode = null; updateSleepUI(); }
+
+  function sleepCountdownTick() {
+    const remaining = _sleepDeadline - Date.now();
+    // Final fade — only ramp volume while something is actually playing.
+    const target = sleepActiveAudio();
+    if (target && !target.paused && remaining <= SLEEP_FADE_MS) {
+      if (!_sleepFadeAudio) { _sleepFadeAudio = target; _sleepFadeFromVol = target.volume; }
+      _sleepFadeAudio.volume = Math.max(0, _sleepFadeFromVol * (remaining / SLEEP_FADE_MS));
+    }
+    if (remaining <= 0) {
+      clearSleepInternal();
+      _sleepMode = null;
+      sleepPauseActive();
+      updateSleepUI();
+      toast('😴 Sleep timer — paused');
+      return;
+    }
+    updateSleepUI();
+  }
+
+  // Called when a track/chapter finishes; true if "end of track/chapter" sleep should stop here.
+  function sleepShouldStopAtItemEnd() {
+    if (_sleepMode !== 'eoc') return false;
+    _sleepMode = null;
+    updateSleepUI();
+    return true;
+  }
+
+  function updateSleepUI() {
+    const on  = _sleepMode != null;
+    let labelTxt = '';
+    if (_sleepMode === 'eoc') labelTxt = 'End';
+    else if (typeof _sleepMode === 'number') {
+      const rem = Math.max(0, Math.ceil((_sleepDeadline - Date.now()) / 1000));
+      labelTxt = `${Math.floor(rem / 60)}:${String(rem % 60).padStart(2, '0')}`;
+    }
+    // Update every sleep trigger button (audiobook pill + music extra button).
+    document.querySelectorAll('.js-sleep-btn').forEach(btn => {
+      btn.classList.toggle('active', on);
+      const lbl = btn.querySelector('.js-sleep-label');
+      if (lbl) lbl.textContent = labelTxt;
+    });
+    // Reflect the chosen option inside every sleep sheet.
+    document.querySelectorAll('.js-sleep-sheet .sleep-opt').forEach(opt => {
+      const v = opt.dataset.sleep;
+      const sel = (v === 'eoc' && _sleepMode === 'eoc') ||
+                  (v !== 'eoc' && v !== 'off' && Number(v) === _sleepMode) ||
+                  (v === 'off' && _sleepMode == null);
+      opt.classList.toggle('selected', sel);
+    });
+  }
+
+  // Generic sheet open/close + delegated option handling. Call once per sheet to wire.
+  function wireSleepSheet(sheetId, triggerId) {
+    const trigger = $(triggerId);
+    const sheet = $(sheetId);
+    if (trigger && sheet) {
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        updateSleepUI();
+        sheet.classList.remove('hidden');
+      });
+      sheet.addEventListener('click', (e) => {
+        const opt = e.target.closest('.sleep-opt');
+        if (opt) {
+          const v = opt.dataset.sleep;
+          setSleep(v === 'off' || v === 'eoc' ? v : Number(v));
+        }
+        if (opt || e.target === sheet) sheet.classList.add('hidden');
+      });
+    }
   }
 
   function fmtTime(secs) {
