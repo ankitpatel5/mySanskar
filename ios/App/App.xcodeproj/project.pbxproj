@@ -7,7 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0B19A003F74A337E67720D2A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2885250FBC19FB47426D52AF /* SwiftUI.framework */; };
+		105F70BE48ABA7BF2B227C0E /* NityaWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A31D503634261FF478ECFD /* NityaWidget.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
+		4348857BB9C23257A38B8C83 /* NityaWidgetPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC1AE2561411CD7FECC6A478 /* NityaWidgetPlugin.swift */; };
+		4A3BA0154E6371F394E3E60A /* NityaWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F7DA73F9B747CC916003C9AB /* NityaWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
@@ -15,6 +19,8 @@
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
+		95FD1F636EF5BC73E93767DF /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 46003AA4FDD8CE243A46F949 /* Foundation.framework */; };
+		AC952311D490F0B170EE9F8F /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DCD7F1F17A05223F468A86BB /* WidgetKit.framework */; };
 		BC14449E2FCDE5C10069AEBC /* SignInWithApplePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC14449D2FCDE5C10069AEBC /* SignInWithApplePlugin.swift */; };
 		BCE0491A2FC65E1500520F19 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = BCE049192FC65E1500520F19 /* GoogleSignIn */; };
 		BCE0491C2FC65E1500520F19 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = BCE0491B2FC65E1500520F19 /* GoogleSignInSwift */; };
@@ -22,8 +28,35 @@
 		BCE049232FC6611600520F19 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCE049222FC6611600520F19 /* ViewController.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		BB96A1E48B5EB2F2DBD159AB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8DD980EA40D5CB4297C7D355;
+			remoteInfo = NityaWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		8C57A8FD599A83EBF7A184A1 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				4A3BA0154E6371F394E3E60A /* NityaWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		2885250FBC19FB47426D52AF /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		2B36B79A7422772393B4FD33 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
+		46003AA4FDD8CE243A46F949 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -33,11 +66,16 @@
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		A1A31D503634261FF478ECFD /* NityaWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NityaWidget.swift; sourceTree = "<group>"; };
+		BB5E31EB76B260C0D7A75FCD /* NityaWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = NityaWidget.entitlements; sourceTree = "<group>"; };
 		BC14449C2FCDE1650069AEBC /* AppRelease.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AppRelease.entitlements; sourceTree = "<group>"; };
 		BC14449D2FCDE5C10069AEBC /* SignInWithApplePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInWithApplePlugin.swift; sourceTree = "<group>"; };
 		BCE0491D2FC65F9B00520F19 /* GoogleSignInPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignInPlugin.swift; sourceTree = "<group>"; };
 		BCE049212FC6605F00520F19 /* App-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "App-Bridging-Header.h"; sourceTree = "<group>"; };
 		BCE049222FC6611600520F19 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		DCD7F1F17A05223F468A86BB /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		F7DA73F9B747CC916003C9AB /* NityaWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NityaWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		FC1AE2561411CD7FECC6A478 /* NityaWidgetPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NityaWidgetPlugin.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -51,6 +89,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		55F5CE069616F41FEEED6DEF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				95FD1F636EF5BC73E93767DF /* Foundation.framework in Frameworks */,
+				AC952311D490F0B170EE9F8F /* WidgetKit.framework in Frameworks */,
+				0B19A003F74A337E67720D2A /* SwiftUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -60,6 +108,8 @@
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
 				504EC3051FED79650016851F /* Products */,
+				6BF8DAB3FC98896071930B89 /* Frameworks */,
+				5F00C09AFC577FF8C1E71C9D /* NityaWidget */,
 			);
 			sourceTree = "<group>";
 		};
@@ -67,6 +117,7 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
+				F7DA73F9B747CC916003C9AB /* NityaWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -87,8 +138,38 @@
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
 				BCE049212FC6605F00520F19 /* App-Bridging-Header.h */,
+				FC1AE2561411CD7FECC6A478 /* NityaWidgetPlugin.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		5F00C09AFC577FF8C1E71C9D /* NityaWidget */ = {
+			isa = PBXGroup;
+			children = (
+				A1A31D503634261FF478ECFD /* NityaWidget.swift */,
+				2B36B79A7422772393B4FD33 /* Info.plist */,
+				BB5E31EB76B260C0D7A75FCD /* NityaWidget.entitlements */,
+			);
+			name = NityaWidget;
+			path = NityaWidget;
+			sourceTree = "<group>";
+		};
+		6BF8DAB3FC98896071930B89 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				FF195647A72E15A7E3D99843 /* iOS */,
+				DCD7F1F17A05223F468A86BB /* WidgetKit.framework */,
+				2885250FBC19FB47426D52AF /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		FF195647A72E15A7E3D99843 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				46003AA4FDD8CE243A46F949 /* Foundation.framework */,
+			);
+			name = iOS;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -101,10 +182,12 @@
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
+				8C57A8FD599A83EBF7A184A1 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				1A5C11FBE69D25762764DB03 /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -115,6 +198,23 @@
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
 			productType = "com.apple.product-type.application";
+		};
+		8DD980EA40D5CB4297C7D355 /* NityaWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E96CF1CAE5D9460255753AE2 /* Build configuration list for PBXNativeTarget "NityaWidget" */;
+			buildPhases = (
+				73710A152F1E15D8816BAAE8 /* Sources */,
+				55F5CE069616F41FEEED6DEF /* Frameworks */,
+				07D6DB78FB4E88A1DD41E054 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NityaWidget;
+			productName = NityaWidget;
+			productReference = F7DA73F9B747CC916003C9AB /* NityaWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -150,11 +250,19 @@
 			projectRoot = "";
 			targets = (
 				504EC3031FED79650016851F /* App */,
+				8DD980EA40D5CB4297C7D355 /* NityaWidget */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		07D6DB78FB4E88A1DD41E054 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3021FED79650016851F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -179,10 +287,28 @@
 				BCE049232FC6611600520F19 /* ViewController.swift in Sources */,
 				BCE0491E2FC65F9B00520F19 /* GoogleSignInPlugin.swift in Sources */,
 				BC14449E2FCDE5C10069AEBC /* SignInWithApplePlugin.swift in Sources */,
+				4348857BB9C23257A38B8C83 /* NityaWidgetPlugin.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		73710A152F1E15D8816BAAE8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				105F70BE48ABA7BF2B227C0E /* NityaWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		1A5C11FBE69D25762764DB03 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = NityaWidget;
+			target = 8DD980EA40D5CB4297C7D355 /* NityaWidget */;
+			targetProxy = BB96A1E48B5EB2F2DBD159AB /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		504EC30B1FED79650016851F /* Main.storyboard */ = {
@@ -204,6 +330,33 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		191243CAFA2161631ADA223F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = NityaWidget/NityaWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = JSWDSX636T;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NityaWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Nitya;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ankitpatel5.mysanskar.NityaWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 		504EC3141FED79650016851F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
@@ -366,6 +519,34 @@
 			};
 			name = Release;
 		};
+		D3D7973D507E1D3219D1EAA5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = NityaWidget/NityaWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = JSWDSX636T;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NityaWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Nitya;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ankitpatel5.mysanskar.NityaWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -383,6 +564,15 @@
 			buildConfigurations = (
 				504EC3171FED79650016851F /* Debug */,
 				504EC3181FED79650016851F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E96CF1CAE5D9460255753AE2 /* Build configuration list for PBXNativeTarget "NityaWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D3D7973D507E1D3219D1EAA5 /* Release */,
+				191243CAFA2161631ADA223F /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

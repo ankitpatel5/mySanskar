@@ -59,6 +59,17 @@
 				<string>com.googleusercontent.apps.566163854295-o6a1hhf85oe54qaemsccsnk09hhhl53s</string>
 			</array>
 		</dict>
+		<!-- Nitya home-screen widget deep link: mysanskar://nitya/play?id=... -->
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.ankitpatel5.mysanskar.deeplink</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>mysanskar</string>
+			</array>
+		</dict>
 	</array>
 	<!-- Background audio: keeps music playing when screen locks or app backgrounds -->
 	<key>UIBackgroundModes</key>

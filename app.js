@@ -181,6 +181,7 @@
     // so tab buttons and sub-nav exist in the DOM.
     switchTab(state.currentTab, state.musicSubTab);
     checkOnboarding();
+    initNityaWidgetBridge();
     loadVoices();
     setupAudio();
     bootstrapLibrary();
@@ -1141,6 +1142,10 @@
     }
     // Library is now ready — (re)render Nitya so shortcuts resolve + defaults seed.
     if (state.currentTab === 'home') renderNitya();
+    // Track names/albums are now resolvable — refresh the widget list.
+    nityaSyncToWidget();
+    // A widget tile tapped before the library loaded can now play.
+    flushPendingNityaPlay();
   }
 
   // ============== COLOR HASHING ==============
@@ -2057,6 +2062,66 @@
   function saveNitya() {
     try { localStorage.setItem(LS.nitya, JSON.stringify(state.nitya || [])); } catch {}
     saveNityaToFirestore();
+    nityaSyncToWidget();
+  }
+
+  // ── Nitya iOS home-screen widget bridge ───────────────────────
+  // The native WidgetKit extension renders state.nitya as a home-screen tile.
+  // Each tile deep-links back via  mysanskar://nitya/play?id=<trackId>  and we
+  // play it through the existing web player. All native calls are optional —
+  // guarded so the web build (no Capacitor plugins) is unaffected.
+  function nityaSyncToWidget() {
+    const plugin = window.Capacitor?.Plugins?.NityaWidget;
+    if (!plugin) return; // web, or plugin not installed yet
+    // Before the library loads, trackById is empty — sync the raw list (id+name
+    // are all the widget needs) rather than filtering everything out.
+    const libReady = state.trackById && Object.keys(state.trackById).length > 0;
+    const items = (state.nitya || [])
+      .filter((s) => s && s.id && (!libReady || state.trackById[s.id]))
+      .map((s) => {
+        const t = libReady ? state.trackById[s.id] : null;
+        return { id: s.id, name: s.name || t?.name || 'Untitled', album: t?.albumName || '' };
+      });
+    try { plugin.sync({ items }); } catch (e) { console.warn('nitya widget sync failed', e); }
+  }
+
+  let _pendingNityaPlayId = null;
+  function playNityaFromWidget(trackId) {
+    if (!trackId) return;
+    if (state.trackById && state.trackById[trackId]) {
+      state.currentSource = { kind: 'single', payload: null };
+      playTrack(trackId);
+      _pendingNityaPlayId = null;
+    } else {
+      // Cold launch — library not loaded yet. Remember and play once it's ready.
+      _pendingNityaPlayId = trackId;
+    }
+  }
+  function flushPendingNityaPlay() {
+    if (_pendingNityaPlayId) playNityaFromWidget(_pendingNityaPlayId);
+  }
+
+  function parseNityaPlayUrl(url) {
+    // mysanskar://nitya/play?id=<trackId>
+    const m = /nitya\/play\?[^#]*\bid=([^&]+)/.exec(url || '');
+    try { return m ? decodeURIComponent(m[1]) : null; } catch { return m ? m[1] : null; }
+  }
+
+  async function initNityaWidgetBridge() {
+    const App = window.Capacitor?.Plugins?.App;
+    if (!App) return; // web build
+    // Warm launch: app already running when a widget tile is tapped.
+    App.addListener('appUrlOpen', (data) => {
+      const id = parseNityaPlayUrl(data?.url);
+      if (id) playNityaFromWidget(id);
+    });
+    // Cold launch: app was closed and opened directly by the widget URL.
+    try {
+      const launch = await App.getLaunchUrl();
+      const id = parseNityaPlayUrl(launch?.url);
+      if (id) playNityaFromWidget(id);
+    } catch {}
+    nityaSyncToWidget(); // push current list on startup
   }
   // Cross-device sync (Firestore, per user). The shortcut list is curated/ordered,
   // so the cloud copy is authoritative on load; a local-only list seeds the cloud.
@@ -2077,6 +2142,7 @@
       if (doc.exists && Array.isArray(doc.data().items)) {
         state.nitya = doc.data().items;                 // cloud is authoritative
         try { localStorage.setItem(LS.nitya, JSON.stringify(state.nitya)); } catch {}
+        nityaSyncToWidget();  // cloud load bypasses saveNitya — push to widget here too
       } else if (state.nitya && state.nitya.length) {
         ref.set({ items: state.nitya }, { merge: true }).catch(() => {}); // seed cloud from local
       }

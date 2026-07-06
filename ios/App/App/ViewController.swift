@@ -10,6 +10,8 @@ class ViewController: CAPBridgeViewController {
         // Register our native Google Sign-In plugin with the Capacitor bridge.
         bridge?.registerPluginInstance(GoogleSignInPlugin())
         bridge?.registerPluginInstance(SignInWithApple())
+        // Nitya home-screen widget: mirrors the daily-plays list into the App Group.
+        bridge?.registerPluginInstance(NityaWidgetPlugin())
 
         // Inject a script that runs before any page JS so we can clear
         // any stale Firebase redirect state left by previous signInWithRedirect
