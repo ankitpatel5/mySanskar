@@ -47,6 +47,14 @@ PBXPROJ="$ROOT/ios/App/App.xcodeproj/project.pbxproj"
 if [ -f "$PBXPROJ" ]; then
   VER=$(grep -m1 'MARKETING_VERSION' "$PBXPROJ" | sed 's/.*= *//; s/;//' | tr -d ' ')
   BLD=$(grep -m1 'CURRENT_PROJECT_VERSION' "$PBXPROJ" | sed 's/.*= *//; s/;//' | tr -d ' ')
+  # Guard: the App target and NityaWidget extension must share one version
+  # (App Store requires it, and grep -m1 above assumes it). Warn on drift.
+  VER_COUNT=$(grep 'MARKETING_VERSION' "$PBXPROJ" | sed 's/.*= *//; s/;//' | tr -d ' ' | sort -u | wc -l | tr -d ' ')
+  BLD_COUNT=$(grep 'CURRENT_PROJECT_VERSION' "$PBXPROJ" | sed 's/.*= *//; s/;//' | tr -d ' ' | sort -u | wc -l | tr -d ' ')
+  if [ "$VER_COUNT" != "1" ] || [ "$BLD_COUNT" != "1" ]; then
+    echo "  ⚠️  VERSION MISMATCH between App and NityaWidget targets in project.pbxproj —"
+    echo "     bump them together (App Store rejects extensions whose version differs from the app)."
+  fi
   printf 'window.APP_BUILD = { version: "%s", build: "%s" };\n' "$VER" "$BLD" > "$DEST/app-build.js"
   echo "  ✓ app-build.js stamped with v$VER ($BLD)"
 fi
