@@ -66,7 +66,7 @@
 		</data>
 		<key>Assets.car</key>
 		<data>
-		rC37FfCx5aLsjVSwahlWQpPQaeg=
+		yqYND1nLB1ETKXaKnDuH+3awj+w=
 		</data>
 		<key>Base.lproj/LaunchScreen.storyboardc/01J-lp-oVM-view-snD-IY-ifK.nib</key>
 		<data>
@@ -652,7 +652,7 @@
 		</data>
 		<key>Info.plist</key>
 		<data>
-		tXB6B7LpZGf/gaz7XaoT1TGiWZI=
+		eLaILkQNgiHjF84OqZhwXMkJYBY=
 		</data>
 		<key>PkgInfo</key>
 		<data>
@@ -660,11 +660,11 @@
 		</data>
 		<key>PlugIns/NityaWidget.appex/Info.plist</key>
 		<data>
-		9AcjwrhhBL69Zt8vTgI9hBmp1fU=
+		eumyZVUnFRclnJenEoe66z5Y99E=
 		</data>
 		<key>PlugIns/NityaWidget.appex/NityaWidget</key>
 		<data>
-		eMuY/5zMakQ79m8u8TzIikoQ4GI=
+		1w6nfSZAUJcRr9Nx+Bzkgtc4fZo=
 		</data>
 		<key>PlugIns/NityaWidget.appex/NityaWidget.debug.dylib</key>
 		<data>
@@ -672,7 +672,7 @@
 		</data>
 		<key>PlugIns/NityaWidget.appex/_CodeSignature/CodeResources</key>
 		<data>
-		dXTzKyyGammsJRxeBY0KdulL78Y=
+		sb4zXqIf4pZbdIuZI8ZgMcgvt8E=
 		</data>
 		<key>PlugIns/NityaWidget.appex/__preview.dylib</key>
 		<data>
@@ -716,11 +716,11 @@
 		</data>
 		<key>public/app-build.js</key>
 		<data>
-		4Es2I1k2HCfID9oONpYbGYfPAOU=
+		JixAimR4d4hw54o7RXiRXG2fjaI=
 		</data>
 		<key>public/app.js</key>
 		<data>
-		W+PYD9R0MwFi75tfyPLLWNExFaE=
+		s79fZqA2SaYb8REpJM7FcVytlAo=
 		</data>
 		<key>public/baal.png</key>
 		<data>
@@ -768,7 +768,7 @@
 		</data>
 		<key>public/index.html</key>
 		<data>
-		9xsEUwt00pj200tdGyLC0zVf6pU=
+		QxNKrS/ozXgf5egu1sxlEBReH44=
 		</data>
 		<key>public/manifest.json</key>
 		<data>
@@ -780,7 +780,7 @@
 		</data>
 		<key>public/styles.css</key>
 		<data>
-		4+7matGYB6oJZ+dtabwYe2uXJxQ=
+		xqRjm55c+hCD2d1z4fKEdItdzTQ=
 		</data>
 		<key>public/sw.js</key>
 		<data>
@@ -906,7 +906,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			Rc0LB8Rd3/AuEpBIjsLN54RWl7fWpIOMeHThUdKmjsY=
+			JgMolXHoYP+Qarz3sbVBffqabR9HJnnIfyKuZovYVpA=
 			</data>
 		</dict>
 		<key>Base.lproj/LaunchScreen.storyboardc/01J-lp-oVM-view-snD-IY-ifK.nib</key>
@@ -1675,14 +1675,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			qgz9GuFB0572KORCm3cZFPQee6Ca3lO2h3SttXdbauQ=
+			Ic986csNUHOiM2uVF3FCTmmwYIr6FcASXyVfe20wMOU=
 			</data>
 		</dict>
 		<key>PlugIns/NityaWidget.appex/NityaWidget</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			aI+z5cJSzwXQ8TO9gxeDvYTmyJHnd4qoEMiYHcZjO2Q=
+			SLC5r9qbNltqrarQi81RXuSry/CnKJIG9KRmjcirAGI=
 			</data>
 		</dict>
 		<key>PlugIns/NityaWidget.appex/NityaWidget.debug.dylib</key>
@@ -1696,7 +1696,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			H1GgbIe/dkG4Jfeivyzc5xJ/xeGirkKNfrhS5dmZM9Y=
+			xOTqCFAGtPeXCv0heULj6gkl112X7RLj1UBU1F75aWE=
 			</data>
 		</dict>
 		<key>PlugIns/NityaWidget.appex/__preview.dylib</key>
@@ -1773,14 +1773,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			1DKRdbtLIzIRzK+tgu0s30wsdbkYtHWdoBCtOJBzrlE=
+			AcqPPMQavbYj5T2b378nniihr0OGRsfeyb1uB26GKE8=
 			</data>
 		</dict>
 		<key>public/app.js</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			TXVuNrOLRF2Vpz58LKP4bVebCluV9ACPi03UdaeMKpU=
+			Pzs30+/a/A5Lj0NCVe4XWqxtbo7R8Q6ZvSi5jzuLdKs=
 			</data>
 		</dict>
 		<key>public/baal.png</key>
@@ -1864,7 +1864,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			tg0F+xhIiT4oQaZNyDymjgPVbA1A7jQTc1TMOfVISk0=
+			ln7uAerzygR058KTTvrHXAW9Ah/fXbw1y51ZRsT9X6Q=
 			</data>
 		</dict>
 		<key>public/manifest.json</key>
@@ -1885,7 +1885,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			+or4/LVtAnm6LgtNexeQFzcJ/Y2lHQq8K6gBUuPEJ94=
+			cVVZIBo3lCiCprjO9MZ0SXvYXuUa7HupjEgxcev5j5Q=
 			</data>
 		</dict>
 		<key>public/sw.js</key>

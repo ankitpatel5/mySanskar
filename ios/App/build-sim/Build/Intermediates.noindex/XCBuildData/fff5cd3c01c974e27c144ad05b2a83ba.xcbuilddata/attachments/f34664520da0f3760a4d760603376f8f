@@ -1,0 +1,29 @@
+{
+  "" : {
+    "diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsPlugin-primary.dia",
+    "emit-module-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsPlugin-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsPlugin-primary-emit-module.dia",
+    "pch" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsPlugin-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsPlugin-primary.swiftdeps"
+  },
+  "/Users/ankit/Documents/AI Projects/drift/node_modules/@capacitor/local-notifications/ios/Sources/LocalNotificationsPlugin/LocalNotificationsHandler.swift" : {
+    "const-values" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsHandler.swiftconstvalues",
+    "dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsHandler.d",
+    "diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsHandler.dia",
+    "index-unit-output-path" : "/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsHandler.o",
+    "llvm-bc" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsHandler.bc",
+    "object" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsHandler.o",
+    "swift-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsHandler.swiftdeps",
+    "swiftmodule" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsHandler~partial.swiftmodule"
+  },
+  "/Users/ankit/Documents/AI Projects/drift/node_modules/@capacitor/local-notifications/ios/Sources/LocalNotificationsPlugin/LocalNotificationsPlugin.swift" : {
+    "const-values" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsPlugin.swiftconstvalues",
+    "dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsPlugin.d",
+    "diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsPlugin.dia",
+    "index-unit-output-path" : "/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsPlugin.o",
+    "llvm-bc" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsPlugin.bc",
+    "object" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsPlugin.o",
+    "swift-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsPlugin.swiftdeps",
+    "swiftmodule" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/CapacitorLocalNotifications.build/Debug-iphonesimulator/LocalNotificationsPlugin.build/Objects-normal/arm64/LocalNotificationsPlugin~partial.swiftmodule"
+  }
+}

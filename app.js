@@ -1957,6 +1957,7 @@
     loadEkadashiTile();
     renderNitya();
     renderUpdateBanner();
+    renderAdminFeedbackTile();
 
     // loadStoryOfDay() handles skeleton show/hide synchronously before its first
     // await, so there is no blank gap or flash — no pre-show needed here.
@@ -2592,6 +2593,12 @@
     return window.fbDb.collection(`users/${uid}/storyOfDay`).doc(dateStr);
   }
 
+  // Bumped whenever buildStoryPrompt changes materially. A cached story from an
+  // older prompt version regenerates on next open, so prompt improvements reach
+  // users same-day instead of waiting for tomorrow's story.
+  // v2 (2026-07-06): 3–4-year-old language rules.
+  const STORY_PROMPT_VERSION = 2;
+
   async function loadStoryOfDay() {
     // Each call gets a unique ID. Any async step checks it before touching the DOM,
     // so a newer concurrent call (e.g. from syncChildProfileFromFirestore) cleanly
@@ -2688,8 +2695,8 @@
       const doc = await sotdFirestoreRef(state.user.uid, dateStr).get();
       if (_sotdReqId !== myReqId) return; // superseded by a newer call — bail out silently
 
-      if (doc.exists) {
-        // Story already exists — swap skeleton → tile
+      if (doc.exists && (doc.data().promptVersion || 1) === STORY_PROMPT_VERSION) {
+        // Story already exists and is from the current prompt — swap skeleton → tile
         if (skeleton) skeleton.classList.add('hidden');
         const sotdStory = doc.data();
         showSOTDTile(sotdStory);
@@ -2698,6 +2705,7 @@
         renderAISavedList();
         return;
       }
+      // Doc missing OR written by an older prompt — fall through and regenerate.
 
       // 2. Not in Firestore — keep skeleton visible while Gemini generates
       const loadingSub = $('sotd-loading-sub');
@@ -2718,13 +2726,15 @@
         character,
         length:      'medium',
         generatedAt: Date.now(),
+        promptVersion: STORY_PROMPT_VERSION,
       };
 
       // 3. Persist to Firestore so subsequent opens are instant
       sotdFirestoreRef(state.user.uid, dateStr).set(story).catch(() => {});
 
       // 4. Cross-save to "Your Stories" so it appears in Stories tab
-      saveAIStory(story);
+      //    (overwrite replaces a stale same-id copy from an older prompt)
+      saveAIStory(story, { overwrite: true });
       renderAISavedList();
 
       // 5. Swap skeleton → tile
@@ -3843,13 +3853,19 @@
     try { return JSON.parse(localStorage.getItem(AI_SAVED_KEY) || '[]'); } catch { return []; }
   }
 
-  function saveAIStory(story) {
+  function saveAIStory(story, opts = {}) {
     if (!story.id) story.id = uid();
     const saved = loadAISavedStories();
-    // Upsert by ID — skip if already present so SOTD cross-saves don't duplicate
-    if (saved.some((s) => s.id === story.id)) return;
-    saved.unshift(story);
-    if (saved.length > 20) saved.splice(20);
+    const existingIdx = saved.findIndex((s) => s.id === story.id);
+    if (existingIdx !== -1) {
+      // Skip so SOTD cross-saves don't duplicate — unless a regenerated story
+      // (same id, fresher content) explicitly replaces the stale copy.
+      if (!opts.overwrite) return;
+      saved[existingIdx] = story;
+    } else {
+      saved.unshift(story);
+      if (saved.length > 20) saved.splice(20);
+    }
     try { localStorage.setItem(AI_SAVED_KEY, JSON.stringify(saved)); } catch {}
     // Sync to Firestore so stories persist across devices
     if (state.user) {
@@ -4187,6 +4203,18 @@
       long:   '8 to 12 paragraphs, about 500 words total',
     }[length] || '5 to 7 paragraphs';
 
+    // Shared vocabulary constraints — the #1 quality complaint was stories
+    // written in an adult register (big words, long sentences). Target a
+    // 3–4-year-old's vocabulary with concrete, checkable rules.
+    const LANGUAGE_RULES = `LANGUAGE RULES — the listener is 3 to 4 years old:
+- Use ONLY simple everyday words a 3-year-old already knows. If a word feels fancy, swap it: "big" not "enormous", "happy" not "delighted", "kept trying" not "persevered", "very good" not "magnificent".
+- Short sentences. Most under 10 words. One idea per sentence.
+- No abstract words, no idioms, no metaphors, no wordplay that needs explaining.
+- Show feelings with actions and faces ("Meera smiled big"), never with labels ("she felt immense gratitude").
+- Playful sounds and repetition are wonderful: "splash, splash!", "round and round", "knock knock knock".
+- Use lots of short, simple dialogue ("Look!" said Meera).
+- A parent must be able to read it aloud with zero explaining. If any sentence would make a 3-year-old ask "what does that mean?", rewrite it.`;
+
     const isFunMode = topic === 'fun' || topic === 'funny';
     const isFunny   = topic === 'funny';
 
@@ -4207,22 +4235,23 @@ HARD RULES — non-negotiable:
 3. NEVER use "Bapa" to refer to a parent or any family member. In the BAPS Swaminarayan community "Bapa" is a sacred title reserved exclusively for the spiritual Guru, Mahant Swami Maharaj. Using it for a parent is deeply disrespectful and incorrect.
 4. Keep all content joyful and age-appropriate — no fear, no violence.
 
-TASK: Create a delightful, ${isFunny ? 'funny' : 'fun'} story for young children (ages 2 to 8).
+TASK: Create a delightful, ${isFunny ? 'funny' : 'fun'} story for very young children (ages 2 to 5).
 
 ${characterLine}
+
+${LANGUAGE_RULES}
 
 Story guidelines:
 - Write ${lengthGuide}
 - ${toneGuide}
-- Use simple, bouncy language a parent can read aloud with expression
 - No religious angle needed — just pure, wholesome fun
 - Age-appropriate humor: silly sounds, funny mistakes, unexpected twists, happy endings
 
-Before outputting, silently check: Did family members appear naturally, or did I force them in? If they appear, did I use only "Mummy", "Pappa", "Baa", "Dada"? Did I avoid "Bapa" for any family member?
+Before outputting, silently check: Would a 3-year-old understand every single word? Are the sentences short? Did family members appear naturally, or did I force them in? If they appear, did I use only "Mummy", "Pappa", "Baa", "Dada"? Did I avoid "Bapa" for any family member?
 
 Return a JSON object with exactly this structure (no markdown, no extra text):
 {
-  "title": "A short, catchy title (4 to 7 words)",
+  "title": "A short, playful title using easy words (3 to 6 words)",
   "paragraphs": ["paragraph 1 text", "paragraph 2 text", "..."]
 }`;
     }
@@ -4252,24 +4281,26 @@ HARD RULES — non-negotiable:
 4. Keep all content joyful, peaceful, and age-appropriate — no fear, no violence.
 5. VARIETY — important: Do NOT use garden, seed, sprout, flower, or "blooming" metaphors. These are overused. Use a distinct, concrete real-world setting and situation instead of plant-growth imagery.
 
-TASK: Create a warm, engaging story for young children (ages 2 to 8) that teaches the value of "${topic}".
+TASK: Create a warm, engaging story for very young children (ages 2 to 5) that teaches the value of "${topic}".
 
 ${characterLine}
 
+${LANGUAGE_RULES}
+
 Story guidelines:
 - Write ${lengthGuide}
-- Use simple, warm language a parent can read aloud to a baby or toddler
+- Show the value of "${topic}" through what characters DO — never name the value with a big word inside the story (no "generosity", "perseverance", "compassion"; instead: sharing, kept trying, being kind)
 - Draw on universal Indian values: kindness, honesty, seva, gratitude, humility
 - Set the story somewhere fresh and specific — for example, ${freshSetting}. Pick a vivid, concrete setting; do NOT default to gardens or plants.
 - Occasionally (not always) stories may naturally touch on devotion or prayer, but only when it fits organically — do not force a religious angle
 - Culturally rooted in an Indian family context without being narrowly religious
-- End with a gentle, clear moral lesson
+- End with one short, simple moral sentence a 3-year-old could repeat (under 10 easy words)
 
-Before outputting, silently check: Did I avoid garden/seed/plant metaphors and use a fresh, concrete setting? Did family members appear naturally with only "Mummy", "Pappa", "Baa", "Dada"? Did I avoid "Bapa" for any family member?
+Before outputting, silently check: Would a 3-year-old understand every single word? Are the sentences short? Did I avoid garden/seed/plant metaphors and use a fresh, concrete setting? Did family members appear naturally with only "Mummy", "Pappa", "Baa", "Dada"? Did I avoid "Bapa" for any family member?
 
 Return a JSON object with exactly this structure (no markdown, no extra text):
 {
-  "title": "A short evocative title (4 to 7 words)",
+  "title": "A short, playful title using easy words (3 to 6 words)",
   "paragraphs": ["paragraph 1 text", "paragraph 2 text", "..."]
 }`;
   }
@@ -5935,9 +5966,85 @@ ${numbered}`;
       await loadAdminAudiobooks();
     } else if (adminCurrentTab === 'lyrics') {
       await loadAdminLyrics();
+    } else if (adminCurrentTab === 'feedback') {
+      await loadAdminFeedback();
     } else {
       await loadAdminSongs();
     }
+  }
+
+  // ── Admin: user feedback ("Suggest a feature" submissions) ────
+  async function loadAdminFeedback() {
+    const content = $('admin-content');
+    try {
+      const snap = await window.fbDb.collection('feedback')
+        .orderBy('createdAt', 'desc').limit(100).get();
+      if (snap.empty) {
+        content.innerHTML = '<div class="admin-loading">No feedback yet.</div>';
+        return;
+      }
+      content.innerHTML = '';
+      snap.docs.forEach((doc) => {
+        const f = doc.data();
+        const item = document.createElement('div');
+        item.className = 'admin-feedback-item' + (f.read ? '' : ' unread');
+        const who = f.displayName
+          ? `${f.displayName} · ${f.email || ''}`
+          : (f.email || f.uid || 'Unknown');
+        item.innerHTML = `
+          <div class="admin-feedback-head">
+            <div class="admin-feedback-who">${escapeHtml(who)}</div>
+            <div class="admin-feedback-date">${f.createdAt ? timeAgo(f.createdAt) : ''}</div>
+          </div>
+          <div class="admin-feedback-text">${escapeHtml(f.text || '')}</div>
+          <div class="admin-feedback-actions">
+            <button class="admin-feedback-read-btn${f.read ? '' : ' unread'}">${f.read ? 'Read' : 'Mark as read'}</button>
+          </div>`;
+        item.querySelector('.admin-feedback-read-btn').addEventListener('click', async () => {
+          try {
+            await window.fbDb.collection('feedback').doc(doc.id).update({ read: !f.read });
+            loadAdminFeedback();
+            renderAdminFeedbackTile(); // keep the Home tile count in sync
+          } catch (e) { console.warn('feedback read toggle failed', e); }
+        });
+        content.appendChild(item);
+      });
+    } catch (e) {
+      console.warn('loadAdminFeedback failed', e);
+      content.innerHTML = '<div class="admin-loading">Couldn\'t load feedback.</div>';
+    }
+  }
+
+  // Admin-only Home tile: "You have new feedback" (count of unread docs).
+  async function renderAdminFeedbackTile() {
+    const tiles = $('home-tiles');
+    const existing = $('admin-feedback-tile');
+    if (!tiles) return;
+    if (!isAdmin()) { if (existing) existing.remove(); return; }
+    try {
+      const snap = await window.fbDb.collection('feedback').where('read', '==', false).get();
+      if (snap.empty) { if (existing) existing.remove(); return; }
+      const n = snap.size;
+      let tile = existing;
+      if (!tile) {
+        tile = document.createElement('div');
+        tile.id = 'admin-feedback-tile';
+        tile.className = 'home-tile admin-feedback-tile';
+        tile.setAttribute('role', 'button');
+        tile.addEventListener('click', () => {
+          openAdminDashboard();
+          loadAdminData('feedback');
+        });
+        tiles.prepend(tile);
+      }
+      tile.innerHTML = `
+        <div class="home-tile-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="9" y1="10" x2="15" y2="10"/></svg></div>
+        <div class="home-tile-body">
+          <div class="home-tile-label">Admin</div>
+          <div class="home-tile-title">You have ${n} new feedback</div>
+          <div class="home-tile-sub">Tap to review</div>
+        </div>`;
+    } catch (e) { console.warn('admin feedback tile failed', e); }
   }
 
   async function blockUser(uid, displayName, email) {
@@ -6901,6 +7008,64 @@ ${numbered}`;
         }
       });
     }
+
+    // ── Share with family (native share sheet, clipboard fallback) ──
+    const shareAppBtn = $('settings-share-app');
+    if (shareAppBtn) shareAppBtn.addEventListener('click', async () => {
+      const shareData = {
+        title: 'mySanskar',
+        text: 'Devotional music, stories, and Gujarati learning for little ones 🪔',
+        url: 'https://mysanskar.vercel.app',
+      };
+      try {
+        if (navigator.share) await navigator.share(shareData);
+        else {
+          await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
+          toast('Link copied — send it to family!');
+        }
+      } catch {} // user cancelled the share sheet — not an error
+    });
+
+    // ── Suggest a feature → in-app feedback sheet → Firestore ──
+    const feedbackRow = $('settings-feedback-row');
+    if (feedbackRow) feedbackRow.addEventListener('click', () => {
+      if (isGuestMode() || !state.user) {
+        toast('Create a free account to send feedback');
+        return;
+      }
+      $('feedback-input').value = '';
+      $('feedback-modal').classList.remove('hidden');
+      setTimeout(() => $('feedback-input').focus(), 80);
+    });
+    const closeFeedback = () => closeModal('feedback-modal');
+    $('feedback-cancel')?.addEventListener('click', closeFeedback);
+    $('feedback-modal')?.addEventListener('click', (e) => {
+      if (!e.target.closest('.modal-sheet')) closeFeedback();
+    });
+    $('feedback-send')?.addEventListener('click', async () => {
+      const text = $('feedback-input').value.trim();
+      if (!text) { toast('Write a little something first'); return; }
+      if (!state.user) { toast('Sign in to send feedback'); return; }
+      const btn = $('feedback-send');
+      btn.disabled = true;
+      try {
+        await window.fbDb.collection('feedback').add({
+          text,
+          uid: state.user.uid,
+          email: state.user.email || '',
+          displayName: state.user.displayName || '',
+          createdAt: Date.now(),
+          read: false,
+        });
+        closeFeedback();
+        toast('🙏 Thank you — feedback sent!');
+      } catch (e) {
+        console.warn('feedback send failed', e);
+        toast("Couldn't send feedback. Try again?");
+      } finally {
+        btn.disabled = false;
+      }
+    });
 
     $('settings-refresh').addEventListener('click', async () => {
       closeModal('settings-modal');

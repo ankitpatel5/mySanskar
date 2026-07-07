@@ -1035,6 +1035,88 @@ input { font-family: inherit; color: inherit; }
 .ek-row.ek-next + .ek-row { border-top: 0; }
 .ek-empty { padding: 28px 10px; text-align: center; color: var(--text3); font-size: 13px; }
 
+/* ── Settings icon chips — colors reuse the app's tile identity:
+     rose = stories/child, violet = vrat/night, saffron = devotion/core,
+     green = success/storage, teal = learn ───────────────────────── */
+.settings-chip {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.chip-rose    { background: rgba(224, 119, 154, 0.14); color: #e0779a; }
+.chip-violet  { background: rgba(150, 130, 220, 0.14); color: #b9a8e0; }
+.chip-saffron { background: var(--accent-soft); color: var(--accent); }
+.chip-green   { background: var(--success-soft); color: var(--success); }
+.chip-teal    { background: var(--learn-soft); color: var(--learn-ink); }
+.chip-neutral { background: rgba(148, 138, 120, 0.14); color: var(--fg-2); }
+.settings-stacked-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 10px;
+}
+.settings-stacked-head .settings-row-title { margin: 0; }
+
+/* Feedback sheet */
+.feedback-input {
+  width: 100%;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  color: var(--fg-0);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 10px 12px;
+  margin: 10px 0 4px;
+  resize: none;
+}
+.feedback-input:focus { outline: none; border-color: var(--accent); }
+
+/* Admin: feedback list */
+.admin-feedback-item {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.admin-feedback-item.unread { border-color: var(--accent-glow); }
+.admin-feedback-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.admin-feedback-who { font-size: 13px; font-weight: 600; color: var(--text1); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-feedback-date { font-size: 11px; color: var(--text3); flex-shrink: 0; }
+.admin-feedback-text { font-size: 13px; color: var(--text2); line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.admin-feedback-actions { margin-top: 8px; display: flex; justify-content: flex-end; }
+.admin-feedback-read-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+}
+.admin-feedback-read-btn.unread { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+/* Admin: "new feedback" tile on Home */
+.admin-feedback-tile {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-glow);
+  cursor: pointer;
+}
+.admin-feedback-tile .home-tile-icon { color: var(--accent); }
+.admin-feedback-tile:active { transform: scale(0.98); }
+
 /* ── Ekadashi reminder settings ───────────────────────────────── */
 .ek-remind-pills {
   display: flex;

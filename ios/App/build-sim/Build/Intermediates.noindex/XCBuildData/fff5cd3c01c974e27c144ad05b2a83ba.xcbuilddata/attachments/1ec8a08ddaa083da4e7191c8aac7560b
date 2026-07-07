@@ -1,0 +1,19 @@
+{
+  "" : {
+    "diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/NityaWidget.build/Objects-normal/arm64/NityaWidget-primary.dia",
+    "emit-module-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/NityaWidget.build/Objects-normal/arm64/NityaWidget-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/NityaWidget.build/Objects-normal/arm64/NityaWidget-primary-emit-module.dia",
+    "pch" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/NityaWidget.build/Objects-normal/arm64/NityaWidget-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/NityaWidget.build/Objects-normal/arm64/NityaWidget-primary.swiftdeps"
+  },
+  "/Users/ankit/Documents/AI Projects/drift/ios/App/NityaWidget/NityaWidget.swift" : {
+    "const-values" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/NityaWidget.build/Objects-normal/arm64/NityaWidget.swiftconstvalues",
+    "dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/NityaWidget.build/Objects-normal/arm64/NityaWidget.d",
+    "diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/NityaWidget.build/Objects-normal/arm64/NityaWidget.dia",
+    "index-unit-output-path" : "/App.build/Debug-iphonesimulator/NityaWidget.build/Objects-normal/arm64/NityaWidget.o",
+    "llvm-bc" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/NityaWidget.build/Objects-normal/arm64/NityaWidget.bc",
+    "object" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/NityaWidget.build/Objects-normal/arm64/NityaWidget.o",
+    "swift-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/NityaWidget.build/Objects-normal/arm64/NityaWidget.swiftdeps",
+    "swiftmodule" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/NityaWidget.build/Objects-normal/arm64/NityaWidget~partial.swiftmodule"
+  }
+}

@@ -103,6 +103,17 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ── User feedback ("Suggest a feature") ──
+    // Any signed-in user can submit; only the admin can read/manage.
+    match /feedback/{feedbackId} {
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.text is string
+                    && request.resource.data.text.size() > 0
+                    && request.resource.data.text.size() < 4000;
+      allow read, update, delete: if isAdmin();
+    }
+
     // ── Shared playlists (public read, auth write) ──
     match /sharedPlaylists/{shareId} {
       allow read:   if true;
