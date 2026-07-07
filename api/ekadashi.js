@@ -28,22 +28,36 @@ module.exports = async function handler(req, res) {
   const now      = new Date();
   const todayStr = toDateStr(now.getFullYear(), now.getMonth() + 1, now.getDate());
 
-  // ── 1. Scrape monthly pages (current + next 2 months) ──────────────────────
+  // ── 1. Scrape monthly pages (current month → December, in parallel) ─────────
+  // The home tile only needs the next date, but the Ekadashi calendar sheet
+  // shows the remainder of the year, so fetch every month through December.
   const results = {}; // date → { name, fastType }
 
-  for (let offset = 0; offset <= 2; offset++) {
+  const monthsLeft = 11 - now.getMonth(); // 0 in December
+  const offsets = Array.from({ length: monthsLeft + 1 }, (_, i) => i);
+
+  const pages = await Promise.all(offsets.map(async (offset) => {
     const d         = new Date(now.getFullYear(), now.getMonth() + offset, 1);
     const year      = d.getFullYear();
     const monthName = MONTH_NAMES[d.getMonth()];
     const monthNum  = d.getMonth() + 1;
-
     try {
       const resp = await fetch(
         `https://www.baps.org/Calendar/${year}/${monthName}.aspx`,
         { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; mySanskar/1.0)' } }
       );
-      if (!resp.ok) continue;
-      const html = await resp.text();
+      if (!resp.ok) return null;
+      return { year, monthName, monthNum, html: await resp.text() };
+    } catch (e) {
+      console.error(`Monthly scrape failed for ${monthName}:`, e.message);
+      return null;
+    }
+  }));
+
+  for (const page of pages) {
+    if (!page) continue;
+    const { year, monthName, monthNum, html } = page;
+    try {
 
       // Each Ekadashi fast tooltip contains "Ekadashi" + "(Fast)" or "Nirjal[a] Upvas"
       const tooltipRe = /data-tooltip="([^"]*Ekadashi[^"]*(?:Nirjala?\s+Upvas|\(Fast\))[^"]*)"/g;
@@ -85,11 +99,8 @@ module.exports = async function handler(req, res) {
 
   // ── 2. Fill known gaps ─────────────────────────────────────────────────────
   // These are dates the monthly BAPS page omits entirely (no tooltip exists).
-  const windowEnd = toDateStr(
-    new Date(now.getFullYear(), now.getMonth() + 3, 0).getFullYear(),
-    new Date(now.getFullYear(), now.getMonth() + 3, 0).getMonth() + 1,
-    new Date(now.getFullYear(), now.getMonth() + 3, 0).getDate()
-  );
+  // Window now runs through the end of the current year (matches the scrape).
+  const windowEnd = toDateStr(now.getFullYear(), 12, 31);
 
   for (const [date, info] of Object.entries(KNOWN_GAPS)) {
     if (date >= todayStr && date <= windowEnd && !results[date]) {

@@ -916,9 +916,132 @@ input { font-family: inherit; color: inherit; }
   background: #201a2c;
   border: 1px solid rgba(150, 130, 220, 0.20);
   color: #ece8f5;
+  cursor: pointer;
+  transition: transform 0.12s, opacity 0.12s;
 }
+.ekadashi-tile:active { transform: scale(0.98); opacity: 0.85; }
 .ekadashi-tile .home-tile-icon { color: #b9a8e0; }
 .ekadashi-tile .home-tile-label { color: #9d93b5; opacity: 1; }
+.ekadashi-tile-chevron {
+  color: #9d93b5;
+  align-self: center;
+  flex-shrink: 0;
+  display: flex;
+}
+
+/* ── Ekadashi calendar sheet ──────────────────────────────────── */
+/* The sheet itself is the one scroller (base .modal-sheet max-height 80vh +
+   overflow-y auto). No flex, no nested scrollers — Safari mislays out flex
+   children under a max-height parent, which clipped the list on iOS. The
+   header stays pinned via position:sticky instead. */
+.ek-sheet {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+}
+.ek-sheet-head {
+  padding: 4px 6px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-1);
+  /* Solid block above the pinned header so rows can't peek through the
+     handle/padding strip while scrolled. */
+  box-shadow: 0 -28px 0 var(--bg-1);
+}
+.ek-sheet-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: -0.01em;
+  color: var(--text1);
+  margin: 0;
+}
+.ek-sheet-sub { font-size: 13px; color: var(--text3); margin: 3px 0 0; }
+.ek-sheet-list { padding: 0 2px 8px; }
+.ek-month-head {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: 14px 6px 6px;
+}
+.ek-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 6px;
+  border-bottom: 1px solid var(--line-1, rgba(255,255,255,0.06));
+}
+.ek-row:last-child { border-bottom: 0; }
+.ek-date-block {
+  width: 44px;
+  flex-shrink: 0;
+  text-align: center;
+  border-radius: 10px;
+  padding: 5px 0 6px;
+  background: rgba(150, 130, 220, 0.10);
+}
+.ek-date-dow { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #9d93b5; }
+.ek-date-day { font-size: 18px; font-weight: 700; color: #ece8f5; line-height: 1.15; }
+.ek-row-body { flex: 1; min-width: 0; }
+.ek-row-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text1);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ek-row-meta { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+.ek-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(150, 130, 220, 0.16);
+  color: #b9a8e0;
+}
+.ek-badge.nirjala { background: rgba(232, 163, 61, 0.16); color: var(--accent); }
+.ek-row-away { font-size: 12px; color: var(--text3); flex-shrink: 0; }
+.ek-row-away.today { color: var(--accent); font-weight: 700; }
+/* Next-up hero row */
+.ek-row.ek-next {
+  background: linear-gradient(135deg, rgba(150,130,220,0.14), rgba(150,130,220,0.05));
+  border: 1px solid rgba(150, 130, 220, 0.28);
+  border-radius: 14px;
+  padding: 12px 10px;
+  margin: 2px 0 4px;
+}
+.ek-row.ek-next .ek-date-block { background: rgba(150, 130, 220, 0.22); }
+.ek-row.ek-next + .ek-row { border-top: 0; }
+.ek-empty { padding: 28px 10px; text-align: center; color: var(--text3); font-size: 13px; }
+
+/* ── Ekadashi reminder settings ───────────────────────────────── */
+.ek-remind-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.ek-remind-pill {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2, rgba(255,255,255,0.12));
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.ek-remind-pill.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
 .story-tile,
 .sotd-setup-tile {
   background: #2a1820;

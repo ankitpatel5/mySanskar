@@ -26,6 +26,8 @@
     activeTab: 'drift.activeTab',
     activeMusicSubTab: 'drift.activeMusicSubTab',
     audiobooksEnabled: 'drift.audiobooksEnabled',
+    ekRemind: 'drift.ekRemind',
+    ekRemindDays: 'drift.ekRemindDays',
     nitya: 'drift.nitya',
   };
 
@@ -83,6 +85,8 @@
     isVIPTTS: false,
     hasPrerenderedTTS: false,  // true when prerenderedTTS/{storyId} exists for the current story
     audiobooksEnabled: false,
+    ekRemind: false,       // Ekadashi reminder notifications (native only)
+    ekRemindDays: 1,       // remind N days before (0 = same day)
   };
 
   // ── Guest mode helpers ──────────────────────────────────────────
@@ -533,6 +537,9 @@
     } catch { state.playCounts = {}; }
     state.libraryView = localStorage.getItem(LS.libraryView) || 'list';
     state.audiobooksEnabled = localStorage.getItem(LS.audiobooksEnabled) === '1';
+    state.ekRemind = localStorage.getItem(LS.ekRemind) === '1';
+    const ekDays = parseInt(localStorage.getItem(LS.ekRemindDays), 10);
+    state.ekRemindDays = Number.isInteger(ekDays) && ekDays >= 0 && ekDays <= 7 ? ekDays : 1;
     loadNitya();
     applyAudiobooksTab();
     const savedTab = localStorage.getItem(LS.activeTab);
@@ -1933,7 +1940,9 @@
 
   // ============== HOME FEED ==============
 
-  const EKADASHI_CACHE_KEY = 'drift.ekadashiCache';
+  // v2: key bumped when the API window widened to the full year, so devices
+  // that cached the old 3-month payload refetch instead of serving it stale.
+  const EKADASHI_CACHE_KEY = 'drift.ekadashiCache.v2';
   const EKADASHI_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
 
   function renderHomeFeed() {
@@ -2293,7 +2302,9 @@
     });
   }
 
-  async function loadEkadashiTile() {
+  // Returns the full upcoming-Ekadashi list (cache-first, then API), with
+  // daysAway recomputed against today. Shared by the home tile and the sheet.
+  async function getEkadashiList() {
     // Try valid cache first (filter out past dates inline)
     try {
       const cached = JSON.parse(localStorage.getItem(EKADASHI_CACHE_KEY) || 'null');
@@ -2305,8 +2316,7 @@
         });
         if (future.length) {
           reattachDaysAway(future);
-          showEkadashiTile(future[0]);
-          return;
+          return future;
         }
       }
     } catch {}
@@ -2316,16 +2326,208 @@
     const _ekadashiBase = (window.Capacitor && window.Capacitor.isNativePlatform?.())
       ? 'https://mysanskar.vercel.app'
       : '';
+    const resp = await fetch(`${_ekadashiBase}/api/ekadashi`);
+    if (!resp.ok) throw new Error(resp.status);
+    const data = await resp.json();
+    try { localStorage.setItem(EKADASHI_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch {}
+    reattachDaysAway(data);
+    return data;
+  }
+
+  async function loadEkadashiTile() {
     try {
-      const resp = await fetch(`${_ekadashiBase}/api/ekadashi`);
-      if (!resp.ok) throw new Error(resp.status);
-      const data = await resp.json();
-      try { localStorage.setItem(EKADASHI_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch {}
-      if (data.length) showEkadashiTile(data[0]);
+      const list = await getEkadashiList();
+      if (list.length) showEkadashiTile(list[0]);
       else hideEkadashiTile();
+      // Keep scheduled reminders in step with the freshest list (no-op on web/off).
+      syncEkadashiReminders(list);
     } catch {
       hideEkadashiTile();
     }
+  }
+
+  // ── Ekadashi calendar sheet ────────────────────────────────────
+  async function openEkadashiSheet() {
+    const modal = $('ekadashi-modal');
+    const listEl = $('ek-sheet-list');
+    const subEl  = $('ek-sheet-sub');
+    if (!modal || !listEl) return;
+    modal.classList.remove('hidden');
+    listEl.innerHTML = '<div class="ek-empty">Loading…</div>';
+    if (subEl) subEl.textContent = '';
+
+    let list = [];
+    try { list = await getEkadashiList(); } catch {}
+    if (!list.length) {
+      listEl.innerHTML = '<div class="ek-empty">Couldn’t load the calendar. Check your connection and try again.</div>';
+      return;
+    }
+
+    const year = new Date().getFullYear();
+    if (subEl) {
+      subEl.textContent =
+        `${list.length} more this year · ${year}`;
+    }
+
+    listEl.innerHTML = '';
+    let lastMonth = -1;
+    list.forEach((ek, idx) => {
+      const [yr, mo, dy] = ek.date.split('-').map(Number);
+      const d = new Date(yr, mo - 1, dy);
+      const isNext = idx === 0;
+
+      // Month header — the hero row leads the sheet unlabelled; every row after
+      // it is grouped under its month (including the hero's own month).
+      if (!isNext && mo !== lastMonth) {
+        const head = document.createElement('div');
+        head.className = 'ek-month-head';
+        head.textContent = d.toLocaleDateString('en-US', { month: 'long' });
+        listEl.appendChild(head);
+      }
+      lastMonth = isNext ? -1 : mo;
+
+      const away = ek.daysAway === 0 ? 'Today 🙏'
+                 : ek.daysAway === 1 ? 'Tomorrow'
+                 : `In ${ek.daysAway} days`;
+      const isNirjala = ek.fastType === 'Nirjala Upvas';
+
+      const row = document.createElement('div');
+      row.className = 'ek-row' + (isNext ? ' ek-next' : '');
+      row.innerHTML = `
+        <div class="ek-date-block">
+          <div class="ek-date-dow">${d.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+          <div class="ek-date-day">${dy}</div>
+        </div>
+        <div class="ek-row-body">
+          <div class="ek-row-name">${ek.name}</div>
+          <div class="ek-row-meta">
+            <span class="ek-badge${isNirjala ? ' nirjala' : ''}">${isNirjala ? 'Nirjala Upvas' : 'Fast'}</span>
+          </div>
+        </div>
+        <div class="ek-row-away${ek.daysAway === 0 ? ' today' : ''}">${away}</div>`;
+      listEl.appendChild(row);
+    });
+  }
+
+  // ── Ekadashi reminder notifications (native only) ─────────────
+  // Local notifications scheduled on-device from the cached Ekadashi list:
+  // one per upcoming fast, at 9:00 AM local time, N days before (state.ekRemindDays).
+  // Rescheduled from scratch on every sync — IDs live in a reserved range.
+  const EK_NOTIF_ID_BASE = 618000; // reserved range [618000, 618100)
+
+  function ekNotifPlugin() {
+    if (!(window.Capacitor && window.Capacitor.isNativePlatform?.())) return null;
+    return window.Capacitor.Plugins?.LocalNotifications || null;
+  }
+
+  async function syncEkadashiReminders(listOpt) {
+    const LN = ekNotifPlugin();
+    if (!LN) return;
+    try {
+      // Always clear our previously scheduled batch first.
+      const pending = await LN.getPending();
+      const ours = (pending?.notifications || [])
+        .filter((n) => n.id >= EK_NOTIF_ID_BASE && n.id < EK_NOTIF_ID_BASE + 100)
+        .map((n) => ({ id: n.id }));
+      if (ours.length) await LN.cancel({ notifications: ours });
+
+      if (!state.ekRemind) return;
+
+      const list = listOpt || await getEkadashiList();
+      const daysBefore = state.ekRemindDays;
+      const now = Date.now();
+
+      const notifications = [];
+      list.forEach((ek, idx) => {
+        const [yr, mo, dy] = ek.date.split('-').map(Number);
+        const fireAt = new Date(yr, mo - 1, dy - daysBefore, 9, 0, 0); // 9:00 AM local
+        if (fireAt.getTime() <= now) return;
+
+        const dateLabel = new Date(yr, mo - 1, dy).toLocaleDateString('en-US', {
+          month: 'short', day: 'numeric',
+        });
+        const fastLabel = ek.fastType === 'Nirjala Upvas' ? 'Nirjala Fast' : 'Regular Fast';
+        // ek.name already ends in "Ekadashi" (e.g. "Yogini Ekadashi").
+        const title = daysBefore === 0
+          ? `Today is ${ek.name} (${fastLabel})`
+          : daysBefore === 1
+            ? `Tomorrow (${dateLabel}) is ${ek.name} (${fastLabel})`
+            : `${ek.name} (${fastLabel}) is in ${daysBefore} days (${dateLabel})`;
+
+        notifications.push({
+          id: EK_NOTIF_ID_BASE + idx,
+          title,
+          body: '',
+          schedule: { at: fireAt, allowWhileIdle: true },
+        });
+      });
+
+      if (notifications.length) await LN.schedule({ notifications });
+    } catch (e) {
+      console.warn('ekadashi reminder sync failed', e);
+    }
+  }
+
+  // Settings UI — toggle + day pills. Section is only revealed on native.
+  function initEkadashiReminderSettings() {
+    const LN = ekNotifPlugin();
+    if (!LN) return; // web: leave the whole section hidden
+    $('settings-notif-label')?.classList.remove('hidden');
+    $('settings-notif-group')?.classList.remove('hidden');
+
+    const toggle  = $('ek-remind-toggle');
+    const daysRow = $('ek-remind-days-row');
+    const pills   = $('ek-remind-pills');
+
+    const renderUI = () => {
+      if (toggle) toggle.setAttribute('aria-checked', state.ekRemind ? 'true' : 'false');
+      if (daysRow) daysRow.classList.toggle('hidden', !state.ekRemind);
+      if (pills) {
+        pills.querySelectorAll('.ek-remind-pill').forEach((p) => {
+          p.classList.toggle('active', Number(p.dataset.days) === state.ekRemindDays);
+        });
+      }
+    };
+    renderUI();
+
+    toggle?.addEventListener('click', async () => {
+      if (!state.ekRemind) {
+        // Opting in — ask for permission in context.
+        try {
+          let perm = await LN.checkPermissions();
+          if (perm.display !== 'granted') perm = await LN.requestPermissions();
+          if (perm.display !== 'granted') {
+            toast('Enable notifications for mySanskar in Settings to get reminders');
+            return;
+          }
+        } catch {
+          toast("Couldn't enable notifications");
+          return;
+        }
+        state.ekRemind = true;
+        localStorage.setItem(LS.ekRemind, '1');
+        renderUI();
+        await syncEkadashiReminders();
+        toast('🪔 Ekadashi reminders on');
+      } else {
+        state.ekRemind = false;
+        localStorage.setItem(LS.ekRemind, '0');
+        renderUI();
+        await syncEkadashiReminders(); // clears the scheduled batch
+        toast('Ekadashi reminders off');
+      }
+    });
+
+    pills?.addEventListener('click', async (e) => {
+      const pill = e.target.closest('.ek-remind-pill');
+      if (!pill) return;
+      state.ekRemindDays = Number(pill.dataset.days) || 0;
+      localStorage.setItem(LS.ekRemindDays, String(state.ekRemindDays));
+      renderUI();
+      await syncEkadashiReminders();
+      toast(state.ekRemindDays === 0 ? 'Reminders on the day, 9 AM'
+        : `Reminders ${state.ekRemindDays} day${state.ekRemindDays > 1 ? 's' : ''} before, 9 AM`);
+    });
   }
 
   function showEkadashiTile(ekadashi) {
@@ -6757,6 +6959,22 @@ ${numbered}`;
     const closeImport = () => { state.pendingShareDoc = null; closeModal('import-modal'); };
     $('import-cancel').addEventListener('click', closeImport);
     $('import-modal').addEventListener('click', (e) => { if (!e.target.closest('.modal-sheet')) closeImport(); });
+
+    // Ekadashi tile → full-year calendar sheet
+    const ekTile = $('ekadashi-tile');
+    if (ekTile) {
+      ekTile.addEventListener('click', openEkadashiSheet);
+      ekTile.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEkadashiSheet(); }
+      });
+    }
+    const ekModal = $('ekadashi-modal');
+    if (ekModal) {
+      ekModal.addEventListener('click', (e) => {
+        if (!e.target.closest('.modal-sheet')) closeModal('ekadashi-modal');
+      });
+    }
+    initEkadashiReminderSettings();
 
     // New playlist
     $('new-playlist-btn').addEventListener('click', () => {
