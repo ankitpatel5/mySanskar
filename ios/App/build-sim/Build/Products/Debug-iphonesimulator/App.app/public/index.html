@@ -116,14 +116,30 @@
 
           <div class="home-tiles" id="home-tiles">
 
-            <!-- Ekadashi tile -->
-            <div class="home-tile ekadashi-tile hidden" id="ekadashi-tile">
+            <!-- Update-available banner (native only; populated by JS) -->
+            <button class="update-banner hidden" id="update-banner">
+              <span class="update-banner-icon">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></svg>
+              </span>
+              <span class="update-banner-text">
+                <span class="update-banner-title">Update available</span>
+                <span class="update-banner-sub" id="update-banner-sub">A new version is ready</span>
+              </span>
+              <span class="update-banner-cta">Update</span>
+              <span class="update-banner-close" id="update-banner-close" role="button" aria-label="Dismiss">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </span>
+            </button>
+
+            <!-- Ekadashi tile — tap opens the full calendar sheet -->
+            <div class="home-tile ekadashi-tile hidden" id="ekadashi-tile" role="button" tabindex="0" aria-label="Ekadashi calendar">
               <div class="home-tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg></div>
               <div class="home-tile-body">
                 <div class="home-tile-label">Upcoming Fast</div>
                 <div class="home-tile-title" id="ekadashi-name">—</div>
                 <div class="home-tile-sub" id="ekadashi-sub"></div>
               </div>
+              <div class="ekadashi-tile-chevron"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
             </div>
 
             <!-- Ekadashi tile skeleton (shown while loading) -->
@@ -288,10 +304,40 @@
         <!-- Story Time: Category grid -->
         <section id="view-stories" class="view hidden">
           <div class="view-header">
-            <h2 class="view-title">Story Time</h2>
+            <h2 class="view-title">Learn</h2>
           </div>
-          <p class="view-sub story-tab-sub">Jay Swaminarayan — choose a category to begin</p>
+          <div class="learn-section-label">Language</div>
+          <div class="guj-hero-wrap" id="guj-hero"></div>
+          <div class="learn-section-label">Stories</div>
           <div class="story-cats" id="story-cats"></div>
+          <div class="learn-section-label">Conversations</div>
+          <div class="story-cats" id="conv-cats"></div>
+        </section>
+
+        <!-- Learn Gujarati: hub of subsections -->
+        <section id="view-gujarati-hub" class="view hidden">
+          <button class="back-btn" id="guj-hub-back" aria-label="Back">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="view-header"><h2 class="view-title">Learn Gujarati</h2></div>
+          <div class="guj-hub-grid" id="guj-hub-grid"></div>
+        </section>
+
+        <!-- Learn Gujarati: a section (letter/topic grid OR pack list) -->
+        <section id="view-gujarati-section" class="view hidden">
+          <button class="back-btn" id="guj-section-back" aria-label="Back">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="view-header"><div><h2 class="view-title" id="guj-section-title">—</h2><p class="view-sub" id="guj-section-sub"></p></div></div>
+          <div id="guj-section-body"></div>
+        </section>
+
+        <!-- Learn Gujarati: detail (flashcards / verb cards / sentence table) -->
+        <section id="view-gujarati-detail" class="view hidden">
+          <button class="back-btn" id="guj-detail-back" aria-label="Back">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div id="guj-detail-body"></div>
         </section>
 
         <!-- AI Stories: Generator -->
@@ -505,6 +551,15 @@
               <span id="ab-player-elapsed">0:00</span>
               <span id="ab-player-remain"></span>
             </div>
+            <!-- Accessories: speed (left) · sleep (right) -->
+            <div class="ab-player-accessories">
+              <button class="ab-speed-btn" id="ab-speed-btn">1×</button>
+              <button class="ab-sleep-btn js-sleep-btn" id="ab-sleep-btn" title="Sleep timer" aria-label="Sleep timer">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                <span class="js-sleep-label" id="ab-sleep-label"></span>
+              </button>
+            </div>
+            <!-- Transport: prev · −30s · play · +30s · next -->
             <div class="ab-player-controls">
               <button class="ab-ctrl-btn" id="ab-prev-btn" title="Previous chapter">
                 <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
@@ -521,11 +576,27 @@
                 <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-3.51"/></svg>
                 <span>+30s</span>
               </button>
-              <button class="ab-speed-btn" id="ab-speed-btn">1×</button>
+              <button class="ab-ctrl-btn" id="ab-next-btn" title="Next chapter">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+                <span>Next</span>
+              </button>
             </div>
           </div>
           <!-- Chapter list -->
           <div class="ab-chapters" id="ab-chapters"></div>
+
+          <!-- Sleep timer sheet -->
+          <div class="ab-sleep-sheet js-sleep-sheet hidden" id="ab-sleep-sheet" role="dialog" aria-modal="true" aria-label="Sleep timer">
+            <div class="ab-sleep-panel">
+              <div class="ab-sleep-title">Sleep timer</div>
+              <button class="ab-sleep-opt sleep-opt" data-sleep="eoc"><span>End of chapter</span><svg class="ab-sleep-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+              <button class="ab-sleep-opt sleep-opt" data-sleep="5"><span>5 minutes</span><svg class="ab-sleep-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+              <button class="ab-sleep-opt sleep-opt" data-sleep="15"><span>15 minutes</span><svg class="ab-sleep-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+              <button class="ab-sleep-opt sleep-opt" data-sleep="30"><span>30 minutes</span><svg class="ab-sleep-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+              <button class="ab-sleep-opt sleep-opt" data-sleep="45"><span>45 minutes</span><svg class="ab-sleep-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+              <button class="ab-sleep-opt sleep-opt ab-sleep-off" data-sleep="off"><span>Off</span><svg class="ab-sleep-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+            </div>
+          </div>
         </section>
 
         <!-- Story Time: Story reader -->
@@ -703,12 +774,28 @@
           <button id="sheet-queue" class="extra-btn">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="11" y2="18"/><polyline points="17 18 21 14 17 10"/></svg> Queue
           </button>
+          <button id="music-sleep-btn" class="extra-btn js-sleep-btn">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> Sleep <span class="js-sleep-label"></span>
+          </button>
           <button id="sheet-lyrics-btn" class="extra-btn extra-btn-lyrics hidden">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="8" x2="13" y2="8"/><line x1="3" y1="13" x2="10" y2="13"/><circle cx="17" cy="15" r="3"/><path d="M20 12V5l-5 1.5"/></svg> Lyrics
           </button>
           <button id="sheet-add-to" class="extra-btn">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add to…
           </button>
+        </div>
+
+        <!-- Sleep timer sheet (music) -->
+        <div class="ab-sleep-sheet js-sleep-sheet hidden" id="music-sleep-sheet" role="dialog" aria-modal="true" aria-label="Sleep timer">
+          <div class="ab-sleep-panel">
+            <div class="ab-sleep-title">Sleep timer</div>
+            <button class="ab-sleep-opt sleep-opt" data-sleep="eoc"><span>End of track</span><svg class="ab-sleep-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+            <button class="ab-sleep-opt sleep-opt" data-sleep="5"><span>5 minutes</span><svg class="ab-sleep-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+            <button class="ab-sleep-opt sleep-opt" data-sleep="15"><span>15 minutes</span><svg class="ab-sleep-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+            <button class="ab-sleep-opt sleep-opt" data-sleep="30"><span>30 minutes</span><svg class="ab-sleep-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+            <button class="ab-sleep-opt sleep-opt" data-sleep="45"><span>45 minutes</span><svg class="ab-sleep-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+            <button class="ab-sleep-opt sleep-opt ab-sleep-off" data-sleep="off"><span>Off</span><svg class="ab-sleep-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+          </div>
         </div>
       </div>
 
@@ -775,7 +862,7 @@
         </button>
         <button class="tab" data-tab="stories">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-          <span>Stories</span>
+          <span>Learn</span>
         </button>
         <button class="tab hidden" data-tab="audiobooks" id="audiobooks-tab-btn">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
@@ -800,10 +887,10 @@
               <div class="ob-card">
                 <div class="ob-card-icon ob-icon-music">
                   <!-- Musical eighth notes beamed together -->
-                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#e8a33d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M9 18V5l12-2v13"/>
-                    <circle cx="6" cy="18" r="3" fill="#4ade80" stroke="none"/>
-                    <circle cx="18" cy="16" r="3" fill="#4ade80" stroke="none"/>
+                    <circle cx="6" cy="18" r="3" fill="#e8a33d" stroke="none"/>
+                    <circle cx="18" cy="16" r="3" fill="#e8a33d" stroke="none"/>
                   </svg>
                 </div>
                 <div>
@@ -828,7 +915,7 @@
               <div class="ob-card">
                 <div class="ob-card-icon ob-icon-custom">
                   <!-- Magic wand with sparkles -->
-                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#a78bfa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#f5c842" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M15 4 19 8 7 20H3v-4L15 4z"/>
                     <path d="M19 2v3M20.5 3.5h-3"/>
                     <path d="M5 4v2M6 5H4"/>
@@ -843,7 +930,7 @@
               <div class="ob-card">
                 <div class="ob-card-icon ob-icon-convo">
                   <!-- Speech bubble with bidirectional arrows -->
-                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#34d399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#e8a33d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                     <path d="M8 10l2.5-1.5L8 7"/>
                     <path d="M16 14l-2.5 1.5L16 17"/>
@@ -1091,6 +1178,31 @@
             </div>
           </div>
 
+          <!-- Notifications — native apps only; hidden on web by JS -->
+          <div class="settings-group-label hidden" id="settings-notif-label">Notifications</div>
+          <div class="settings-group hidden" id="settings-notif-group">
+            <div class="settings-row">
+              <div class="settings-row-main">
+                <div class="settings-row-title">Ekadashi reminders</div>
+                <div class="settings-row-sub">Before each fast · 9:00 AM</div>
+              </div>
+              <button class="settings-feature-toggle" id="ek-remind-toggle" role="switch" aria-checked="false">
+                <span class="settings-feature-toggle-dot"></span>
+              </button>
+            </div>
+            <div class="settings-row ek-remind-days-row hidden" id="ek-remind-days-row">
+              <div class="settings-row-main">
+                <div class="settings-row-title">Remind me</div>
+                <div class="ek-remind-pills" id="ek-remind-pills">
+                  <button class="ek-remind-pill" data-days="0">Same day</button>
+                  <button class="ek-remind-pill" data-days="1">1 day before</button>
+                  <button class="ek-remind-pill" data-days="2">2 days</button>
+                  <button class="ek-remind-pill" data-days="3">3 days</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="settings-group-label">Storage</div>
           <div class="settings-group" id="settings-storage-group">
             <button class="settings-row settings-row-nav" id="settings-downloads-row" style="display:none">
@@ -1110,6 +1222,23 @@
               <div class="settings-row-main">
                 <div class="settings-row-title">Resync music library</div>
               </div>
+            </button>
+          </div>
+
+          <div class="settings-group-label settings-about-only hidden" id="settings-about-label">About</div>
+          <div class="settings-group settings-about-only hidden" id="settings-about-group">
+            <div class="settings-row">
+              <div class="settings-row-main">
+                <div class="settings-row-title">Version</div>
+              </div>
+              <span class="settings-row-value" id="settings-version-value">—</span>
+            </div>
+            <button class="settings-row settings-row-nav" id="settings-update-row">
+              <div class="settings-row-main">
+                <div class="settings-row-title">Check for updates</div>
+              </div>
+              <span class="settings-row-value" id="settings-update-status"></span>
+              <svg class="settings-row-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           </div>
         </div>
@@ -1293,6 +1422,19 @@
       </div>
     </div>
 
+    <!-- Ekadashi calendar sheet -->
+    <div id="ekadashi-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Ekadashi calendar">
+      <div class="modal-backdrop"></div>
+      <div class="modal-sheet ek-sheet">
+        <div class="sheet-handle"></div>
+        <div class="ek-sheet-head">
+          <h3 class="ek-sheet-title">Ekadashi Calendar</h3>
+          <p class="ek-sheet-sub" id="ek-sheet-sub"></p>
+        </div>
+        <div class="ek-sheet-list" id="ek-sheet-list"></div>
+      </div>
+    </div>
+
     <!-- Shared playlist import modal -->
     <div id="import-modal" class="modal hidden">
       <div class="modal-backdrop"></div>
@@ -1331,12 +1473,14 @@
   <script src="firebase-config.js"></script>
   <script src="config.js"></script>
   <script src="stories-data.js"></script>
+  <script src="gujarati-data-content.js"></script>
   <script src="lottie.min.js"></script>
   <script src="translations-data.js"></script>
   <script src="title-translations.js"></script>
   <script src="conversation-starters.js"></script>
   <script src="lyrics-data.js"></script>
   <script src="utils.js"></script>
+  <script src="app-build.js"></script>
   <script src="app.js?v=20250601u"></script>
   <script>
     // Skip service worker in native Capacitor app — WKWebView doesn't support it.

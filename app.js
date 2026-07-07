@@ -6682,7 +6682,8 @@ ${numbered}`;
         const d = new Date(cp.dob);
         if (!isNaN(d.getTime())) {
           const yrs = Math.floor((Date.now() - d.getTime()) / (365.25 * 24 * 3600 * 1000));
-          if (yrs >= 0 && yrs < 25) age = `, ${yrs}`;
+          if (yrs === 0) age = ', Under 1';
+          else if (yrs > 0 && yrs < 25) age = `, ${yrs}`;
         }
       }
       return `${cp.name}${age}`;

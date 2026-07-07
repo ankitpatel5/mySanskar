@@ -46,6 +46,20 @@
       {
         "basedOn" : null,
         "packageRef" : {
+          "identity" : "app",
+          "kind" : "fileSystem",
+          "location" : "/Users/ankit/Documents/AI Projects/drift/node_modules/@capacitor/app",
+          "name" : "app"
+        },
+        "state" : {
+          "name" : "fileSystem",
+          "path" : "/Users/ankit/Documents/AI Projects/drift/node_modules/@capacitor/app"
+        },
+        "subpath" : "app"
+      },
+      {
+        "basedOn" : null,
+        "packageRef" : {
           "identity" : "app-check",
           "kind" : "remoteSourceControl",
           "location" : "https://github.com/google/app-check.git",
@@ -175,6 +189,20 @@
           "name" : "sourceControlCheckout"
         },
         "subpath" : "GTMAppAuth"
+      },
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "local-notifications",
+          "kind" : "fileSystem",
+          "location" : "/Users/ankit/Documents/AI Projects/drift/node_modules/@capacitor/local-notifications",
+          "name" : "local-notifications"
+        },
+        "state" : {
+          "name" : "fileSystem",
+          "path" : "/Users/ankit/Documents/AI Projects/drift/node_modules/@capacitor/local-notifications"
+        },
+        "subpath" : "local-notifications"
       },
       {
         "basedOn" : null,

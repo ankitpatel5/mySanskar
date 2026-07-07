@@ -17,5 +17,8 @@
 			"showSpinner": false
 		}
 	},
-	"packageClassList": []
+	"packageClassList": [
+		"AppPlugin",
+		"LocalNotificationsPlugin"
+	]
 }

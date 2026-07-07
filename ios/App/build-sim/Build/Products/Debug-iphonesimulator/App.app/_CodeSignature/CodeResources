@@ -6,7 +6,7 @@
 	<dict>
 		<key>App.debug.dylib</key>
 		<data>
-		UBn80f42CCy20/gEei0GV9Aoj+w=
+		w4p97Z+/kzcWkkc0etVU01FylK4=
 		</data>
 		<key>AppAuth_AppAuth.bundle/Info.plist</key>
 		<data>
@@ -66,7 +66,7 @@
 		</data>
 		<key>Assets.car</key>
 		<data>
-		yqYND1nLB1ETKXaKnDuH+3awj+w=
+		rC37FfCx5aLsjVSwahlWQpPQaeg=
 		</data>
 		<key>Base.lproj/LaunchScreen.storyboardc/01J-lp-oVM-view-snD-IY-ifK.nib</key>
 		<data>
@@ -652,11 +652,31 @@
 		</data>
 		<key>Info.plist</key>
 		<data>
-		KwHXi4LeEn4Sr7FQkUo2As6dPbQ=
+		tXB6B7LpZGf/gaz7XaoT1TGiWZI=
 		</data>
 		<key>PkgInfo</key>
 		<data>
 		n57qDP4tZfLD1rCS43W0B4LQjzE=
+		</data>
+		<key>PlugIns/NityaWidget.appex/Info.plist</key>
+		<data>
+		9AcjwrhhBL69Zt8vTgI9hBmp1fU=
+		</data>
+		<key>PlugIns/NityaWidget.appex/NityaWidget</key>
+		<data>
+		eMuY/5zMakQ79m8u8TzIikoQ4GI=
+		</data>
+		<key>PlugIns/NityaWidget.appex/NityaWidget.debug.dylib</key>
+		<data>
+		GqvL7B1Q/GYBwtbFk/VuJuuNVzQ=
+		</data>
+		<key>PlugIns/NityaWidget.appex/_CodeSignature/CodeResources</key>
+		<data>
+		dXTzKyyGammsJRxeBY0KdulL78Y=
+		</data>
+		<key>PlugIns/NityaWidget.appex/__preview.dylib</key>
+		<data>
+		R69NukidAKGri6/DPwNmkS/tkFQ=
 		</data>
 		<key>Promises_FBLPromises.bundle/Info.plist</key>
 		<data>
@@ -684,19 +704,23 @@
 		</data>
 		<key>__preview.dylib</key>
 		<data>
-		yENKiL4kz6lg54u5KC0PmwhsQho=
+		2Aefp3bGHTnlga26NekUGld4TAI=
 		</data>
 		<key>capacitor.config.json</key>
 		<data>
-		ZlZJVCh02X+QelsT0uOaWxLL+6E=
+		AU1bIBLyInME2Ja6BjHt6hkY6kY=
 		</data>
 		<key>config.xml</key>
 		<data>
 		bCZGUCvjDKt2Qr2EGwXDYJ/P+fI=
 		</data>
+		<key>public/app-build.js</key>
+		<data>
+		4Es2I1k2HCfID9oONpYbGYfPAOU=
+		</data>
 		<key>public/app.js</key>
 		<data>
-		3Bu2D6D2XAFhprQQhWwN85+sAXE=
+		W+PYD9R0MwFi75tfyPLLWNExFaE=
 		</data>
 		<key>public/baal.png</key>
 		<data>
@@ -722,6 +746,10 @@
 		<data>
 		sh0LCzFGInvRGsZxECVJgz0crl0=
 		</data>
+		<key>public/gujarati-data-content.js</key>
+		<data>
+		NK0Yhu9CC8drVPTpltXhjJZTS9s=
+		</data>
 		<key>public/icons/icon-192.png</key>
 		<data>
 		IbFaJF2EcgMsX8bGE0yubSDQpno=
@@ -740,7 +768,7 @@
 		</data>
 		<key>public/index.html</key>
 		<data>
-		w7JtSuiqYNGs4ss4cLbZS7eC9v8=
+		9xsEUwt00pj200tdGyLC0zVf6pU=
 		</data>
 		<key>public/manifest.json</key>
 		<data>
@@ -752,11 +780,11 @@
 		</data>
 		<key>public/styles.css</key>
 		<data>
-		l4+xGlTx4vc3Zti8vCkkQ03UdcU=
+		4+7matGYB6oJZ+dtabwYe2uXJxQ=
 		</data>
 		<key>public/sw.js</key>
 		<data>
-		ZLtq0hFBPSG1v/TwHHjz13zsfOQ=
+		0Rv+QoxqZKGOt6atq8ZPdYCnEyA=
 		</data>
 		<key>public/title-translations.js</key>
 		<data>
@@ -773,7 +801,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			aTK0TAGUlIX13IIidkzTbXkidS52ubwN5yD8OeV79I0=
+			yM9bkr8Ye3+JHFqdwmS0j2CRyT1/5IgT83hogBCZah8=
 			</data>
 		</dict>
 		<key>AppAuth_AppAuth.bundle/Info.plist</key>
@@ -878,7 +906,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			JgMolXHoYP+Qarz3sbVBffqabR9HJnnIfyKuZovYVpA=
+			Rc0LB8Rd3/AuEpBIjsLN54RWl7fWpIOMeHThUdKmjsY=
 			</data>
 		</dict>
 		<key>Base.lproj/LaunchScreen.storyboardc/01J-lp-oVM-view-snD-IY-ifK.nib</key>
@@ -1643,6 +1671,41 @@
 			47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=
 			</data>
 		</dict>
+		<key>PlugIns/NityaWidget.appex/Info.plist</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			qgz9GuFB0572KORCm3cZFPQee6Ca3lO2h3SttXdbauQ=
+			</data>
+		</dict>
+		<key>PlugIns/NityaWidget.appex/NityaWidget</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			aI+z5cJSzwXQ8TO9gxeDvYTmyJHnd4qoEMiYHcZjO2Q=
+			</data>
+		</dict>
+		<key>PlugIns/NityaWidget.appex/NityaWidget.debug.dylib</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			58NtHqDwROJLzgO3/THnbTWm1SMEr+aCqlgCyhBKHEk=
+			</data>
+		</dict>
+		<key>PlugIns/NityaWidget.appex/_CodeSignature/CodeResources</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			H1GgbIe/dkG4Jfeivyzc5xJ/xeGirkKNfrhS5dmZM9Y=
+			</data>
+		</dict>
+		<key>PlugIns/NityaWidget.appex/__preview.dylib</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			b3o3b4Kgi1A+8Ausf8Mdebg32DwKc4wZMfgQgYh1EeQ=
+			</data>
+		</dict>
 		<key>Promises_FBLPromises.bundle/Info.plist</key>
 		<dict>
 			<key>hash2</key>
@@ -1689,14 +1752,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			MPx8w5CBFkCWnC45XqNYmrQ2tk7A02l9jEU6jJQIXhQ=
+			0vRK3HP2MpvClYjuzSRUSiem7D5dDp+/L8hlByMQnIU=
 			</data>
 		</dict>
 		<key>capacitor.config.json</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			8fYaxwLBya6Os/qT/O1k9bDCw6HOfRpTRieX6Pr1nwU=
+			75hdX4GsAh23HFzGn2qXjWdfiL8UNUQ1+BCPnQBTG78=
 			</data>
 		</dict>
 		<key>config.xml</key>
@@ -1706,11 +1769,18 @@
 			6dzaST5mPFxNuePLO9loR3pukKqIQLy7pA1y7VS3Z84=
 			</data>
 		</dict>
+		<key>public/app-build.js</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			1DKRdbtLIzIRzK+tgu0s30wsdbkYtHWdoBCtOJBzrlE=
+			</data>
+		</dict>
 		<key>public/app.js</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			0uxBWFZ9xUYgyQ4FRSiJaszuyK4WiVV/cqLs8oH3EY4=
+			TXVuNrOLRF2Vpz58LKP4bVebCluV9ACPi03UdaeMKpU=
 			</data>
 		</dict>
 		<key>public/baal.png</key>
@@ -1755,6 +1825,13 @@
 			cWQi+0cLrlAWkJcjVOQlR5MR0i5hbxerXXfrgRaTCXE=
 			</data>
 		</dict>
+		<key>public/gujarati-data-content.js</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			D3MjDoAeldbkuuj7Y4gE8Lwp2CK+IOw/yCHyhE5xfoA=
+			</data>
+		</dict>
 		<key>public/icons/icon-192.png</key>
 		<dict>
 			<key>hash2</key>
@@ -1787,7 +1864,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			SSerQCrlTGVQTSWszL23V+ZCN/BER0KI8tjLyCFEOms=
+			tg0F+xhIiT4oQaZNyDymjgPVbA1A7jQTc1TMOfVISk0=
 			</data>
 		</dict>
 		<key>public/manifest.json</key>
@@ -1808,14 +1885,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			ZLUM8hAmfhckGBdTSJEky+IMi3AZPI5JMjx2ftXG2HI=
+			+or4/LVtAnm6LgtNexeQFzcJ/Y2lHQq8K6gBUuPEJ94=
 			</data>
 		</dict>
 		<key>public/sw.js</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			2XbeagcWZuwWSTkReqXXCrWo78wX+SDpj5eUQHbDs5M=
+			Is99YLespNuEPOyiJDmEkA6Y55RKnl5ch4tA/UZ4Kas=
 			</data>
 		</dict>
 		<key>public/title-translations.js</key>

@@ -17,6 +17,7 @@
     queue: 'drift.queue',
     lastTrack: 'drift.lastTrack',
     loop: 'drift.loop',
+    repeat: 'drift.repeat',
     shuffle: 'drift.shuffle',
     playCounts: 'drift.playCounts',
     libraryView: 'drift.libraryView',
@@ -25,6 +26,8 @@
     activeTab: 'drift.activeTab',
     activeMusicSubTab: 'drift.activeMusicSubTab',
     audiobooksEnabled: 'drift.audiobooksEnabled',
+    ekRemind: 'drift.ekRemind',
+    ekRemindDays: 'drift.ekRemindDays',
     nitya: 'drift.nitya',
   };
 
@@ -61,7 +64,7 @@
     queue: [],
     history: [],
     currentTrackId: null,
-    loop: false,
+    repeat: 'off',   // 'off' | 'all' | 'one'
     shuffle: false,
     playing: false,
     currentSource: { kind: 'none', payload: null },
@@ -82,6 +85,8 @@
     isVIPTTS: false,
     hasPrerenderedTTS: false,  // true when prerenderedTTS/{storyId} exists for the current story
     audiobooksEnabled: false,
+    ekRemind: false,       // Ekadashi reminder notifications (native only)
+    ekRemindDays: 1,       // remind N days before (0 = same day)
   };
 
   // ── Guest mode helpers ──────────────────────────────────────────
@@ -180,6 +185,7 @@
     // so tab buttons and sub-nav exist in the DOM.
     switchTab(state.currentTab, state.musicSubTab);
     checkOnboarding();
+    initNityaWidgetBridge();
     loadVoices();
     setupAudio();
     bootstrapLibrary();
@@ -189,7 +195,10 @@
     loadConvTalked();
     syncAudiobooksSettingFromFirestore();
     syncAudiobookProgressFromFirestore();
+    syncGujProgressFromFirestore();
+    syncNityaFromFirestore();
     initDownloads();
+    checkForUpdate();
     checkShareParam();
 
     // Skip auth-dependent setup when booting from the localStorage cache snapshot.
@@ -517,7 +526,9 @@
       state.queue = JSON.parse(localStorage.getItem(LS.queue) || '[]');
       if (!Array.isArray(state.queue)) state.queue = [];
     } catch { state.queue = []; }
-    state.loop = localStorage.getItem(LS.loop) === '1';
+    // Migrate legacy boolean loop → tri-state repeat ('1' meant repeat-one).
+    state.repeat = localStorage.getItem(LS.repeat)
+      || (localStorage.getItem(LS.loop) === '1' ? 'one' : 'off');
     state.shuffle = localStorage.getItem(LS.shuffle) === '1';
     state.currentTrackId = localStorage.getItem(LS.lastTrack) || null;
     try {
@@ -526,6 +537,9 @@
     } catch { state.playCounts = {}; }
     state.libraryView = localStorage.getItem(LS.libraryView) || 'list';
     state.audiobooksEnabled = localStorage.getItem(LS.audiobooksEnabled) === '1';
+    state.ekRemind = localStorage.getItem(LS.ekRemind) === '1';
+    const ekDays = parseInt(localStorage.getItem(LS.ekRemindDays), 10);
+    state.ekRemindDays = Number.isInteger(ekDays) && ekDays >= 0 && ekDays <= 7 ? ekDays : 1;
     loadNitya();
     applyAudiobooksTab();
     const savedTab = localStorage.getItem(LS.activeTab);
@@ -543,7 +557,7 @@
     try {
       if (key === 'playlists') localStorage.setItem(LS.playlists, JSON.stringify(state.playlists));
       else if (key === 'queue') localStorage.setItem(LS.queue, JSON.stringify(state.queue));
-      else if (key === 'loop') localStorage.setItem(LS.loop, state.loop ? '1' : '0');
+      else if (key === 'repeat') localStorage.setItem(LS.repeat, state.repeat);
       else if (key === 'shuffle') localStorage.setItem(LS.shuffle, state.shuffle ? '1' : '0');
       else if (key === 'lastTrack') {
         if (state.currentTrackId) localStorage.setItem(LS.lastTrack, state.currentTrackId);
@@ -1135,6 +1149,10 @@
     }
     // Library is now ready — (re)render Nitya so shortcuts resolve + defaults seed.
     if (state.currentTab === 'home') renderNitya();
+    // Track names/albums are now resolvable — refresh the widget list.
+    nityaSyncToWidget();
+    // A widget tile tapped before the library loaded can now play.
+    flushPendingNityaPlay();
   }
 
   // ============== COLOR HASHING ==============
@@ -1330,7 +1348,9 @@
       const t = state.trackById[state.currentTrackId];
       if (t) toast(`Couldn't play "${t.name}"`);
     });
-    audio.loop = state.loop;
+    // Repeat is handled manually in handleTrackEnded so the 'ended' event always
+    // fires (needed for queue/shuffle/sleep logic) — never use native audio.loop.
+    audio.loop = false;
 
     if ('mediaSession' in navigator) {
       navigator.mediaSession.setActionHandler('play', () => togglePlay());
@@ -1396,7 +1416,12 @@
   }
 
   function handleTrackEnded() {
-    if (state.loop) {
+    // Sleep timer set to "end of track" wins over everything — stop here.
+    if (sleepShouldStopAtItemEnd()) {
+      audio.pause();
+      return;
+    }
+    if (state.repeat === 'one') {
       audio.currentTime = 0;
       audio.play();
       return;
@@ -1422,6 +1447,8 @@
         else { do { nextIdx = Math.floor(Math.random() * ids.length); } while (nextIdx === i); }
       } else {
         nextIdx = i + 1;
+        // Repeat-all: wrap from the last track back to the first.
+        if (nextIdx >= ids.length && state.repeat === 'all') nextIdx = 0;
       }
       if (nextIdx >= 0 && nextIdx < ids.length) {
         playTrack(ids[nextIdx]);
@@ -1689,18 +1716,26 @@
     });
   }
 
-  // ============== LOOP / SHUFFLE TOGGLES ==============
+  // ============== REPEAT / SHUFFLE TOGGLES ==============
+  const REPEAT_CYCLE = { off: 'all', all: 'one', one: 'off' };
   function toggleLoop() {
-    state.loop = !state.loop;
-    audio.loop = state.loop;
-    persist('loop');
+    state.repeat = REPEAT_CYCLE[state.repeat] || 'all';
+    persist('repeat');
     updateLoopUI();
-    toast(state.loop ? 'Loop on' : 'Loop off');
+    toast(state.repeat === 'all' ? 'Repeat all'
+        : state.repeat === 'one' ? 'Repeat one'
+        : 'Repeat off');
   }
   function updateLoopUI() {
-    $('sheet-loop').classList.toggle('active', state.loop);
-    const ml = $('mini-loop');
-    if (ml) ml.classList.toggle('active', state.loop);
+    const on  = state.repeat !== 'off';
+    const one = state.repeat === 'one';
+    [$('sheet-loop'), $('mini-loop')].forEach(btn => {
+      if (!btn) return;
+      btn.classList.toggle('active', on);
+      btn.classList.toggle('repeat-one', one);
+      btn.setAttribute('aria-label',
+        on ? (one ? 'Repeat one' : 'Repeat all') : 'Repeat off');
+    });
   }
   function toggleShuffle() {
     state.shuffle = !state.shuffle;
@@ -1905,7 +1940,9 @@
 
   // ============== HOME FEED ==============
 
-  const EKADASHI_CACHE_KEY = 'drift.ekadashiCache';
+  // v2: key bumped when the API window widened to the full year, so devices
+  // that cached the old 3-month payload refetch instead of serving it stale.
+  const EKADASHI_CACHE_KEY = 'drift.ekadashiCache.v2';
   const EKADASHI_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
 
   function renderHomeFeed() {
@@ -1919,10 +1956,100 @@
     }
     loadEkadashiTile();
     renderNitya();
+    renderUpdateBanner();
 
     // loadStoryOfDay() handles skeleton show/hide synchronously before its first
     // await, so there is no blank gap or flash — no pre-show needed here.
     loadStoryOfDay();
+  }
+
+  // ============== APP UPDATE CHECK (native only) ==============
+  // The installed version is baked into window.APP_BUILD at native build time.
+  // The latest released version comes from a manifest we host and bump per release.
+  const APP_VERSION_MANIFEST = 'https://mysanskar.vercel.app/app-version.json';
+  const ANDROID_PACKAGE = 'com.ankit.mysanskar';
+  let _updateInfo = null; // { latest, url } when an update is available
+
+  function appVersion() { return (window.APP_BUILD && window.APP_BUILD.version) || null; }
+  function appBuildNum() { return (window.APP_BUILD && window.APP_BUILD.build) || null; }
+  function platformKey() {
+    const p = window.Capacitor?.getPlatform?.();
+    return (p === 'ios' || p === 'android') ? p : null;
+  }
+  // Semver-ish compare: returns 1 if a>b, -1 if a<b, 0 if equal. Tolerates "1.3.0" vs "1.3".
+  function cmpVersion(a, b) {
+    const pa = String(a).split('.').map((n) => parseInt(n, 10) || 0);
+    const pb = String(b).split('.').map((n) => parseInt(n, 10) || 0);
+    const len = Math.max(pa.length, pb.length);
+    for (let i = 0; i < len; i++) {
+      const x = pa[i] || 0, y = pb[i] || 0;
+      if (x > y) return 1;
+      if (x < y) return -1;
+    }
+    return 0;
+  }
+  function storeUrlFor(plat, cfg) {
+    if (plat === 'ios') {
+      const id = cfg && cfg.appStoreId;
+      // Direct deep link to the (unlisted) App Store product page.
+      return id ? `itms-apps://apps.apple.com/app/id${id}` : 'itms-apps://';
+    }
+    return `market://details?id=${ANDROID_PACKAGE}`;
+  }
+  function openStore() {
+    if (!_updateInfo || !_updateInfo.url) return;
+    try { window.open(_updateInfo.url, '_system'); }
+    catch { window.location.href = _updateInfo.url; }
+  }
+
+  // Fetch the manifest and decide whether an update is available.
+  async function checkForUpdate() {
+    const plat = platformKey();
+    const cur  = appVersion();
+    if (!plat || !cur) return; // web / unknown version → nothing to check
+    try {
+      const res = await fetch(`${APP_VERSION_MANIFEST}?t=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      const cfg  = data[plat];
+      if (!cfg || !cfg.latest) return;
+      if (cmpVersion(cfg.latest, cur) > 0) {
+        _updateInfo = { latest: cfg.latest, url: storeUrlFor(plat, cfg) };
+      } else {
+        _updateInfo = null;
+      }
+    } catch { /* offline / parse error → stay quiet */ }
+    renderUpdateBanner();
+    renderSettingsAbout();
+  }
+
+  function renderUpdateBanner() {
+    const banner = $('update-banner');
+    if (!banner) return;
+    const dismissed = localStorage.getItem('drift.updateDismissed');
+    const show = !!_updateInfo && _updateInfo.latest !== dismissed;
+    banner.classList.toggle('hidden', !show);
+    if (show) {
+      const sub = $('update-banner-sub');
+      if (sub) sub.textContent = `Version ${_updateInfo.latest} is ready`;
+    }
+  }
+
+  // Settings → About: show the installed version + update status (native only).
+  function renderSettingsAbout() {
+    const label  = $('settings-about-label');
+    const group  = $('settings-about-group');
+    const verEl  = $('settings-version-value');
+    const statEl = $('settings-update-status');
+    const native = !!appVersion();
+    if (label) label.classList.toggle('hidden', !native);
+    if (group) group.classList.toggle('hidden', !native);
+    if (!native) return;
+    if (verEl) verEl.textContent = appBuildNum() ? `${appVersion()} (${appBuildNum()})` : appVersion();
+    if (statEl) {
+      statEl.textContent = _updateInfo ? `${_updateInfo.latest} available` : 'Up to date';
+      statEl.classList.toggle('settings-update-available', !!_updateInfo);
+    }
   }
 
   // ============== NITYA — quick-play shortcuts ==============
@@ -1943,9 +2070,98 @@
   }
   function saveNitya() {
     try { localStorage.setItem(LS.nitya, JSON.stringify(state.nitya || [])); } catch {}
+    saveNityaToFirestore();
+    nityaSyncToWidget();
+  }
+
+  // ── Nitya iOS home-screen widget bridge ───────────────────────
+  // The native WidgetKit extension renders state.nitya as a home-screen tile.
+  // Each tile deep-links back via  mysanskar://nitya/play?id=<trackId>  and we
+  // play it through the existing web player. All native calls are optional —
+  // guarded so the web build (no Capacitor plugins) is unaffected.
+  function nityaSyncToWidget() {
+    const plugin = window.Capacitor?.Plugins?.NityaWidget;
+    if (!plugin) return; // web, or plugin not installed yet
+    // Before the library loads, trackById is empty — sync the raw list (id+name
+    // are all the widget needs) rather than filtering everything out.
+    const libReady = state.trackById && Object.keys(state.trackById).length > 0;
+    const items = (state.nitya || [])
+      .filter((s) => s && s.id && (!libReady || state.trackById[s.id]))
+      .map((s) => {
+        const t = libReady ? state.trackById[s.id] : null;
+        return { id: s.id, name: s.name || t?.name || 'Untitled', album: t?.albumName || '' };
+      });
+    try { plugin.sync({ items }); } catch (e) { console.warn('nitya widget sync failed', e); }
+  }
+
+  let _pendingNityaPlayId = null;
+  function playNityaFromWidget(trackId) {
+    if (!trackId) return;
+    if (state.trackById && state.trackById[trackId]) {
+      state.currentSource = { kind: 'single', payload: null };
+      playTrack(trackId);
+      _pendingNityaPlayId = null;
+    } else {
+      // Cold launch — library not loaded yet. Remember and play once it's ready.
+      _pendingNityaPlayId = trackId;
+    }
+  }
+  function flushPendingNityaPlay() {
+    if (_pendingNityaPlayId) playNityaFromWidget(_pendingNityaPlayId);
+  }
+
+  function parseNityaPlayUrl(url) {
+    // mysanskar://nitya/play?id=<trackId>
+    const m = /nitya\/play\?[^#]*\bid=([^&]+)/.exec(url || '');
+    try { return m ? decodeURIComponent(m[1]) : null; } catch { return m ? m[1] : null; }
+  }
+
+  async function initNityaWidgetBridge() {
+    const App = window.Capacitor?.Plugins?.App;
+    if (!App) return; // web build
+    // Warm launch: app already running when a widget tile is tapped.
+    App.addListener('appUrlOpen', (data) => {
+      const id = parseNityaPlayUrl(data?.url);
+      if (id) playNityaFromWidget(id);
+    });
+    // Cold launch: app was closed and opened directly by the widget URL.
+    try {
+      const launch = await App.getLaunchUrl();
+      const id = parseNityaPlayUrl(launch?.url);
+      if (id) playNityaFromWidget(id);
+    } catch {}
+    nityaSyncToWidget(); // push current list on startup
+  }
+  // Cross-device sync (Firestore, per user). The shortcut list is curated/ordered,
+  // so the cloud copy is authoritative on load; a local-only list seeds the cloud.
+  function nityaRef() { return state.user ? window.fbDb.doc(`users/${state.user.uid}/settings/nitya`) : null; }
+  let _nityaSynced = false;
+  let _nityaSaveTimer = null;
+  function saveNityaToFirestore() {
+    const ref = nityaRef(); if (!ref || state.nitya == null) return;
+    clearTimeout(_nityaSaveTimer);
+    _nityaSaveTimer = setTimeout(() => {
+      ref.set({ items: state.nitya || [] }, { merge: true }).catch((e) => console.warn('nitya save failed', e));
+    }, 800);
+  }
+  async function syncNityaFromFirestore() {
+    const ref = nityaRef(); if (!ref) return;
+    try {
+      const doc = await ref.get();
+      if (doc.exists && Array.isArray(doc.data().items)) {
+        state.nitya = doc.data().items;                 // cloud is authoritative
+        try { localStorage.setItem(LS.nitya, JSON.stringify(state.nitya)); } catch {}
+        nityaSyncToWidget();  // cloud load bypasses saveNitya — push to widget here too
+      } else if (state.nitya && state.nitya.length) {
+        ref.set({ items: state.nitya }, { merge: true }).catch(() => {}); // seed cloud from local
+      }
+      _nityaSynced = true;   // unblock default-seeding for brand-new users
+      renderNitya();         // adopt cloud / allow seeding now
+    } catch (e) { _nityaSynced = true; console.warn('nitya sync failed', e); }
   }
   function seedNityaDefaults() {
     if (state.nitya !== null) return;               // already configured (even if empty)
+    if (state.user && !_nityaSynced) return;        // wait for cloud check first (avoid clobbering curated list)
     if (!state.flatTracks || !state.flatTracks.length) return; // wait for library
     const picks = [];
     NITYA_DEFAULTS.forEach((re) => {
@@ -2086,7 +2302,9 @@
     });
   }
 
-  async function loadEkadashiTile() {
+  // Returns the full upcoming-Ekadashi list (cache-first, then API), with
+  // daysAway recomputed against today. Shared by the home tile and the sheet.
+  async function getEkadashiList() {
     // Try valid cache first (filter out past dates inline)
     try {
       const cached = JSON.parse(localStorage.getItem(EKADASHI_CACHE_KEY) || 'null');
@@ -2098,8 +2316,7 @@
         });
         if (future.length) {
           reattachDaysAway(future);
-          showEkadashiTile(future[0]);
-          return;
+          return future;
         }
       }
     } catch {}
@@ -2109,16 +2326,208 @@
     const _ekadashiBase = (window.Capacitor && window.Capacitor.isNativePlatform?.())
       ? 'https://mysanskar.vercel.app'
       : '';
+    const resp = await fetch(`${_ekadashiBase}/api/ekadashi`);
+    if (!resp.ok) throw new Error(resp.status);
+    const data = await resp.json();
+    try { localStorage.setItem(EKADASHI_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch {}
+    reattachDaysAway(data);
+    return data;
+  }
+
+  async function loadEkadashiTile() {
     try {
-      const resp = await fetch(`${_ekadashiBase}/api/ekadashi`);
-      if (!resp.ok) throw new Error(resp.status);
-      const data = await resp.json();
-      try { localStorage.setItem(EKADASHI_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch {}
-      if (data.length) showEkadashiTile(data[0]);
+      const list = await getEkadashiList();
+      if (list.length) showEkadashiTile(list[0]);
       else hideEkadashiTile();
+      // Keep scheduled reminders in step with the freshest list (no-op on web/off).
+      syncEkadashiReminders(list);
     } catch {
       hideEkadashiTile();
     }
+  }
+
+  // ── Ekadashi calendar sheet ────────────────────────────────────
+  async function openEkadashiSheet() {
+    const modal = $('ekadashi-modal');
+    const listEl = $('ek-sheet-list');
+    const subEl  = $('ek-sheet-sub');
+    if (!modal || !listEl) return;
+    modal.classList.remove('hidden');
+    listEl.innerHTML = '<div class="ek-empty">Loading…</div>';
+    if (subEl) subEl.textContent = '';
+
+    let list = [];
+    try { list = await getEkadashiList(); } catch {}
+    if (!list.length) {
+      listEl.innerHTML = '<div class="ek-empty">Couldn’t load the calendar. Check your connection and try again.</div>';
+      return;
+    }
+
+    const year = new Date().getFullYear();
+    if (subEl) {
+      subEl.textContent =
+        `${list.length} more this year · ${year}`;
+    }
+
+    listEl.innerHTML = '';
+    let lastMonth = -1;
+    list.forEach((ek, idx) => {
+      const [yr, mo, dy] = ek.date.split('-').map(Number);
+      const d = new Date(yr, mo - 1, dy);
+      const isNext = idx === 0;
+
+      // Month header — the hero row leads the sheet unlabelled; every row after
+      // it is grouped under its month (including the hero's own month).
+      if (!isNext && mo !== lastMonth) {
+        const head = document.createElement('div');
+        head.className = 'ek-month-head';
+        head.textContent = d.toLocaleDateString('en-US', { month: 'long' });
+        listEl.appendChild(head);
+      }
+      lastMonth = isNext ? -1 : mo;
+
+      const away = ek.daysAway === 0 ? 'Today 🙏'
+                 : ek.daysAway === 1 ? 'Tomorrow'
+                 : `In ${ek.daysAway} days`;
+      const isNirjala = ek.fastType === 'Nirjala Upvas';
+
+      const row = document.createElement('div');
+      row.className = 'ek-row' + (isNext ? ' ek-next' : '');
+      row.innerHTML = `
+        <div class="ek-date-block">
+          <div class="ek-date-dow">${d.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+          <div class="ek-date-day">${dy}</div>
+        </div>
+        <div class="ek-row-body">
+          <div class="ek-row-name">${ek.name}</div>
+          <div class="ek-row-meta">
+            <span class="ek-badge${isNirjala ? ' nirjala' : ''}">${isNirjala ? 'Nirjala Upvas' : 'Fast'}</span>
+          </div>
+        </div>
+        <div class="ek-row-away${ek.daysAway === 0 ? ' today' : ''}">${away}</div>`;
+      listEl.appendChild(row);
+    });
+  }
+
+  // ── Ekadashi reminder notifications (native only) ─────────────
+  // Local notifications scheduled on-device from the cached Ekadashi list:
+  // one per upcoming fast, at 9:00 AM local time, N days before (state.ekRemindDays).
+  // Rescheduled from scratch on every sync — IDs live in a reserved range.
+  const EK_NOTIF_ID_BASE = 618000; // reserved range [618000, 618100)
+
+  function ekNotifPlugin() {
+    if (!(window.Capacitor && window.Capacitor.isNativePlatform?.())) return null;
+    return window.Capacitor.Plugins?.LocalNotifications || null;
+  }
+
+  async function syncEkadashiReminders(listOpt) {
+    const LN = ekNotifPlugin();
+    if (!LN) return;
+    try {
+      // Always clear our previously scheduled batch first.
+      const pending = await LN.getPending();
+      const ours = (pending?.notifications || [])
+        .filter((n) => n.id >= EK_NOTIF_ID_BASE && n.id < EK_NOTIF_ID_BASE + 100)
+        .map((n) => ({ id: n.id }));
+      if (ours.length) await LN.cancel({ notifications: ours });
+
+      if (!state.ekRemind) return;
+
+      const list = listOpt || await getEkadashiList();
+      const daysBefore = state.ekRemindDays;
+      const now = Date.now();
+
+      const notifications = [];
+      list.forEach((ek, idx) => {
+        const [yr, mo, dy] = ek.date.split('-').map(Number);
+        const fireAt = new Date(yr, mo - 1, dy - daysBefore, 9, 0, 0); // 9:00 AM local
+        if (fireAt.getTime() <= now) return;
+
+        const dateLabel = new Date(yr, mo - 1, dy).toLocaleDateString('en-US', {
+          month: 'short', day: 'numeric',
+        });
+        const fastLabel = ek.fastType === 'Nirjala Upvas' ? 'Nirjala Fast' : 'Regular Fast';
+        // ek.name already ends in "Ekadashi" (e.g. "Yogini Ekadashi").
+        const title = daysBefore === 0
+          ? `Today is ${ek.name} (${fastLabel})`
+          : daysBefore === 1
+            ? `Tomorrow (${dateLabel}) is ${ek.name} (${fastLabel})`
+            : `${ek.name} (${fastLabel}) is in ${daysBefore} days (${dateLabel})`;
+
+        notifications.push({
+          id: EK_NOTIF_ID_BASE + idx,
+          title,
+          body: '',
+          schedule: { at: fireAt, allowWhileIdle: true },
+        });
+      });
+
+      if (notifications.length) await LN.schedule({ notifications });
+    } catch (e) {
+      console.warn('ekadashi reminder sync failed', e);
+    }
+  }
+
+  // Settings UI — toggle + day pills. Section is only revealed on native.
+  function initEkadashiReminderSettings() {
+    const LN = ekNotifPlugin();
+    if (!LN) return; // web: leave the whole section hidden
+    $('settings-notif-label')?.classList.remove('hidden');
+    $('settings-notif-group')?.classList.remove('hidden');
+
+    const toggle  = $('ek-remind-toggle');
+    const daysRow = $('ek-remind-days-row');
+    const pills   = $('ek-remind-pills');
+
+    const renderUI = () => {
+      if (toggle) toggle.setAttribute('aria-checked', state.ekRemind ? 'true' : 'false');
+      if (daysRow) daysRow.classList.toggle('hidden', !state.ekRemind);
+      if (pills) {
+        pills.querySelectorAll('.ek-remind-pill').forEach((p) => {
+          p.classList.toggle('active', Number(p.dataset.days) === state.ekRemindDays);
+        });
+      }
+    };
+    renderUI();
+
+    toggle?.addEventListener('click', async () => {
+      if (!state.ekRemind) {
+        // Opting in — ask for permission in context.
+        try {
+          let perm = await LN.checkPermissions();
+          if (perm.display !== 'granted') perm = await LN.requestPermissions();
+          if (perm.display !== 'granted') {
+            toast('Enable notifications for mySanskar in Settings to get reminders');
+            return;
+          }
+        } catch {
+          toast("Couldn't enable notifications");
+          return;
+        }
+        state.ekRemind = true;
+        localStorage.setItem(LS.ekRemind, '1');
+        renderUI();
+        await syncEkadashiReminders();
+        toast('🪔 Ekadashi reminders on');
+      } else {
+        state.ekRemind = false;
+        localStorage.setItem(LS.ekRemind, '0');
+        renderUI();
+        await syncEkadashiReminders(); // clears the scheduled batch
+        toast('Ekadashi reminders off');
+      }
+    });
+
+    pills?.addEventListener('click', async (e) => {
+      const pill = e.target.closest('.ek-remind-pill');
+      if (!pill) return;
+      state.ekRemindDays = Number(pill.dataset.days) || 0;
+      localStorage.setItem(LS.ekRemindDays, String(state.ekRemindDays));
+      renderUI();
+      await syncEkadashiReminders();
+      toast(state.ekRemindDays === 0 ? 'Reminders on the day, 9 AM'
+        : `Reminders ${state.ekRemindDays} day${state.ekRemindDays > 1 ? 's' : ''} before, 9 AM`);
+    });
   }
 
   function showEkadashiTile(ekadashi) {
@@ -2409,6 +2818,7 @@
   // ============== STORY TIME ==============
 
   function renderStoryCategories() {
+    renderGujHero();
     const data = window.STORIES_DATA;
     if (!data) return;
     const container = $('story-cats');
@@ -2429,8 +2839,10 @@
       container.appendChild(card);
     });
 
-    // Conversation Starters card
-    if (window.CONVERSATION_STARTERS) {
+    // Conversation Starters card — its own "Conversations" section
+    const convContainer = $('conv-cats');
+    if (convContainer) convContainer.innerHTML = '';
+    if (window.CONVERSATION_STARTERS && convContainer) {
       const convCard = document.createElement('div');
       convCard.className = 'story-cat-card';
       convCard.style.background = 'linear-gradient(135deg, #5B8FD6, #7B5EC8)';
@@ -2450,7 +2862,7 @@
         }
         openConversationAges();
       });
-      container.appendChild(convCard);
+      convContainer.appendChild(convCard);
     }
 
     // AI Stories card
@@ -2472,6 +2884,271 @@
       openAIStories();
     });
     container.appendChild(aiCard);
+  }
+
+  // ============== LEARN GUJARATI ==============
+  const GUJ_META = {
+    vowels:     { label: 'Vowels',      kind: 'grid', glyph: 'અ',  unit: 'letters' },
+    consonants: { label: 'Consonants',  kind: 'grid', glyph: 'ક',  unit: 'letters' },
+    numbers:    { label: 'Numbers',     kind: 'grid', glyph: '૧',  unit: 'numbers' },
+    vocabulary: { label: 'Vocabulary',  kind: 'grid', icon: 'books', unit: 'topics' },
+    verbs:      { label: 'Verbs',       kind: 'verbs', icon: 'run',  unit: 'verbs' },
+    sentences:  { label: 'Sentences',   kind: 'sentences', icon: 'chat', unit: 'sentences' },
+  };
+  const GUJ_ICONS = {
+    books: '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+    run:   '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4" r="1"/><path d="M4 17l5-1 2-4 4 3 3 1M11 12l-1 5 3 4M14 7l-2 3"/></svg>',
+    chat:  '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg>',
+  };
+  const SPEAKER = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+  const PLAY_TRI = '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>';
+
+  let _gujAudio = null;
+  function gujPlay(url) {
+    if (!url) return;
+    if (!_gujAudio) _gujAudio = new Audio();
+    if (!audio.paused) audio.pause();            // pause music
+    if (_abAudio && !_abAudio.paused) abPause();  // pause audiobook
+    try { _gujAudio.pause(); _gujAudio.src = url; _gujAudio.currentTime = 0; _gujAudio.play().catch(() => {}); } catch {}
+  }
+
+  // Hero entry on the Learn tab
+  function renderGujHero() {
+    const el = $('guj-hero');
+    if (!el || !window.GUJARATI_DATA) return;
+    el.innerHTML = `
+      <button class="guj-hero" id="guj-hero-btn">
+        <span class="guj-hero-mark">અ<br>ક<br>૧</span>
+        <span class="guj-hero-text">
+          <span class="guj-hero-title">Learn Gujarati</span>
+          <span class="guj-hero-sub">Letters, words, verbs &amp; sentences</span>
+        </span>
+        <span class="guj-hero-arrow"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+      </button>`;
+    $('guj-hero-btn').addEventListener('click', openGujHub);
+  }
+
+  // ── Quiet progress (gentle gamification) ──────────────────
+  // Tracks which items per subsection the learner has opened, shown as a soft
+  // teal ring on each hub card. Persisted locally.
+  let _gujProgress = null;
+  function ensureGujProgress() {
+    if (_gujProgress === null) {
+      try { _gujProgress = JSON.parse(localStorage.getItem('drift.gujProgress') || '{}'); }
+      catch { _gujProgress = {}; }
+    }
+    return _gujProgress;
+  }
+  function gujTotal(key) {
+    const d = window.GUJARATI_DATA[key];
+    return d.items ? d.items.length : d.packs ? d.packs.length : d.sets ? d.sets.length : 0;
+  }
+  function gujDone(key) {
+    const p = ensureGujProgress();
+    return Array.isArray(p[key]) ? p[key].length : 0;
+  }
+  function markGujDone(key, idx) {
+    const p = ensureGujProgress();
+    if (!p[key]) p[key] = [];
+    if (!p[key].includes(idx)) {
+      p[key].push(idx);
+      try { localStorage.setItem('drift.gujProgress', JSON.stringify(p)); } catch {}
+      saveGujProgressToFirestore();
+    }
+  }
+  // Cross-device sync (Firestore, per user) — merged with local so progress is
+  // never lost across devices.
+  function gujProgressRef() { return state.user ? window.fbDb.doc(`users/${state.user.uid}/settings/gujProgress`) : null; }
+  let _gujSaveTimer = null;
+  function saveGujProgressToFirestore() {
+    const ref = gujProgressRef(); if (!ref) return;
+    clearTimeout(_gujSaveTimer);
+    _gujSaveTimer = setTimeout(() => {
+      ref.set({ progress: ensureGujProgress() }, { merge: true }).catch((e) => console.warn('guj progress save failed', e));
+    }, 800);
+  }
+  async function syncGujProgressFromFirestore() {
+    const ref = gujProgressRef(); if (!ref) return;
+    try {
+      const doc = await ref.get();
+      const remote = (doc.exists && doc.data().progress) ? doc.data().progress : {};
+      const local = ensureGujProgress();
+      const merged = {};
+      let localGrew = false;
+      new Set([...Object.keys(local), ...Object.keys(remote)]).forEach((k) => {
+        merged[k] = [...new Set([...(local[k] || []), ...(remote[k] || [])])];
+        if (merged[k].length > (remote[k] || []).length) localGrew = true;
+      });
+      _gujProgress = merged;
+      try { localStorage.setItem('drift.gujProgress', JSON.stringify(merged)); } catch {}
+      if (localGrew) ref.set({ progress: merged }, { merge: true }).catch(() => {}); // push local-only items up
+      if (!$('view-gujarati-hub').classList.contains('hidden')) openGujHub(); // refresh rings if visible
+    } catch (e) { console.warn('guj progress sync failed', e); }
+  }
+  function gujRing(pct) {
+    const C = 94.25, off = C * (1 - Math.max(0, Math.min(1, pct)));
+    const done = pct >= 1;
+    return `<svg class="guj-ring" viewBox="0 0 36 36" width="26" height="26" aria-hidden="true">
+      <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3"/>
+      <circle cx="18" cy="18" r="15" fill="none" stroke="#3fb999" stroke-width="3" stroke-dasharray="${C}" stroke-dashoffset="${off}" stroke-linecap="round" transform="rotate(-90 18 18)"/>
+      ${done ? '<path d="M13 18.5l3.2 3.2L23 15" fill="none" stroke="#3fb999" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' : ''}
+    </svg>`;
+  }
+
+  function openGujHub() {
+    const grid = $('guj-hub-grid');
+    const data = window.GUJARATI_DATA;
+    if (!grid || !data) return;
+    ensureGujProgress();
+    grid.innerHTML = '';
+    Object.keys(GUJ_META).forEach((key) => {
+      const m = GUJ_META[key];
+      const d = data[key];
+      const total = gujTotal(key);
+      const done  = gujDone(key);
+      const unit = (m.kind === 'verbs') ? `${d.packs.reduce((n, p) => n + p.verbs.length, 0)} verbs`
+        : (m.kind === 'sentences') ? `${d.sets.reduce((n, s) => n + s.rows.length, 0)} sentences`
+        : `${total} ${m.unit}`;
+      const head = m.glyph ? `<span class="guj-hub-glyph">${m.glyph}</span>` : `<span class="guj-hub-ic">${GUJ_ICONS[m.icon]}</span>`;
+      const countLine = done > 0 ? `${done} / ${total} done` : unit;
+      const card = document.createElement('button');
+      card.className = 'guj-hub-card';
+      card.innerHTML = `<span class="guj-hub-top">${head}${gujRing(total ? done / total : 0)}</span><span class="guj-hub-name">${m.label}</span><span class="guj-hub-count">${countLine}</span>`;
+      card.addEventListener('click', () => openGujSection(key));
+      grid.appendChild(card);
+    });
+    switchView('view-gujarati-hub');
+    $('content').scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  function openGujSection(key) {
+    const m = GUJ_META[key];
+    const d = window.GUJARATI_DATA[key];
+    _gujKey = key;
+    $('guj-section-title').textContent = m.label;
+    const body = $('guj-section-body');
+    body.innerHTML = '';
+    const sub = $('guj-section-sub');
+
+    if (m.kind === 'grid') {
+      sub.textContent = `Tap a ${m.unit.replace(/s$/, '')} to learn`;
+      const grid = document.createElement('div');
+      grid.className = 'guj-grid';
+      d.items.forEach((it, idx) => {
+        const isTopic = key === 'vocabulary';
+        const tile = document.createElement('button');
+        tile.className = isTopic ? 'guj-topic-tile' : 'guj-letter-tile';
+        if (isTopic) {
+          tile.innerHTML = `<span class="guj-topic-guj">${escapeHtml(it.gujarati)}</span><span class="guj-topic-eng">${escapeHtml(it.translit || it.english || '')}</span><span class="guj-topic-arrow">${PLAY_TRI}</span>`;
+        } else {
+          tile.innerHTML = `<span class="guj-letter-glyph">${escapeHtml(it.gujarati)}</span><span class="guj-letter-translit">${escapeHtml(it.translit || '')}</span>${it.audio ? `<span class="guj-letter-listen" data-audio="1">${SPEAKER}</span>` : ''}`;
+        }
+        tile.addEventListener('click', (e) => {
+          if (e.target.closest('[data-audio]')) { e.stopPropagation(); gujPlay(it.audio); return; }
+          openGujDetail(key, idx);
+        });
+        grid.appendChild(tile);
+      });
+      body.appendChild(grid);
+    } else if (m.kind === 'verbs') {
+      sub.textContent = 'Choose a set';
+      body.appendChild(buildPackList(d.packs.map((p, i) => ({ label: p.pack.replace('part-', 'Set '), count: `${p.verbs.length} verbs`, idx: i })), (i) => openGujDetail('verbs', i)));
+    } else if (m.kind === 'sentences') {
+      sub.textContent = 'Choose a set';
+      body.appendChild(buildPackList(d.sets.map((s, i) => ({ label: s.set.replace('set-', 'Set '), count: `${s.rows.length} sentences`, idx: i })), (i) => openGujDetail('sentences', i)));
+    }
+    switchView('view-gujarati-section');
+    $('content').scrollTo({ top: 0, behavior: 'instant' });
+  }
+  let _gujKey = null;
+
+  function buildPackList(items, onTap) {
+    const wrap = document.createElement('div');
+    wrap.className = 'guj-pack-list';
+    items.forEach((it) => {
+      const row = document.createElement('button');
+      row.className = 'guj-pack-row';
+      row.innerHTML = `<span class="guj-pack-name">${it.label}</span><span class="guj-pack-count">${it.count}</span><svg class="guj-pack-chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+      row.addEventListener('click', () => onTap(it.idx));
+      wrap.appendChild(row);
+    });
+    return wrap;
+  }
+
+  function openGujDetail(key, idx) {
+    markGujDone(key, idx); // opening an item counts toward subsection progress
+    const d = window.GUJARATI_DATA[key];
+    const body = $('guj-detail-body');
+    body.innerHTML = '';
+
+    if (key === 'verbs' || key === 'sentences') {
+      const pack = key === 'verbs' ? d.packs[idx] : d.sets[idx];
+      const title = (key === 'verbs' ? pack.pack : pack.set).replace(/-/, ' ').replace(/^\w/, c => c.toUpperCase());
+      body.appendChild(detailHeader(title, ''));
+      if (key === 'verbs') {
+        pack.verbs.forEach((v) => body.appendChild(verbCard(v)));
+      } else {
+        pack.rows.forEach((r) => body.appendChild(sentenceRow(r)));
+      }
+    } else {
+      const it = d.items[idx];
+      const hero = document.createElement('div');
+      hero.className = 'guj-detail-hero';
+      hero.innerHTML = `<div class="guj-detail-glyph">${escapeHtml(it.gujarati)}</div>${it.audio ? `<button class="guj-hear-btn" id="guj-hear">${SPEAKER}<span>Hear "${escapeHtml(it.translit || '')}"</span></button>` : ''}`;
+      body.appendChild(detailHeader('', ''));
+      body.appendChild(hero);
+      if (it.audio) hero.querySelector('#guj-hear').addEventListener('click', () => gujPlay(it.audio));
+      const grid = document.createElement('div');
+      grid.className = 'guj-flash-grid';
+      (it.words || []).forEach((w) => grid.appendChild(flashCard(w)));
+      body.appendChild(grid);
+    }
+    switchView('view-gujarati-detail');
+    $('content').scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  function detailHeader(title) {
+    const h = document.createElement('div');
+    h.className = 'guj-detail-head';
+    if (title) h.innerHTML = `<span class="guj-detail-title">${escapeHtml(title)}</span>`;
+    return h;
+  }
+  function flashCard(w) {
+    const c = document.createElement('button');
+    c.className = 'guj-flash';
+    c.innerHTML = `
+      <span class="guj-flash-img">${w.image ? `<img src="${w.image}" alt="${escapeHtml(w.english)}" loading="lazy">` : ''}</span>
+      <span class="guj-flash-body">
+        <span class="guj-flash-text">
+          <span class="guj-flash-word">${escapeHtml(w.gujarati)}</span>
+          <span class="guj-flash-sub">${escapeHtml([w.translit, w.english].filter(Boolean).join(' · '))}</span>
+        </span>
+        ${w.audio ? `<span class="guj-flash-playbtn">${PLAY_TRI}</span>` : ''}
+      </span>`;
+    c.addEventListener('click', () => gujPlay(w.audio));
+    return c;
+  }
+  function verbCard(v) {
+    const c = document.createElement('div');
+    c.className = 'guj-verb-card';
+    const labels = ['Present', 'Past', 'Future'];
+    const head = `<div class="guj-verb-head">${v.image ? `<img src="${v.image}" alt="" loading="lazy">` : ''}<span>${escapeHtml(v.tenses?.[0]?.english || '')}</span></div>`;
+    const rows = (v.tenses || []).map((t, i) => `
+      <button class="guj-verb-row" data-audio="${t.audio || ''}">
+        <span class="guj-verb-tense">${labels[i] || ''}</span>
+        <span class="guj-verb-word">${escapeHtml(t.gujarati)} <span class="guj-verb-translit">${escapeHtml(t.translit || '')}</span></span>
+        <span class="guj-verb-play">${PLAY_TRI}</span>
+      </button>`).join('');
+    c.innerHTML = head + rows;
+    c.querySelectorAll('.guj-verb-row').forEach((r) => r.addEventListener('click', () => gujPlay(r.dataset.audio)));
+    return c;
+  }
+  function sentenceRow(r) {
+    const row = document.createElement('button');
+    row.className = 'guj-sentence-row';
+    row.innerHTML = `<span class="guj-sentence-main"><span class="guj-sentence-guj">${escapeHtml(r.gujarati)}</span><span class="guj-sentence-eng">${escapeHtml(r.english)}</span></span><span class="guj-verb-play">${PLAY_TRI}</span>`;
+    row.addEventListener('click', () => gujPlay(r.audio));
+    return row;
   }
 
   function openStoryCategory(catId) {
@@ -3543,6 +4220,18 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
       ? `The main character is: ${character}.`
       : 'Choose a fitting main character — a curious child, a kind animal, a wise elder, or a young friend.';
 
+    // Randomized fresh setting to break the model's habit of defaulting to
+    // gardens/plants for abstract values (seeds, sprouts, blooms).
+    const SETTINGS = [
+      'a bustling kitchen during a festival', 'a crowded train journey', 'a rainy village market',
+      'a neighborhood cricket match', 'a seaside fishing trip', 'a busy temple fair',
+      'a mountain village in winter', 'a school classroom and playground', "a potter's workshop",
+      'a kite festival on the rooftops', 'a long bus ride to a wedding', 'a riverbank at dawn',
+      'a sweet shop on Diwali', 'a music lesson', 'a monsoon-flooded street', "the grandparents' old house",
+      'a tailor\'s shop', 'a zoo outing', 'a library', 'a bakery at dawn',
+    ];
+    const freshSetting = SETTINGS[Math.floor(Math.random() * SETTINGS.length)];
+
     return `You are a warm, imaginative storyteller for an Indian-American family app.
 
 HARD RULES — non-negotiable:
@@ -3550,6 +4239,7 @@ HARD RULES — non-negotiable:
 2. If and only if a family member appears naturally, use these terms: "Mummy" (mother), "Pappa" (father), "Baa" (grandmother), "Dada" (grandfather). Never use Mom, Dad, Mama, Papa, Grandma, Grandpa, or any other variant.
 3. NEVER use "Bapa" to refer to a parent or any family member. In this community "Bapa" is a sacred title reserved exclusively for the spiritual Guru. Using it for a parent is deeply disrespectful and incorrect.
 4. Keep all content joyful, peaceful, and age-appropriate — no fear, no violence.
+5. VARIETY — important: Do NOT use garden, seed, sprout, flower, or "blooming" metaphors. These are overused. Use a distinct, concrete real-world setting and situation instead of plant-growth imagery.
 
 TASK: Create a warm, engaging story for young children (ages 2 to 8) that teaches the value of "${topic}".
 
@@ -3559,12 +4249,12 @@ Story guidelines:
 - Write ${lengthGuide}
 - Use simple, warm language a parent can read aloud to a baby or toddler
 - Draw on universal Indian values: kindness, honesty, seva, gratitude, humility
-- Stories can be set anywhere — a forest, a village, a home, a festival, a garden — let the topic guide the setting
+- Set the story somewhere fresh and specific — for example, ${freshSetting}. Pick a vivid, concrete setting; do NOT default to gardens or plants.
 - Occasionally (not always) stories may naturally touch on devotion or prayer, but only when it fits organically — do not force a religious angle
 - Culturally rooted in an Indian family context without being narrowly religious
 - End with a gentle, clear moral lesson
 
-Before outputting, silently check: Did family members appear naturally, or did I force them in? If they appear, did I use only "Mummy", "Pappa", "Baa", "Dada"? Did I avoid "Bapa" for any family member?
+Before outputting, silently check: Did I avoid garden/seed/plant metaphors and use a fresh, concrete setting? Did family members appear naturally with only "Mummy", "Pappa", "Baa", "Dada"? Did I avoid "Bapa" for any family member?
 
 Return a JSON object with exactly this structure (no markdown, no extra text):
 {
@@ -5091,6 +5781,7 @@ ${numbered}`;
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && state.user) {
         checkBlockedStatus(user.uid);
+        checkForUpdate(); // re-check when the app returns to the foreground
       }
     });
   }
@@ -5876,6 +6567,22 @@ ${numbered}`;
     // Brand logo → home tab
     $('brand-home-btn').addEventListener('click', () => switchTab('home'));
 
+    // Update banner — tap to open the store, × to dismiss this version
+    $('update-banner').addEventListener('click', openStore);
+    $('update-banner-close').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (_updateInfo) localStorage.setItem('drift.updateDismissed', _updateInfo.latest);
+      renderUpdateBanner();
+    });
+    // Settings → Check for updates row
+    $('settings-update-row').addEventListener('click', async () => {
+      if (_updateInfo) { openStore(); return; }
+      const statEl = $('settings-update-status');
+      if (statEl) statEl.textContent = 'Checking…';
+      await checkForUpdate();
+      if (!_updateInfo) toast('You’re on the latest version');
+    });
+
     // Nitya quick-play shortcuts
     $('nitya-edit-btn').addEventListener('click', toggleNityaEdit);
     $('nitya-picker-close').addEventListener('click', () => closeModal('nitya-picker'));
@@ -6015,6 +6722,7 @@ ${numbered}`;
       // Account + Child summary rows
       refreshAccountRow();
       refreshChildSummaryRow();
+      renderSettingsAbout();
 
       // Reflect current default language + theme selection
       const curLang = getDefaultStoryLang();
@@ -6252,6 +6960,22 @@ ${numbered}`;
     $('import-cancel').addEventListener('click', closeImport);
     $('import-modal').addEventListener('click', (e) => { if (!e.target.closest('.modal-sheet')) closeImport(); });
 
+    // Ekadashi tile → full-year calendar sheet
+    const ekTile = $('ekadashi-tile');
+    if (ekTile) {
+      ekTile.addEventListener('click', openEkadashiSheet);
+      ekTile.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEkadashiSheet(); }
+      });
+    }
+    const ekModal = $('ekadashi-modal');
+    if (ekModal) {
+      ekModal.addEventListener('click', (e) => {
+        if (!e.target.closest('.modal-sheet')) closeModal('ekadashi-modal');
+      });
+    }
+    initEkadashiReminderSettings();
+
     // New playlist
     $('new-playlist-btn').addEventListener('click', () => {
       if (isGuestMode()) {
@@ -6343,6 +7067,11 @@ ${numbered}`;
 
     // ── Story Time ──────────────────────────────────────
     $('conv-ages-back').addEventListener('click', () => switchTab('stories'));
+
+    // Learn Gujarati navigation
+    $('guj-hub-back').addEventListener('click', () => switchTab('stories'));
+    $('guj-section-back').addEventListener('click', () => openGujHub());
+    $('guj-detail-back').addEventListener('click', () => { if (_gujKey) openGujSection(_gujKey); else openGujHub(); });
 
     // Audiobooks back + more details toggle
     $('ab-resync-btn').addEventListener('click', async () => {
@@ -6656,6 +7385,7 @@ ${numbered}`;
     $('sheet-loop').addEventListener('click', toggleLoop);
     $('sheet-shuffle').addEventListener('click', toggleShuffle);
     $('sheet-queue').addEventListener('click', () => { closePlayerSheet(); switchTab('queue'); });
+    wireSleepSheet('music-sleep-sheet', 'music-sleep-btn');
     $('sheet-lyrics-btn').addEventListener('click', () => {
       const t = state.trackById[state.currentTrackId];
       if (t) openLyricsSheet(t);
@@ -7082,6 +7812,15 @@ ${numbered}`;
   let _abPlaying   = false;
   let _abScrubbing = false;  // true while the user is dragging the scrubber thumb
   let _abSpeed     = 1;
+
+  // ── Sleep timer (shared by music + audiobook players) ─────────
+  // _sleepMode: null (off) | 'eoc' (end of current track/chapter) | minutes (number)
+  let _sleepMode     = null;
+  let _sleepDeadline = 0;     // epoch ms when a timed countdown fires (timed modes only)
+  let _sleepTick     = null;  // setInterval handle for the 1s countdown
+  let _sleepFadeAudio = null; // the audio element being faded out
+  let _sleepFadeFromVol = 1;  // volume captured when the fade began (to restore later)
+  const SLEEP_FADE_MS = 15000; // fade audio to silence over the last 15s
   let _abProgress  = {};     // { [bookId]: { [fileId]: { position, duration } } } — in-memory cache
   let _abSaveTimer = null;
 
@@ -7488,29 +8227,27 @@ ${numbered}`;
       const pct = abBookProgress(book.id, book);
       const pctPct = Math.round(pct * 100);
       const done = pct >= 0.95;
-      const circumference = 75.4;
-      const offset = circumference * (1 - Math.min(pct, 1));
       const tile = document.createElement('div');
       tile.className = 'ab-book-tile';
-      const ringHtml = pctPct > 0 ? `
-        <div class="ab-progress-ring">
-          <svg viewBox="0 0 32 32" width="32" height="32">
-            <circle class="ab-ring-bg" cx="16" cy="16" r="12" stroke-dasharray="${circumference}"/>
-            <circle class="ab-ring-fill${done ? ' done' : ''}" cx="16" cy="16" r="12"
-              stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
-          </svg>
-          <div class="ab-ring-pct">${done ? '✓' : pctPct + '%'}</div>
+      // Single linear progress bar — same metaphor as the Continue Listening rail.
+      const barHtml = pctPct > 0 ? `
+        <div class="ab-book-bar-wrap">
+          <div class="ab-book-bar-fill${done ? ' done' : ''}" style="width:${done ? 100 : pctPct}%"></div>
         </div>` : '';
+      const chapterCount = `${book.chapters.length} chapter${book.chapters.length !== 1 ? 's' : ''}`;
+      const metaText = done
+        ? '✓ Finished'
+        : (pctPct > 0 ? `${pctPct}% complete` : chapterCount);
       tile.innerHTML = `
         <div class="ab-book-cover">
           ${book.coverFileId
             ? `<img src="${abCoverUrl(book.coverFileId)}" alt="${book.name}" loading="lazy">`
             : `<div class="ab-cover-placeholder" style="background:${abCoverGradient(book.name)}">📖</div>`}
-          ${ringHtml}
+          ${barHtml}
         </div>
         <div class="ab-book-info">
           <div class="ab-book-title">${book.name}</div>
-          <div class="ab-book-meta">${book.chapters.length} chapter${book.chapters.length !== 1 ? 's' : ''}</div>
+          <div class="ab-book-meta">${metaText}</div>
         </div>`;
       tile.addEventListener('click', () => openAudiobook(book, abLastChapterIdx(book)));
       grid.appendChild(tile);
@@ -7806,6 +8543,12 @@ ${numbered}`;
     $('ab-prev-btn').addEventListener('click', () => {
       if (_abBook && _abChapterIdx > 0) abLoadChapter(_abChapterIdx - 1, _abPlaying);
     });
+    const abNextBtn = $('ab-next-btn');
+    if (abNextBtn) abNextBtn.addEventListener('click', () => {
+      if (_abBook && _abChapterIdx < _abBook.chapters.length - 1) {
+        abLoadChapter(_abChapterIdx + 1, _abPlaying);
+      }
+    });
     $('ab-speed-btn').addEventListener('click', () => {
       const next = AB_SPEED_STEPS[(AB_SPEED_STEPS.indexOf(_abSpeed) + 1) % AB_SPEED_STEPS.length];
       _abSpeed = next;
@@ -7813,6 +8556,9 @@ ${numbered}`;
       const btn = $('ab-speed-btn');
       if (btn) btn.textContent = `${_abSpeed}×`;
     });
+
+    // Sleep timer (shared engine)
+    wireSleepSheet('ab-sleep-sheet', 'ab-sleep-btn');
 
     // Seek: native <input type="range">. iOS handles touch drag for us.
     //  'input'  fires continuously while dragging → live preview, no audio seek yet
@@ -7861,6 +8607,12 @@ ${numbered}`;
         // Listening sees accurate progress even after a page reload.
         saveAbProgress(_abBook.id, ch.id, chDur, chDur);
         flushAbProgressToFirestore(_abBook.id);
+        // End-of-chapter sleep timer: stop at this part boundary instead of advancing.
+        if (sleepShouldStopAtItemEnd()) {
+          _abAudio.pause();
+          toast('😴 Sleep timer — paused');
+          return;
+        }
         abLoadChapter(_abChapterIdx + 1, true);
       }
       return;
@@ -7881,6 +8633,13 @@ ${numbered}`;
       const chEnd   = ch.endTime   ?? _abAudio.duration;
       const chDur   = chEnd - chStart;
       saveAbProgress(_abBook.id, ch.id, chDur, chDur);
+    }
+    // End-of-chapter sleep timer: stop here instead of advancing.
+    if (sleepShouldStopAtItemEnd()) {
+      _abPlaying = false;
+      abUpdatePlayBtn();
+      toast('😴 Sleep timer — paused');
+      return;
     }
     if (_abChapterIdx < _abBook.chapters.length - 1) {
       abLoadChapter(_abChapterIdx + 1, true);
@@ -7917,6 +8676,112 @@ ${numbered}`;
     if (_abAudio && _abPlaying) _abAudio.pause();
     // Flush current position to Firestore immediately so hard refresh works
     flushAbProgressToFirestore();
+  }
+
+  // ── Sleep timer engine (shared by music + audiobook) ──────────
+  // The timer acts on whichever player is currently active. Starting one player
+  // pauses the other, so at most one is playing at a time.
+  function sleepActiveAudio() {
+    if (_abAudio && _abPlaying) return _abAudio;
+    if (audio && !audio.paused) return audio;
+    return (_abAudio && _abAudio.src) ? _abAudio : audio;
+  }
+  function sleepPauseActive() {
+    if (_abAudio && _abPlaying) { _abAudio.pause(); return true; }
+    if (audio && !audio.paused) { audio.pause(); return true; }
+    return false;
+  }
+
+  function setSleep(mode) {
+    clearSleepInternal();
+    if (mode === 'off' || mode == null) { _sleepMode = null; updateSleepUI(); return; }
+    _sleepMode = mode; // 'eoc' or a number of minutes
+    if (mode !== 'eoc') {
+      _sleepDeadline = Date.now() + Number(mode) * 60000;
+      _sleepTick = setInterval(sleepCountdownTick, 1000);
+    }
+    updateSleepUI();
+  }
+
+  // Clears timer + interval and restores any faded volume, without touching state/UI labels.
+  function clearSleepInternal() {
+    if (_sleepTick) { clearInterval(_sleepTick); _sleepTick = null; }
+    _sleepDeadline = 0;
+    if (_sleepFadeAudio) { _sleepFadeAudio.volume = _sleepFadeFromVol; _sleepFadeAudio = null; }
+  }
+
+  function clearSleep() { clearSleepInternal(); _sleepMode = null; updateSleepUI(); }
+
+  function sleepCountdownTick() {
+    const remaining = _sleepDeadline - Date.now();
+    // Final fade — only ramp volume while something is actually playing.
+    const target = sleepActiveAudio();
+    if (target && !target.paused && remaining <= SLEEP_FADE_MS) {
+      if (!_sleepFadeAudio) { _sleepFadeAudio = target; _sleepFadeFromVol = target.volume; }
+      _sleepFadeAudio.volume = Math.max(0, _sleepFadeFromVol * (remaining / SLEEP_FADE_MS));
+    }
+    if (remaining <= 0) {
+      clearSleepInternal();
+      _sleepMode = null;
+      sleepPauseActive();
+      updateSleepUI();
+      toast('😴 Sleep timer — paused');
+      return;
+    }
+    updateSleepUI();
+  }
+
+  // Called when a track/chapter finishes; true if "end of track/chapter" sleep should stop here.
+  function sleepShouldStopAtItemEnd() {
+    if (_sleepMode !== 'eoc') return false;
+    _sleepMode = null;
+    updateSleepUI();
+    return true;
+  }
+
+  function updateSleepUI() {
+    const on  = _sleepMode != null;
+    let labelTxt = '';
+    if (_sleepMode === 'eoc') labelTxt = 'End';
+    else if (typeof _sleepMode === 'number') {
+      const rem = Math.max(0, Math.ceil((_sleepDeadline - Date.now()) / 1000));
+      labelTxt = `${Math.floor(rem / 60)}:${String(rem % 60).padStart(2, '0')}`;
+    }
+    // Update every sleep trigger button (audiobook pill + music extra button).
+    document.querySelectorAll('.js-sleep-btn').forEach(btn => {
+      btn.classList.toggle('active', on);
+      const lbl = btn.querySelector('.js-sleep-label');
+      if (lbl) lbl.textContent = labelTxt;
+    });
+    // Reflect the chosen option inside every sleep sheet.
+    document.querySelectorAll('.js-sleep-sheet .sleep-opt').forEach(opt => {
+      const v = opt.dataset.sleep;
+      const sel = (v === 'eoc' && _sleepMode === 'eoc') ||
+                  (v !== 'eoc' && v !== 'off' && Number(v) === _sleepMode) ||
+                  (v === 'off' && _sleepMode == null);
+      opt.classList.toggle('selected', sel);
+    });
+  }
+
+  // Generic sheet open/close + delegated option handling. Call once per sheet to wire.
+  function wireSleepSheet(sheetId, triggerId) {
+    const trigger = $(triggerId);
+    const sheet = $(sheetId);
+    if (trigger && sheet) {
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        updateSleepUI();
+        sheet.classList.remove('hidden');
+      });
+      sheet.addEventListener('click', (e) => {
+        const opt = e.target.closest('.sleep-opt');
+        if (opt) {
+          const v = opt.dataset.sleep;
+          setSleep(v === 'off' || v === 'eoc' ? v : Number(v));
+        }
+        if (opt || e.target === sheet) sheet.classList.add('hidden');
+      });
+    }
   }
 
   function fmtTime(secs) {

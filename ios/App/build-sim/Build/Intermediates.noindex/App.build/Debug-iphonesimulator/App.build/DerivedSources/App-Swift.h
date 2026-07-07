@@ -408,6 +408,16 @@ SWIFT_CLASS_NAMED("GoogleSignInPlugin")
 - (nonnull instancetype)init OBJC_DESIGNATED_INITIALIZER;
 @end
 
+SWIFT_CLASS_NAMED("NityaWidgetPlugin")
+@interface NityaWidgetPlugin : CAPPlugin <CAPBridgedPlugin>
+@property (nonatomic, readonly, copy) NSString * _Nonnull identifier;
+@property (nonatomic, readonly, copy) NSString * _Nonnull jsName;
+@property (nonatomic, readonly, copy) NSArray<CAPPluginMethod *> * _Nonnull pluginMethods;
+- (void)sync:(CAPPluginCall * _Nonnull)call;
+- (nonnull instancetype)initWithBridge:(id <CAPBridgeProtocol> _Nonnull)bridge pluginId:(NSString * _Nonnull)pluginId pluginName:(NSString * _Nonnull)pluginName OBJC_DESIGNATED_INITIALIZER SWIFT_DEPRECATED_MSG("This initializer is deprecated and is not suggested for use. Any data set through this init method will be overridden when it is loaded on the bridge.");
+- (nonnull instancetype)init OBJC_DESIGNATED_INITIALIZER;
+@end
+
 @class ASAuthorizationController;
 @class ASAuthorization;
 SWIFT_CLASS("_TtC3App15SignInWithApple")
