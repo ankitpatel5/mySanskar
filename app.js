@@ -2912,20 +2912,31 @@
     try { _gujAudio.pause(); _gujAudio.src = url; _gujAudio.currentTime = 0; _gujAudio.play().catch(() => {}); } catch {}
   }
 
-  // Hero entry on the Learn tab
+  // Hero entry on the Learn tab. Free accounts only — guests see a locked
+  // state that sells the feature (same pattern as the locked story cards).
   function renderGujHero() {
     const el = $('guj-hero');
     if (!el || !window.GUJARATI_DATA) return;
+    const locked = isGuestMode();
+    const trailing = locked
+      ? '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>'
+      : '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
     el.innerHTML = `
-      <button class="guj-hero" id="guj-hero-btn">
+      <button class="guj-hero${locked ? ' guj-hero--locked' : ''}" id="guj-hero-btn">
         <span class="guj-hero-mark">અ<br>ક<br>૧</span>
         <span class="guj-hero-text">
           <span class="guj-hero-title">Learn Gujarati</span>
-          <span class="guj-hero-sub">Letters, words, verbs &amp; sentences</span>
+          <span class="guj-hero-sub">${locked ? 'Free with an account — letters, words &amp; more' : 'Letters, words, verbs &amp; sentences'}</span>
         </span>
-        <span class="guj-hero-arrow"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+        <span class="guj-hero-arrow">${trailing}</span>
       </button>`;
-    $('guj-hero-btn').addEventListener('click', openGujHub);
+    $('guj-hero-btn').addEventListener('click', () => {
+      if (isGuestMode()) {
+        toast('Create a free account to learn Gujarati');
+        return;
+      }
+      openGujHub();
+    });
   }
 
   // ── Quiet progress (gentle gamification) ──────────────────
@@ -2990,8 +3001,8 @@
     const done = pct >= 1;
     return `<svg class="guj-ring" viewBox="0 0 36 36" width="26" height="26" aria-hidden="true">
       <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3"/>
-      <circle cx="18" cy="18" r="15" fill="none" stroke="#3fb999" stroke-width="3" stroke-dasharray="${C}" stroke-dashoffset="${off}" stroke-linecap="round" transform="rotate(-90 18 18)"/>
-      ${done ? '<path d="M13 18.5l3.2 3.2L23 15" fill="none" stroke="#3fb999" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' : ''}
+      <circle cx="18" cy="18" r="15" fill="none" stroke="var(--learn)" stroke-width="3" stroke-dasharray="${C}" stroke-dashoffset="${off}" stroke-linecap="round" transform="rotate(-90 18 18)"/>
+      ${done ? '<path d="M13 18.5l3.2 3.2L23 15" fill="none" stroke="var(--learn)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' : ''}
     </svg>`;
   }
 
@@ -6184,7 +6195,7 @@ ${numbered}`;
           <td style="padding:10px;font-size:12px;color:var(--text3)">${escapeHtml(t.albumName || '—')}</td>
           <td style="padding:10px">
             ${has
-              ? `<span style="font-size:11px;font-weight:600;color:#4ade80;background:rgba(74,222,128,.12);border-radius:10px;padding:3px 10px">✓ Has Lyrics</span>`
+              ? `<span style="font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:10px;padding:3px 10px">✓ Has Lyrics</span>`
               : `<span style="font-size:11px;font-weight:600;color:#e05a5a;background:rgba(224,90,90,.1);border-radius:10px;padding:3px 10px">No Lyrics</span>`
             }
           </td>
@@ -6194,7 +6205,7 @@ ${numbered}`;
               style="font-size:11px;padding:4px 12px;border-radius:6px;cursor:pointer;
                 ${has
                   ? 'border:1px solid var(--line-1);background:transparent;color:var(--text2)'
-                  : 'border:1px solid rgba(74,222,128,.4);background:rgba(74,222,128,.1);color:#4ade80'
+                  : 'border:1px solid var(--accent-glow);background:var(--accent-soft);color:var(--accent)'
                 }">
               ${has ? 'Edit' : '+ Add Lyrics'}
             </button>
@@ -6205,7 +6216,7 @@ ${numbered}`;
     content.innerHTML = `
       <div style="padding:12px 0 16px;display:flex;gap:20px;align-items:center;flex-wrap:wrap">
         <span style="font-size:13px;color:var(--text3)">${sorted.length} songs total</span>
-        <span style="font-size:13px;color:#4ade80;font-weight:600">● ${withCount} with lyrics</span>
+        <span style="font-size:13px;color:var(--accent);font-weight:600">● ${withCount} with lyrics</span>
         <span style="font-size:13px;color:#e05a5a;font-weight:600">● ${withoutCount} missing</span>
       </div>
       <div style="overflow-x:auto">

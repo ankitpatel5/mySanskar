@@ -20,6 +20,18 @@
   --accent-soft: rgba(232, 163, 61, 0.14);
   --accent-glow: rgba(232, 163, 61, 0.4);
   --danger: #ff5b5b;
+  /* One green for every completed/done state (was 3 ad-hoc greens) */
+  --success: #4caf68;
+  --success-soft: rgba(76, 175, 104, 0.14);
+  --success-deep: #1a3325;
+  --success-border: #3d8a50;
+  /* Learn Gujarati sub-brand — intentional teal identity, single source */
+  --learn: #3fb999;
+  --learn-ink: #6fd3b6;
+  --learn-sub: #7fc3ac;
+  --learn-soft: rgba(63, 185, 153, 0.18);
+  --learn-bg: #112620;
+  --learn-bg-active: #163029;
   /* Aliases — the audiobook/music UI was authored against these names, which were
      never defined. Mapping them to the real scale makes those colors intentional. */
   --text1: var(--fg-0);
@@ -58,7 +70,9 @@
   --fg-2: #726a59;
   --fg-3: #9a917f;
   --fg-4: #b3ab99;
-  --accent: #b26b12;        /* deeper saffron — meets AA on light surfaces */
+  --accent: #b26b12;
+  --success: #2e7d32;
+  --success-soft: rgba(46, 125, 50, 0.12);        /* deeper saffron — meets AA on light surfaces */
   --accent-soft: rgba(178, 107, 18, 0.12);
   --accent-glow: rgba(178, 107, 18, 0.25);
   --danger: #d93025;
@@ -651,18 +665,20 @@ input { font-family: inherit; color: inherit; }
   gap: 14px;
   width: 100%;
   text-align: left;
-  background: #112620;
+  background: var(--learn-bg);
   border: 1px solid rgba(63, 185, 153, 0.30);
   border-radius: 16px;
   padding: 15px;
   margin-bottom: 6px;
 }
-.guj-hero:active { background: #163029; }
-.guj-hero-mark { font-size: 18px; font-weight: 500; line-height: 1.08; color: #6fd3b6; flex-shrink: 0; text-align: center; }
+.guj-hero:active { background: var(--learn-bg-active); }
+.guj-hero-mark { font-size: 18px; font-weight: 500; line-height: 1.08; color: var(--learn-ink); flex-shrink: 0; text-align: center; }
 .guj-hero-text { flex: 1; display: flex; flex-direction: column; }
 .guj-hero-title { font-family: var(--font-display); font-size: 17px; font-weight: 500; color: #eafaf4; }
-.guj-hero-sub { font-size: 12px; color: #7fc3ac; margin-top: 3px; }
-.guj-hero-arrow { width: 34px; height: 34px; border-radius: 50%; background: rgba(63,185,153,0.18); color: #6fd3b6; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.guj-hero-sub { font-size: 12px; color: var(--learn-sub); margin-top: 3px; }
+.guj-hero-arrow { width: 34px; height: 34px; border-radius: 50%; background: var(--learn-soft); color: var(--learn-ink); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+/* Guest-locked state — dimmed like the locked story cards */
+.guj-hero--locked { opacity: 0.72; }
 
 .guj-hub-grid, .guj-grid, .guj-flash-grid {
   display: grid;
@@ -687,7 +703,7 @@ input { font-family: inherit; color: inherit; }
 .guj-hub-card:active { background: var(--bg-2); }
 .guj-hub-top { display: flex; align-items: flex-start; justify-content: space-between; }
 .guj-hub-glyph { font-size: 30px; font-weight: 500; color: var(--fg-0); line-height: 1; }
-.guj-hub-ic { color: #3fb999; display: block; }
+.guj-hub-ic { color: var(--learn); display: block; }
 .guj-ring { flex-shrink: 0; margin: 3px 4px 0 8px; }
 .guj-hub-name { font-size: 14px; font-weight: 500; color: var(--fg-0); margin-top: auto; padding-top: 12px; }
 .guj-hub-count { font-size: 11px; color: var(--fg-3); margin-top: 2px; }
@@ -731,7 +747,7 @@ input { font-family: inherit; color: inherit; }
 .guj-topic-tile:active { background: var(--bg-2); }
 .guj-topic-guj { font-size: 21px; font-weight: 500; color: var(--fg-0); }
 .guj-topic-eng { font-size: 14px; color: var(--fg-2); margin-top: 4px; }
-.guj-topic-arrow { position: absolute; bottom: 12px; right: 12px; color: #3fb999; }
+.guj-topic-arrow { position: absolute; bottom: 12px; right: 12px; color: var(--learn); }
 
 /* Pack list (verbs/sentences sets) */
 .guj-pack-list { padding: 0 20px 24px; display: flex; flex-direction: column; gap: 8px; }
@@ -828,7 +844,7 @@ input { font-family: inherit; color: inherit; }
 }
 .guj-verb-card .guj-verb-row:last-child { border-bottom: none; }
 .guj-verb-row:active { background: var(--hover-overlay); }
-.guj-verb-tense { font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: #6fd3b6; width: 56px; flex-shrink: 0; }
+.guj-verb-tense { font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--learn-ink); width: 56px; flex-shrink: 0; }
 .guj-verb-word { flex: 1; font-size: 18px; color: var(--fg-0); }
 .guj-verb-translit { font-size: 14px; color: var(--fg-2); }
 .guj-verb-play, .guj-topic-arrow { flex-shrink: 0; }
@@ -1816,8 +1832,8 @@ button.ab-dl-dot:hover::before {
   display: flex; align-items: center; justify-content: center;
   line-height: 1;
 }
-.mini-lyrics-btn:not(.hidden) { color: #4ade80; }
-.mini-lyrics-btn:hover { color: #86efac !important; }
+.mini-lyrics-btn:not(.hidden) { color: var(--accent); }
+.mini-lyrics-btn:hover { color: var(--accent) !important; }
 .mini-seek-input {
   -webkit-appearance: none;
   appearance: none;
@@ -2135,11 +2151,11 @@ button.ab-dl-dot:hover::before {
 
 /* Lyrics button — green tint when available */
 .extra-btn-lyrics {
-  background: rgba(74, 222, 128, 0.12);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.25);
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid rgba(232, 163, 61, 0.25);
 }
-.extra-btn-lyrics:hover { background: rgba(74, 222, 128, 0.2); }
+.extra-btn-lyrics:hover { background: rgba(232, 163, 61, 0.2); }
 
 /* ── Lyrics Sheet ── */
 .lyrics-sheet {
@@ -2196,8 +2212,8 @@ button.ab-dl-dot:hover::before {
 .lyrics-sheet-lang {
   font-size: 11px;
   font-weight: 600;
-  color: #4ade80;
-  background: rgba(74,222,128,.12);
+  color: var(--accent);
+  background: var(--accent-soft);
   border-radius: 10px;
   padding: 2px 8px;
   white-space: nowrap;
@@ -2230,7 +2246,6 @@ button.ab-dl-dot:hover::before {
 .lyrics-line.stanza-break { margin-bottom: 16px; }
 
 [data-theme="light"] .lyrics-sheet { background: #f5f5f7; border-top-color: rgba(0,0,0,.1); }
-[data-theme="light"] .extra-btn-lyrics { background: rgba(22,163,74,.1); color: #16a34a; border-color: rgba(22,163,74,.25); }
 [data-theme="light"] .extra-btn-lyrics:hover { background: rgba(22,163,74,.18); }
 
 /* ============== MODALS ============== */
@@ -2976,9 +2991,9 @@ button.ab-dl-dot:hover::before {
 }
 .story-mark-complete-btn:active { transform: scale(0.95); }
 .story-mark-complete-btn.completed {
-  background: rgba(34, 197, 94, 0.12);
-  border-color: #22c55e;
-  color: #22c55e;
+  background: var(--success-soft);
+  border-color: var(--success);
+  color: var(--success);
 }
 /* ── Completion badge on story list rows ─────────────────────── */
 .story-row-thumb { position: relative; }
@@ -2991,7 +3006,7 @@ button.ab-dl-dot:hover::before {
   height: 16px;
   border-radius: 50%;
   border: 2px solid var(--bg-2);
-  background: #22c55e url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E") center/10px no-repeat;
+  background: var(--success) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E") center/10px no-repeat;
 }
 /* ── Settings modal — language default picker ────────────────── */
 .settings-section {
@@ -4281,9 +4296,9 @@ button.ab-dl-dot:hover::before {
 }
 /* Talked state */
 .conv-starter-card.talked .conv-starter-check {
-  border-color: #3d8a50;
-  background: #1a3325;
-  color: #4caf68;
+  border-color: var(--success-border);
+  background: var(--success-deep);
+  color: var(--success);
 }
 .conv-starter-card.talked .conv-starter-body {
   opacity: 0.38;
@@ -4295,16 +4310,16 @@ button.ab-dl-dot:hover::before {
   border: 1.5px solid #2a2a2a;
 }
 .conv-cat-pill.hide-done-pill.active {
-  background: #1a3325;
-  color: #4caf68;
-  border-color: #3d8a50;
+  background: var(--success-deep);
+  color: var(--success);
+  border-color: var(--success-border);
 }
 /* Progress badge */
 .conv-progress-badge {
   font-size: 12px;
   font-weight: 600;
-  color: #4caf68;
-  background: #1a3325;
+  color: var(--success);
+  background: var(--success-deep);
   padding: 3px 9px;
   border-radius: 999px;
   white-space: nowrap;
@@ -4323,8 +4338,8 @@ button.ab-dl-dot:hover::before {
   display: inline-block;
   font-size: 10px;
   font-weight: 600;
-  color: #4caf68;
-  background: #1a3325;
+  color: var(--success);
+  background: var(--success-deep);
   padding: 1px 6px;
   border-radius: 999px;
   margin-left: 6px;
@@ -4590,6 +4605,13 @@ button.ab-dl-dot:hover::before {
 .ob-icon-stories { background: rgba(251, 146, 60, 0.14); }  /* amber/diya */
 .ob-icon-custom  { background: rgba(245, 200, 66, 0.14); }  /* warm gold  */
 .ob-icon-convo   { background: rgba(232, 163, 61, 0.12); }  /* saffron    */
+/* Learn Gujarati — sub-brand teal, previews the Learn tab identity */
+.ob-icon-guj {
+  background: var(--learn-soft);
+  color: var(--learn-ink);
+  font-size: 17px;
+  font-weight: 600;
+}
 /* legacy alias kept for safety */
 .ob-icon-home    { background: rgba(251, 146, 60, 0.14); }
 .ob-card-title {
@@ -5072,7 +5094,7 @@ button.ab-dl-dot:hover::before {
   border-radius: 0 2px 2px 0;
   transition: width .3s ease;
 }
-.ab-book-bar-fill.done { background: #4caf68; border-radius: 0; }
+.ab-book-bar-fill.done { background: var(--success); border-radius: 0; }
 .ab-book-info { padding: 9px 10px 11px; }
 .ab-book-title {
   font-size: 13px;
@@ -5399,7 +5421,7 @@ button.ab-dl-dot:hover::before {
   color: var(--text3);
   flex-shrink: 0;
 }
-.ab-chapter-num.done { background: #1a3325; color: #4caf68; }
+.ab-chapter-num.done { background: var(--success-deep); color: var(--success); }
 .ab-chapter-num.active { background: var(--accent); color: #000; }
 .ab-chapter-info { flex: 1; min-width: 0; }
 .ab-chapter-name {
@@ -5415,11 +5437,11 @@ button.ab-dl-dot:hover::before {
 .ab-chapter-duration { font-size: 11px; color: var(--text3); margin-top: 2px; }
 .ab-chapter-pct-wrap { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
 .ab-chapter-pct { font-size: 11px; font-weight: 600; color: var(--text3); }
-.ab-chapter-pct.done { color: #4caf68; }
+.ab-chapter-pct.done { color: var(--success); }
 .ab-chapter-pct.active { color: var(--accent); }
 .ab-chapter-bar { width: 48px; height: 3px; background: var(--surface3, #2a2a2a); border-radius: 2px; overflow: hidden; }
 .ab-chapter-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; }
-.ab-chapter-bar-fill.done { background: #4caf68; }
+.ab-chapter-bar-fill.done { background: var(--success); }
 .ab-chapter-bar-fill.active { background: var(--accent); }
 .ab-resync-wrap {
   display: flex;
