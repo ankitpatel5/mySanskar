@@ -186,6 +186,17 @@
               </div>
             </div>
 
+            <!-- Today's Eternal Virtue — daily prasang from Pramukh Swami Maharaj's life -->
+            <div class="home-tile virtue-tile hidden" id="virtue-tile" role="button" tabindex="0" aria-label="Today's Eternal Virtue">
+              <div class="home-tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5c1.7 2 2.6 3.9 2.6 5.9a2.6 2.6 0 0 1-5.2 0c0-2 .9-3.9 2.6-5.9z"/><path d="M3.5 12.5c2.2 3.9 5.1 5.9 8.5 5.9s6.3-2 8.5-5.9c-1.7-.9-3.3-1.3-4.9-1.3-1.4 0-2.6.3-3.6 1-1-.7-2.2-1-3.6-1-1.6 0-3.2.4-4.9 1.3z"/></svg></div>
+              <div class="home-tile-body">
+                <div class="home-tile-label">Today's Eternal Virtue</div>
+                <div class="home-tile-title" id="virtue-title">—</div>
+                <div class="home-tile-sub" id="virtue-sub"></div>
+              </div>
+              <div class="ekadashi-tile-chevron"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+            </div>
+
           </div>
 
           <!-- Nitya — quick-play shortcuts (own frame, below the daily tiles) -->
@@ -1499,6 +1510,22 @@
           <p class="ek-sheet-sub" id="ek-sheet-sub"></p>
         </div>
         <div class="ek-sheet-list" id="ek-sheet-list"></div>
+      </div>
+    </div>
+
+    <!-- Today's Eternal Virtue sheet -->
+    <div id="virtue-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Today's Eternal Virtue">
+      <div class="modal-backdrop"></div>
+      <div class="modal-sheet virtue-sheet">
+        <div class="sheet-handle"></div>
+        <div class="virtue-sheet-head">
+          <p class="virtue-sheet-kicker">Today's Eternal Virtue</p>
+          <h3 class="virtue-sheet-virtue" id="virtue-sheet-virtue">—</h3>
+          <p class="virtue-sheet-gu" id="virtue-sheet-gu"></p>
+        </div>
+        <h4 class="virtue-sheet-title" id="virtue-sheet-title">—</h4>
+        <p class="virtue-sheet-text" id="virtue-sheet-text"></p>
+        <p class="virtue-sheet-foot">From the life of Pramukh Swami Maharaj</p>
       </div>
     </div>
 

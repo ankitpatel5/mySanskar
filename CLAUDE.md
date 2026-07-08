@@ -47,6 +47,14 @@ This does everything:
 
 **Never skip staging. Never push straight to prod without the user's explicit go-ahead.**
 
+### Service-worker cache (web users)
+`sw.js` is CACHE-FIRST for all shell assets keyed on `const CACHE = 'sanskar-…'`.
+**Now auto-stamped on every Vercel deploy** (scripts/generate-config.js rewrites it
+from VERCEL_GIT_COMMIT_SHA) — discovered 2026-07-07 that it sat un-bumped at v79
+while multiple ships went out, leaving returning web/PWA users on stale assets.
+Native apps are unaffected (no SW in WKWebView). If testing web changes in the
+local preview and they don't appear: unregister the SW + clear CacheStorage.
+
 ### Firestore rules
 Edit `firestore.rules`, then deploy with
 `npx firebase-tools deploy --only firestore:rules --project baal-shravan`
@@ -182,6 +190,20 @@ When the user says anything like "build for iOS submission", "archive for App St
   own-uid only, admin-only read/manage) → admin dashboard Feedback tab
   (`loadAdminFeedback`, mark read/unread) + admin-only Home tile
   (`renderAdminFeedbackTile`, count of read==false).
+- **Eternal Virtues (daily prasang)**: master content = `eternal-virtues.md`
+  (208 true prasangs across 21 virtues from "Eternal Virtues" book; format
+  `## Virtue · English · Gujarati` + `### Title` + 4–7 sentence story; NO source
+  field by design — the tile name references the book; Kirtihi·Manaha chapter
+  skipped = testimonial quotes only). Publish: `node scripts/build-eternal-virtues.js`
+  (parses MD, interleaves round-robin across virtues, uploads → Firestore doc
+  `content/eternalVirtues` {version,count,updatedAt,json}; auth = firebase-tools
+  cached token, same pattern as prerender-tts.js; `--dry-run` for stats).
+  Client: `loadEternalVirtueTile` / `renderVirtueTile` / `openVirtueSheet` in app.js —
+  localStorage cache `drift.eternalVirtues.v1` (~3-day re-fetch), day index =
+  local-calendar `daysSinceEpoch % count` so every user sees the same snippet on
+  the same date. Rules: `/content/{docId}` public read, admin write. NOTE: ANY republish
+  that changes the count remaps `day % count` for everyone (append-only included);
+  clients re-fetch daily so they converge within ~a day — keep republishes rare.
 - **Settings**: reference-style redesign — `.settings-chip` color chips
   (rose=child/stories, violet=night/vrat, saffron=core, green=storage, teal=learn),
   account card + separate CHILD section, "Share the sanskar" group
@@ -193,7 +215,7 @@ When the user says anything like "build for iOS submission", "archive for App St
   `--success` #4caf68 family — ONE green for every done/completed state (light #2e7d32);
   `--learn*` teal family — intentional Learn Gujarati sub-brand; `--danger`.
   **Never hardcode greens/teals — route through tokens.**
-- Tile color identity: Ekadashi=violet, story=rose, Nitya/devotion=saffron, learn=teal.
+- Tile color identity: Ekadashi=violet, story=rose, Nitya/devotion=saffron, learn=teal, Eternal Virtue=gold (#262012 bg / #e3c88a icon).
 - Fonts: Fraunces (`--font-display`) + Inter (`--font-ui`).
 - Sheets: `.modal` + `.modal-backdrop` + `.modal-sheet`. The sheet itself is the ONE
   scroller (max-height + overflow-y) with a sticky header — nested scrollers break
@@ -236,18 +258,103 @@ When the user says anything like "build for iOS submission", "archive for App St
   iPhone + iPad marketing screenshot sets generated. App Store description rewrite
   drafted in chat, not yet pasted into ASC.
 - 2026-07-07 (later): **v1.4 approved + live on the App Store.** Update banner made
-  self-serving for iOS (see manifest section) — pending prod ship.
+  self-serving for iOS (see manifest section) — shipped to prod (`91f4e52`) and
+  verified: prod `/app-version.json` serves live ios.latest from Apple's lookup.
+
+- 2026-07-08: **Eternal Virtues feature built** (staged, not yet shipped):
+  208-snippet master MD authored from the full 129-page book pass, uploaded to
+  Firestore `content/eternalVirtues`, gold "Today's Eternal Virtue" Home tile +
+  bottom sheet live for signed-in AND guest users. Verified in preview (guest
+  mode, tile + sheet render, Firestore fetch + cache). Also staged from 07-07:
+  icon/cover system (#4), sw.js v80 + auto-stamp. Awaiting "ship it".
 
 ## Open items / known bugs
 - **iPad Google sign-in hang** ("Signing in…" after OAuth completes): native token
   exchange succeeded but Firebase credential step didn't visibly run; worked on
   retry. Debug rig: `simctl launch --console-pty` + watch ⚡️ lines. Real-user risk.
-- **`[` cover initials** (Music): "[Eng] Nursery Rhymes" shows "[" as cover initial —
-  strip leading non-alphanumerics when deriving initials (P0; visible in marketing
-  frame 7 — refresh that frame after fixing).
+- Marketing frames 7 (Music) + 8 (Learn) show pre-icon-system UI (old emoji
+  tiles / letter covers) — re-capture those two screenshots when convenient.
 - **Oval play button**: `#sheet-play` computes 52×68 with border-radius:50% —
   force a square box (P0 from design audit).
 - **Guest Home hero** leads with a locked Story of the Day — audit recommends one
   free playable story with the gate on the second (P1; product decision pending).
 - Discussed but NOT approved (don't build unprompted): audiobook offline downloads,
-  nightly streak mechanic, real cover-art system, Ekadashi row → add-to-calendar.
+  nightly streak mechanic, Ekadashi row → add-to-calendar, storybook-mode reader,
+  moral share cards, guest free first story, fluid shared-element transitions.
+
+# Design & UX committee
+
+A standing review board for mySanskar's design decisions. Each member is channeled
+through their published principles, essays, talks, and shipped work — these
+are lenses, not endorsements or affiliations. Convene the full committee for
+foundational flows (onboarding, Home, stories, notifications); convene a single
+group for narrower questions (motion → iOS craft; copy/forms → product leaders).
+
+## The foundational thinkers — how we evaluate interfaces
+
+| Member | Lens they bring |
+| --- | --- |
+| **Don Norman** | Human-centered design, affordances, error tolerance; *The Design of Everyday Things*. Asks: does the design match the user's mental model, and does it forgive? |
+| **Jakob Nielsen** | The ten usability heuristics every review still runs on. Asks: visibility of status, user control, recognition over recall, error prevention. |
+| **Dieter Rams** | Ten principles of good design (Braun); the DNA of minimal UI. Asks: is it honest, unobtrusive, and as little design as possible? |
+| **Edward Tufte** | Information design, data-ink, chartjunk. Asks: does every pixel of the tiles/cards/lists earn its ink? |
+| **Bret Victor** | *Inventing on Principle*, *Magic Ink*; information software as understanding. Asks: does the interface show consequences before commitment? |
+
+## The Apple lineage — the aesthetic bar
+
+| Member | Lens they bring |
+| --- | --- |
+| **Jony Ive** | Care, inevitability, materials; iMac→iPhone, LoveFrom. Asks: does it feel inevitable and cared-for down to the corner radii? |
+| **Susan Kare** | Icon language, friendliness at small sizes; the original Mac vocabulary. Asks: do the symbols speak without labels? |
+| **Alan Dye** | Current Apple HIG voice; Liquid Glass era. Asks: does it feel native to the platform's present tense? |
+| **Mike Matas** | Touch-era interaction design (original iPhone UI, Paper, Push Pop Press). Asks: is the content the interface? |
+| **Loren Brichter** | Pull-to-refresh; gesture-driven economy (Tweetie). Asks: what would this flow feel like as one continuous gesture? |
+
+## Product design leaders — scaling judgment
+
+| Member | Lens they bring |
+| --- | --- |
+| **Julie Zhuo** | Product design judgment, team-scale quality; *The Making of a Manager*. Asks: what does the user believe this product is after 60 seconds? |
+| **Luke Wroblewski** | Mobile-first, forms and input research. Asks: is every keystroke justified, and does the keyboard type match the field? |
+| **Ryan Singer** | *Shape Up*; what a screen is *for*. Asks: what job is this screen hired to do, and is anything else on it? |
+| **Karri Saarinen** | Design systems (Airbnb), craft-as-brand (Linear). Asks: is the system coherent enough that new surfaces design themselves? |
+| **Rasmus Andersson** | Typography and systems (early Spotify, Figma). Asks: does the type carry the hierarchy without decoration? |
+
+## The current iOS craft scene — the bar mySanskar competes on
+
+| Member | Lens they bring |
+| --- | --- |
+| **Sebastiaan de With** | Lux (Halide, Kino); ex-Apple. Release-notes-as-design-essays; tactile, purposeful polish. Asks: where's the craft moment users screenshot? |
+| **Andy Allen** | !Boring Software; ADA winner. Texture, sound, maximal delight without losing usability. Asks: what does this flow *sound and feel* like? |
+| **Benji Taylor & the Family team** | "Family Values" fluid interfaces; wallet transitions as reference point. Asks: do states *transform* into each other or just get replaced? |
+| **Janum Trivedi** | Spring physics, fluid-interface motion, SwiftUI-era open source. Asks: is every animation interruptible, physical, and driven by gesture velocity? |
+
+## How a consult works
+
+1. Give the committee the artifact (design doc, mocks, or build) and the goal.
+2. Each member reacts through their lens: verdict + the single highest-leverage
+   change they'd demand, grounded in their actual published thinking.
+3. Synthesis ranks the changes by impact against mySanskar's brand (warm,
+   devotional, premium) — a change that violates the Design system section
+   above loses automatically.
+4. Consult output is recorded below (Committee consults) next to the decision
+   it produced.
+
+## Committee consults
+- **2026-07-07 · full app (v1.4) · full committee.** Top-5 10x–100x bets, ranked:
+  1. **Storybook Mode** — paged picture-book reader, read-aloud paints each word
+     (Matas/Victor/Brichter). Core-product 10x.
+  2. **Moral share cards** — story ends in a celebration card (moral + child's
+     name) → WhatsApp share (de With/Allen). Distribution 100x via family groups.
+  3. **Guest's first story free**, gate the second (Zhuo/Norman). Activation.
+  4. **Owned icon+cover language** — 12 saffron glyphs replace emoji; generated
+     covers replace letter tiles (Kare/Saarinen/Ive). Retires the `[` bug.
+  5. **Fluid transformations** — story-card→reader shared-element morph,
+     gesture/velocity-driven pages (Family/Trivedi).
+  Passes noted: typography hierarchy (Andersson), forms (Wroblewski), status
+  visibility (Nielsen). Craft debt named by Ive: oval play button, `[` covers.
+  Before/after mocks delivered in chat 2026-07-07. **Decision: #4 APPROVED and
+  built same day (drawn white icon family for story tiles — temple was the
+  existing benchmark; Gujarati cover glyphs ન/અ/ચ via GUJ_GLYPHS map; warm-only
+  PALETTES so covers + player sheet stay on-brand; `[Tag]` album names parsed to
+  "Title · Tag"). #1/#2/#3/#5 REJECTED by Ankit — do not build.**

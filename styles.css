@@ -945,6 +945,66 @@ input { font-family: inherit; color: inherit; }
   display: flex;
 }
 
+/* ── Today's Eternal Virtue tile — gold (guru / sacred) ───────── */
+.virtue-tile {
+  background: #262012;
+  border: 1px solid rgba(228, 196, 118, 0.20);
+  color: #f2ecdd;
+  cursor: pointer;
+  transition: transform 0.12s, opacity 0.12s;
+}
+.virtue-tile:active { transform: scale(0.98); opacity: 0.85; }
+.virtue-tile .home-tile-icon { color: #e3c88a; }
+.virtue-tile .home-tile-label { color: #b5a67c; opacity: 1; }
+.virtue-tile .home-tile-sub { color: #cfc3a4; opacity: 1; }
+.virtue-tile .ekadashi-tile-chevron { color: #b5a67c; }
+
+/* ── Eternal Virtue sheet ─────────────────────────────────────── */
+.virtue-sheet {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: 8px 22px calc(22px + env(safe-area-inset-bottom));
+}
+.virtue-sheet-head { padding: 4px 0 14px; }
+.virtue-sheet-kicker {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin: 0 0 8px;
+}
+.virtue-sheet-virtue {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+}
+.virtue-sheet-gu {
+  font-size: 0.95rem;
+  color: #e3c88a;
+  margin: 3px 0 0;
+}
+[data-theme="light"] .virtue-sheet-gu { color: #8a6b28; }
+.virtue-sheet-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 4px 0 10px;
+  color: var(--text);
+}
+.virtue-sheet-text {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--text2);
+  margin: 0;
+}
+.virtue-sheet-foot {
+  margin: 18px 0 0;
+  font-size: 0.75rem;
+  color: var(--text3);
+  text-align: center;
+}
+
 /* ── Ekadashi calendar sheet ──────────────────────────────────── */
 /* The sheet itself is the one scroller (base .modal-sheet max-height 80vh +
    overflow-y auto). No flex, no nested scrollers — Safari mislays out flex
@@ -1334,6 +1394,14 @@ input { font-family: inherit; color: inherit; }
   font-size: 44px;
   letter-spacing: -0.02em;
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  /* Gujarati cover glyphs read warm-ivory on the warm gradients */
+  color: #ffdca8;
+}
+/* Language tag split out of album titles ("Nursery Rhymes · Eng") */
+.folder-tag {
+  color: var(--fg-3);
+  font-weight: 400;
+  font-size: 0.85em;
 }
 .folder-name {
   font-weight: 500;

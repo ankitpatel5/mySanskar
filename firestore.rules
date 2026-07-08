@@ -114,6 +114,13 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    // ── Global app content (Eternal Virtues, etc.) ──
+    // Static devotional content shown to everyone, including guests.
+    match /content/{docId} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
     // ── Shared playlists (public read, auth write) ──
     match /sharedPlaylists/{shareId} {
       allow read:   if true;

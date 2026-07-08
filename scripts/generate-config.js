@@ -23,6 +23,23 @@ const path = require('path');
 
 const outputPath = path.join(__dirname, '..', 'config.js');
 
+// ── Auto-bump the service-worker cache version on every Vercel deploy ──
+// sw.js is cache-first for shell assets; without a CACHE bump, returning web
+// users keep stale app.js/styles.css forever. Stamp the version from the git
+// SHA (or timestamp for CLI deploys) so every deploy invalidates the cache.
+try {
+  const swPath = path.join(__dirname, '..', 'sw.js');
+  const stamp = (process.env.VERCEL_GIT_COMMIT_SHA || String(Date.now())).slice(0, 10);
+  const sw = fs.readFileSync(swPath, 'utf8');
+  const bumped = sw.replace(/const CACHE = 'sanskar-[^']+';/, `const CACHE = 'sanskar-${stamp}';`);
+  if (bumped !== sw) {
+    fs.writeFileSync(swPath, bumped);
+    console.log(`[generate-config] sw.js CACHE stamped: sanskar-${stamp}`);
+  }
+} catch (e) {
+  console.warn('[generate-config] sw.js stamp skipped:', e.message);
+}
+
 // Check that at least the required keys are present
 const required = ['DRIFT_API_KEY', 'DRIFT_FOLDER_ID', 'GEMINI_KEY'];
 const missing = required.filter((k) => !process.env[k]);

@@ -18,7 +18,7 @@ window.STORIES_DATA = {
         "#3a2010",
         "#1f1008"
       ],
-      "icon": "🪔"
+      "icon": "<svg viewBox=\"0 0 48 44\" xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"37\"><g fill=\"white\"><path d=\"M24 3 C21.8 7.2 19.5 10.4 19.5 13.2 A4.5 4.5 0 0 0 28.5 13.2 C28.5 10.4 26.2 6.8 24 3 Z\"/><circle cx=\"13.5\" cy=\"12\" r=\"1.3\" opacity=\"0.85\"/><circle cx=\"34.5\" cy=\"12\" r=\"1.3\" opacity=\"0.85\"/><circle cx=\"9.5\" cy=\"17\" r=\"1\" opacity=\"0.6\"/><circle cx=\"38.5\" cy=\"17\" r=\"1\" opacity=\"0.6\"/><path d=\"M7 24 Q24 19.5 41 24 L38 33 Q24 37.5 10 33 Z\"/><rect x=\"16\" y=\"35.5\" width=\"16\" height=\"2.6\" rx=\"1.3\"/><rect x=\"11\" y=\"39\" width=\"26\" height=\"2.4\" rx=\"1.2\" opacity=\"0.75\"/></g></svg>"
     },
     {
       "id": "moral",
@@ -28,7 +28,7 @@ window.STORIES_DATA = {
         "#1a2a3a",
         "#0d1620"
       ],
-      "icon": "⭐"
+      "icon": "<svg viewBox=\"0 0 48 44\" xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"37\"><g fill=\"white\"><path d=\"M24 3 L29.2 14.6 L41.8 16 L32.4 24.6 L35 37 L24 30.6 L13 37 L15.6 24.6 L6.2 16 L18.8 14.6 Z\"/><circle cx=\"40\" cy=\"6\" r=\"1.6\" opacity=\"0.7\"/><circle cx=\"8\" cy=\"7\" r=\"1.2\" opacity=\"0.55\"/></g></svg>"
     }
   ],
   "stories": {
