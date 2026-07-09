@@ -1161,22 +1161,51 @@
     for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
     return Math.abs(h);
   }
+  // Warm-family pairs only — covers (and the player sheet, which inherits
+  // --c-a) stay in the saffron/amber/terracotta world of the brand.
   const PALETTES = [
-    ['#2a4030', '#0f1f17'],
-    ['#3a2b4a', '#1a1224'],
-    ['#4a2f2a', '#211513'],
-    ['#2f3a4a', '#141a22'],
-    ['#4a4030', '#211a12'],
-    ['#2a3f4a', '#13202a'],
-    ['#4a2a3f', '#221324'],
-    ['#3a4a2a', '#1c241a'],
-    ['#2a4a4a', '#132424'],
-    ['#4a2a2a', '#241313'],
-    ['#2a2a4a', '#13132a'],
-    ['#404a2a', '#22241a'],
+    ['#4a3618', '#241708'],
+    ['#4a2f14', '#22150a'],
+    ['#4a2a1e', '#24130d'],
+    ['#4a2531', '#241018'],
+    ['#3f3a1c', '#1e1c0c'],
+    ['#40301f', '#1f150c'],
+    ['#4d3a10', '#251b06'],
+    ['#47281a', '#23120b'],
+    ['#431f22', '#210e10'],
+    ['#38351a', '#1a190a'],
+    ['#46422e', '#232012'],
+    ['#482e22', '#241610'],
   ];
   function paletteFor(name) {
     return PALETTES[hashStr(name || '?') % PALETTES.length];
+  }
+
+  // "[Eng] Nursery Rhymes" → { title: "Nursery Rhymes", tag: "Eng" }.
+  // Fixes the "[" cover-initial bug and moves language tags out of titles.
+  function albumDisplay(name) {
+    const m = /^\s*\[([^\]]+)\]\s*(.+)$/.exec(name || '');
+    return m ? { title: m[2].trim(), tag: m[1].trim() } : { title: (name || '').trim(), tag: null };
+  }
+  function albumInitial(name) {
+    const t = albumDisplay(name).title;
+    const m = /[A-Za-z0-9\u0A80-\u0AFF]/.exec(t); // first letter, incl. Gujarati
+    return m ? m[0].toUpperCase() : '?';
+  }
+  // Latin initial → Gujarati glyph, the cover language of the app.
+  const GUJ_GLYPHS = {
+    A:'અ', B:'બ', C:'ચ', D:'દ', E:'એ', F:'ફ', G:'ગ', H:'હ', I:'ઇ', J:'જ',
+    K:'ક', L:'લ', M:'મ', N:'ન', O:'ઓ', P:'પ', Q:'ક', R:'ર', S:'સ', T:'ત',
+    U:'ઉ', V:'વ', W:'વ', X:'ક્ષ', Y:'ય', Z:'ઝ',
+    '0':'૦','1':'૧','2':'૨','3':'૩','4':'૪','5':'૫','6':'૬','7':'૭','8':'૮','9':'૯',
+  };
+  function coverGlyph(name) {
+    const init = albumInitial(name);
+    return GUJ_GLYPHS[init] || init;
+  }
+  function albumNameHtml(name) {
+    const d = albumDisplay(name);
+    return escapeHtml(d.title) + (d.tag ? ` <span class="folder-tag">· ${escapeHtml(d.tag)}</span>` : '');
   }
   function applyArt(el, name) {
     if (!el) return;
@@ -1227,12 +1256,11 @@
     for (const a of state.library.albums) {
       const card = document.createElement('div');
       card.className = 'folder-card';
-      const initial = (a.name || '?').trim().charAt(0).toUpperCase();
       card.innerHTML = `
         <div class="folder-art">
-          <span class="folder-initial">${escapeHtml(initial)}</span>
+          <span class="folder-initial">${escapeHtml(coverGlyph(a.name))}</span>
         </div>
-        <p class="folder-name">${escapeHtml(a.name)}</p>
+        <p class="folder-name">${albumNameHtml(a.name)}</p>
         <p class="folder-meta">${a.tracks.length} song${a.tracks.length === 1 ? '' : 's'}</p>
       `;
       applyArt(card.querySelector('.folder-art'), a.name);
@@ -1247,7 +1275,7 @@
     if (!album) return;
     state.activeAlbum = album;
     switchView('view-album');
-    $('album-title').textContent = album.name;
+    $('album-title').innerHTML = albumNameHtml(album.name);
     $('album-count').textContent = `${album.tracks.length} song${album.tracks.length === 1 ? '' : 's'}`;
     const list = $('album-tracks');
     list.innerHTML = '';
@@ -1604,10 +1632,9 @@
         if (miniLyricsBtn) miniLyricsBtn.classList.toggle('hidden', !lyrics);
       }
     });
-    const initial = (track.albumName || '?').charAt(0).toUpperCase();
     applyArt($('mini-art'), track.albumName);
     applyArt($('sheet-art'), track.albumName);
-    $('sheet-art').innerHTML = `<span class="folder-initial">${escapeHtml(initial)}</span>`;
+    $('sheet-art').innerHTML = `<span class="folder-initial">${escapeHtml(coverGlyph(track.albumName))}</span>`;
     const [a] = paletteFor(track.albumName || '?');
     document.querySelector('.player-sheet')?.style.setProperty('--c-a', a);
     // Only surface the mini-player on the music tab
@@ -1955,12 +1982,83 @@
       });
     }
     loadEkadashiTile();
+    loadEternalVirtueTile();
     renderNitya();
     renderUpdateBanner();
+    renderAdminFeedbackTile();
 
     // loadStoryOfDay() handles skeleton show/hide synchronously before its first
     // await, so there is no blank gap or flash — no pre-show needed here.
     loadStoryOfDay();
+  }
+
+  // ============== TODAY'S ETERNAL VIRTUE ==============
+  // Daily prasang highlight from the life of Pramukh Swami Maharaj.
+  // Content lives in Firestore doc content/eternalVirtues (published by
+  // scripts/build-eternal-virtues.js from eternal-virtues.md). The items
+  // array is pre-interleaved across virtues; every user sees the same
+  // snippet on the same calendar date via daysSinceEpoch % count.
+  const VIRTUE_CACHE_KEY = 'drift.eternalVirtues.v1';
+  // Re-fetch daily: a republish that changes the snippet count remaps
+  // day % count for everyone, so a short TTL keeps clients converged within a day.
+  const VIRTUE_REFRESH_MS = 24 * 60 * 60 * 1000;
+  let _virtueToday = null;
+  let _virtueFetching = false;
+
+  function virtueDayNumber() {
+    // Day index anchored to the LOCAL calendar date — flips at local
+    // midnight, and everyone on the same date sees the same snippet.
+    const now = new Date();
+    return Math.floor((now.getTime() - now.getTimezoneOffset() * 60000) / 86400000);
+  }
+
+  function renderVirtueTile(payload) {
+    const items = payload && payload.items;
+    if (!items || !items.length) return;
+    const item = items[virtueDayNumber() % items.length];
+    _virtueToday = item;
+    const titleEl = $('virtue-title');
+    const subEl   = $('virtue-sub');
+    if (!titleEl) return;
+    titleEl.textContent = `${item.v} · ${item.vEn}`;
+    subEl.textContent = item.title;
+    $('virtue-tile').classList.remove('hidden');
+  }
+
+  async function loadEternalVirtueTile() {
+    let cache = null;
+    try { cache = JSON.parse(localStorage.getItem(VIRTUE_CACHE_KEY) || 'null'); } catch (e) { /* corrupt cache */ }
+    if (cache && cache.payload) renderVirtueTile(cache.payload);
+
+    const fresh = cache && (Date.now() - (cache.fetchedAt || 0)) < VIRTUE_REFRESH_MS;
+    if (fresh || _virtueFetching) return;
+    _virtueFetching = true;
+    try {
+      const snap = await window.fbDb.collection('content').doc('eternalVirtues').get();
+      if (!snap.exists) return;
+      const data = snap.data();
+      const payload = JSON.parse(data.json);
+      renderVirtueTile(payload);
+      // Cache is an optimization — a storage failure must never block the render.
+      try {
+        localStorage.setItem(VIRTUE_CACHE_KEY, JSON.stringify({
+          fetchedAt: Date.now(), version: data.version || 1, payload,
+        }));
+      } catch (e2) { /* quota/security error — refetch next visit */ }
+    } catch (e) {
+      console.warn('eternal virtue fetch failed', e);
+    } finally {
+      _virtueFetching = false;
+    }
+  }
+
+  function openVirtueSheet() {
+    if (!_virtueToday) return;
+    $('virtue-sheet-virtue').textContent = `${_virtueToday.v} · ${_virtueToday.vEn}`;
+    $('virtue-sheet-gu').textContent = _virtueToday.vGu || '';
+    $('virtue-sheet-title').textContent = _virtueToday.title;
+    $('virtue-sheet-text').textContent = _virtueToday.text;
+    $('virtue-modal').classList.remove('hidden');
   }
 
   // ============== APP UPDATE CHECK (native only) ==============
@@ -2592,6 +2690,12 @@
     return window.fbDb.collection(`users/${uid}/storyOfDay`).doc(dateStr);
   }
 
+  // Bumped whenever buildStoryPrompt changes materially. A cached story from an
+  // older prompt version regenerates on next open, so prompt improvements reach
+  // users same-day instead of waiting for tomorrow's story.
+  // v2 (2026-07-06): 3–4-year-old language rules.
+  const STORY_PROMPT_VERSION = 2;
+
   async function loadStoryOfDay() {
     // Each call gets a unique ID. Any async step checks it before touching the DOM,
     // so a newer concurrent call (e.g. from syncChildProfileFromFirestore) cleanly
@@ -2611,7 +2715,7 @@
         guestTile.id        = 'sotd-guest-tile';
         guestTile.className = 'home-tile sotd-guest-tile';
         guestTile.innerHTML = `
-          <div class="sotd-guest-tile-icon">📖</div>
+          <div class="sotd-guest-tile-icon"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/></svg></div>
           <div class="sotd-guest-tile-body">
             <div class="sotd-guest-tile-label">Today's Story</div>
             <div class="sotd-guest-tile-title">Story of the Day</div>
@@ -2688,8 +2792,8 @@
       const doc = await sotdFirestoreRef(state.user.uid, dateStr).get();
       if (_sotdReqId !== myReqId) return; // superseded by a newer call — bail out silently
 
-      if (doc.exists) {
-        // Story already exists — swap skeleton → tile
+      if (doc.exists && (doc.data().promptVersion || 1) === STORY_PROMPT_VERSION) {
+        // Story already exists and is from the current prompt — swap skeleton → tile
         if (skeleton) skeleton.classList.add('hidden');
         const sotdStory = doc.data();
         showSOTDTile(sotdStory);
@@ -2698,6 +2802,7 @@
         renderAISavedList();
         return;
       }
+      // Doc missing OR written by an older prompt — fall through and regenerate.
 
       // 2. Not in Firestore — keep skeleton visible while Gemini generates
       const loadingSub = $('sotd-loading-sub');
@@ -2718,13 +2823,15 @@
         character,
         length:      'medium',
         generatedAt: Date.now(),
+        promptVersion: STORY_PROMPT_VERSION,
       };
 
       // 3. Persist to Firestore so subsequent opens are instant
       sotdFirestoreRef(state.user.uid, dateStr).set(story).catch(() => {});
 
       // 4. Cross-save to "Your Stories" so it appears in Stories tab
-      saveAIStory(story);
+      //    (overwrite replaces a stale same-id copy from an older prompt)
+      saveAIStory(story, { overwrite: true });
       renderAISavedList();
 
       // 5. Swap skeleton → tile
@@ -2849,7 +2956,7 @@
       const totalCount = Object.values(window.CONVERSATION_STARTERS)
         .reduce((n, g) => n + g.categories.reduce((m, c) => m + c.items.length, 0), 0);
       convCard.innerHTML = `
-        <div class="story-cat-icon">💬</div>
+        <div class="story-cat-icon"><svg viewBox="0 0 48 44" width="40" height="37"><g><path fill="white" d="M24 4 C13 4 4 11.2 4 20.2 C4 25.4 7 30 11.6 32.9 L10 40 L18.4 35.6 C20.2 36 22 36.3 24 36.3 C35 36.3 44 29.1 44 20.2 C44 11.2 35 4 24 4 Z"/><circle cx="15.5" cy="20" r="2.4" fill="#6377D0"/><circle cx="24" cy="20" r="2.4" fill="#6377D0"/><circle cx="32.5" cy="20" r="2.4" fill="#6377D0"/></g></svg></div>
         <div class="story-cat-name">Conversation Starters</div>
         <div class="story-cat-count">${totalCount} prompts · 4 age groups</div>
         ${isGuestMode() ? '<div class="story-cat-lock-badge"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>' : ''}
@@ -2870,7 +2977,7 @@
     aiCard.className = 'story-cat-card story-cat-ai';
     const aiSaved = loadAISavedStories();
     aiCard.innerHTML = `
-      <div class="story-cat-icon">✨</div>
+      <div class="story-cat-icon"><svg viewBox="0 0 48 44" width="40" height="37"><g fill="white"><path d="M18 4 L21.6 15.4 L33 19 L21.6 22.6 L18 34 L14.4 22.6 L3 19 L14.4 15.4 Z"/><path d="M37 8 L39.2 14.8 L46 17 L39.2 19.2 L37 26 L34.8 19.2 L28 17 L34.8 14.8 Z" opacity="0.9"/><path d="M38 30 L39.4 34.6 L44 36 L39.4 37.4 L38 42 L36.6 37.4 L32 36 L36.6 34.6 Z" opacity="0.75"/></g></svg></div>
       <div class="story-cat-name">Make Your Own</div>
       <div class="story-cat-count">${aiSaved.length ? aiSaved.length + ' saved' : 'Generate new'}</div>
       ${isGuestMode() ? '<div class="story-cat-lock-badge"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>' : ''}
@@ -3240,9 +3347,9 @@
           </div>
         </div>`;
       } else if (story.photo) {
-        thumbHtml = `<div class="story-row-thumb"><img src="${story.photo}" alt="" loading="lazy" onerror="this.parentNode.textContent='📖'"></div>`;
+        thumbHtml = `<div class="story-row-thumb"><img src="${story.photo}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<svg viewBox=&quot;0 0 24 24&quot; width=&quot;18&quot; height=&quot;18&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;1.8&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;><path d=&quot;M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z&quot;/><path d=&quot;M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z&quot;/></svg>'"></div>`;
       } else {
-        thumbHtml = `<div class="story-row-thumb">📖</div>`;
+        thumbHtml = `<div class="story-row-thumb"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/></svg></div>`;
       }
 
       row.innerHTML = `
@@ -3843,13 +3950,19 @@
     try { return JSON.parse(localStorage.getItem(AI_SAVED_KEY) || '[]'); } catch { return []; }
   }
 
-  function saveAIStory(story) {
+  function saveAIStory(story, opts = {}) {
     if (!story.id) story.id = uid();
     const saved = loadAISavedStories();
-    // Upsert by ID — skip if already present so SOTD cross-saves don't duplicate
-    if (saved.some((s) => s.id === story.id)) return;
-    saved.unshift(story);
-    if (saved.length > 20) saved.splice(20);
+    const existingIdx = saved.findIndex((s) => s.id === story.id);
+    if (existingIdx !== -1) {
+      // Skip so SOTD cross-saves don't duplicate — unless a regenerated story
+      // (same id, fresher content) explicitly replaces the stale copy.
+      if (!opts.overwrite) return;
+      saved[existingIdx] = story;
+    } else {
+      saved.unshift(story);
+      if (saved.length > 20) saved.splice(20);
+    }
     try { localStorage.setItem(AI_SAVED_KEY, JSON.stringify(saved)); } catch {}
     // Sync to Firestore so stories persist across devices
     if (state.user) {
@@ -3948,7 +4061,7 @@
       const row = document.createElement('div');
       row.className = 'story-row' + (isStoryCompleted(story.id) ? ' done' : '');
       row.innerHTML = `
-        <div class="story-row-thumb">✨</div>
+        <div class="story-row-thumb"><svg viewBox="0 0 48 44" width="18" height="18"><g fill="currentColor"><path d="M18 4 L21.6 15.4 L33 19 L21.6 22.6 L18 34 L14.4 22.6 L3 19 L14.4 15.4 Z"/><path d="M37 8 L39.2 14.8 L46 17 L39.2 19.2 L37 26 L34.8 19.2 L28 17 L34.8 14.8 Z" opacity="0.9"/></g></svg></div>
         <div class="story-row-info">
           <div class="story-row-title">${story.title}</div>
           <div class="story-row-badge" style="color:var(--fg-3);">${story.topic} · ${story.length || 'medium'}</div>
@@ -4187,6 +4300,18 @@
       long:   '8 to 12 paragraphs, about 500 words total',
     }[length] || '5 to 7 paragraphs';
 
+    // Shared vocabulary constraints — the #1 quality complaint was stories
+    // written in an adult register (big words, long sentences). Target a
+    // 3–4-year-old's vocabulary with concrete, checkable rules.
+    const LANGUAGE_RULES = `LANGUAGE RULES — the listener is 3 to 4 years old:
+- Use ONLY simple everyday words a 3-year-old already knows. If a word feels fancy, swap it: "big" not "enormous", "happy" not "delighted", "kept trying" not "persevered", "very good" not "magnificent".
+- Short sentences. Most under 10 words. One idea per sentence.
+- No abstract words, no idioms, no metaphors, no wordplay that needs explaining.
+- Show feelings with actions and faces ("Meera smiled big"), never with labels ("she felt immense gratitude").
+- Playful sounds and repetition are wonderful: "splash, splash!", "round and round", "knock knock knock".
+- Use lots of short, simple dialogue ("Look!" said Meera).
+- A parent must be able to read it aloud with zero explaining. If any sentence would make a 3-year-old ask "what does that mean?", rewrite it.`;
+
     const isFunMode = topic === 'fun' || topic === 'funny';
     const isFunny   = topic === 'funny';
 
@@ -4207,22 +4332,23 @@ HARD RULES — non-negotiable:
 3. NEVER use "Bapa" to refer to a parent or any family member. In the BAPS Swaminarayan community "Bapa" is a sacred title reserved exclusively for the spiritual Guru, Mahant Swami Maharaj. Using it for a parent is deeply disrespectful and incorrect.
 4. Keep all content joyful and age-appropriate — no fear, no violence.
 
-TASK: Create a delightful, ${isFunny ? 'funny' : 'fun'} story for young children (ages 2 to 8).
+TASK: Create a delightful, ${isFunny ? 'funny' : 'fun'} story for very young children (ages 2 to 5).
 
 ${characterLine}
+
+${LANGUAGE_RULES}
 
 Story guidelines:
 - Write ${lengthGuide}
 - ${toneGuide}
-- Use simple, bouncy language a parent can read aloud with expression
 - No religious angle needed — just pure, wholesome fun
 - Age-appropriate humor: silly sounds, funny mistakes, unexpected twists, happy endings
 
-Before outputting, silently check: Did family members appear naturally, or did I force them in? If they appear, did I use only "Mummy", "Pappa", "Baa", "Dada"? Did I avoid "Bapa" for any family member?
+Before outputting, silently check: Would a 3-year-old understand every single word? Are the sentences short? Did family members appear naturally, or did I force them in? If they appear, did I use only "Mummy", "Pappa", "Baa", "Dada"? Did I avoid "Bapa" for any family member?
 
 Return a JSON object with exactly this structure (no markdown, no extra text):
 {
-  "title": "A short, catchy title (4 to 7 words)",
+  "title": "A short, playful title using easy words (3 to 6 words)",
   "paragraphs": ["paragraph 1 text", "paragraph 2 text", "..."]
 }`;
     }
@@ -4252,24 +4378,26 @@ HARD RULES — non-negotiable:
 4. Keep all content joyful, peaceful, and age-appropriate — no fear, no violence.
 5. VARIETY — important: Do NOT use garden, seed, sprout, flower, or "blooming" metaphors. These are overused. Use a distinct, concrete real-world setting and situation instead of plant-growth imagery.
 
-TASK: Create a warm, engaging story for young children (ages 2 to 8) that teaches the value of "${topic}".
+TASK: Create a warm, engaging story for very young children (ages 2 to 5) that teaches the value of "${topic}".
 
 ${characterLine}
 
+${LANGUAGE_RULES}
+
 Story guidelines:
 - Write ${lengthGuide}
-- Use simple, warm language a parent can read aloud to a baby or toddler
+- Show the value of "${topic}" through what characters DO — never name the value with a big word inside the story (no "generosity", "perseverance", "compassion"; instead: sharing, kept trying, being kind)
 - Draw on universal Indian values: kindness, honesty, seva, gratitude, humility
 - Set the story somewhere fresh and specific — for example, ${freshSetting}. Pick a vivid, concrete setting; do NOT default to gardens or plants.
 - Occasionally (not always) stories may naturally touch on devotion or prayer, but only when it fits organically — do not force a religious angle
 - Culturally rooted in an Indian family context without being narrowly religious
-- End with a gentle, clear moral lesson
+- End with one short, simple moral sentence a 3-year-old could repeat (under 10 easy words)
 
-Before outputting, silently check: Did I avoid garden/seed/plant metaphors and use a fresh, concrete setting? Did family members appear naturally with only "Mummy", "Pappa", "Baa", "Dada"? Did I avoid "Bapa" for any family member?
+Before outputting, silently check: Would a 3-year-old understand every single word? Are the sentences short? Did I avoid garden/seed/plant metaphors and use a fresh, concrete setting? Did family members appear naturally with only "Mummy", "Pappa", "Baa", "Dada"? Did I avoid "Bapa" for any family member?
 
 Return a JSON object with exactly this structure (no markdown, no extra text):
 {
-  "title": "A short evocative title (4 to 7 words)",
+  "title": "A short, playful title using easy words (3 to 6 words)",
   "paragraphs": ["paragraph 1 text", "paragraph 2 text", "..."]
 }`;
   }
@@ -5048,7 +5176,7 @@ ${numbered}`;
         // English: ElevenLabs — no voice selection (single voice)
         list.innerHTML = `
           <div style="padding:20px 16px;text-align:center;color:var(--fg-2);font-size:14px;line-height:1.6;">
-            <div style="font-size:22px;margin-bottom:8px;">⭐</div>
+            <svg viewBox="0 0 48 44" width="24" height="22" style="margin-bottom:8px"><g fill="#e8a33d"><path d="M24 3 L29.2 14.6 L41.8 16 L32.4 24.6 L35 37 L24 30.6 L13 37 L15.6 24.6 L6.2 16 L18.8 14.6 Z"/></g></svg>
             <strong>ElevenLabs · Rachel</strong><br>
             <span style="color:var(--fg-3);font-size:13px;">Natural English voice via ElevenLabs.</span>
           </div>`;
@@ -5935,9 +6063,85 @@ ${numbered}`;
       await loadAdminAudiobooks();
     } else if (adminCurrentTab === 'lyrics') {
       await loadAdminLyrics();
+    } else if (adminCurrentTab === 'feedback') {
+      await loadAdminFeedback();
     } else {
       await loadAdminSongs();
     }
+  }
+
+  // ── Admin: user feedback ("Suggest a feature" submissions) ────
+  async function loadAdminFeedback() {
+    const content = $('admin-content');
+    try {
+      const snap = await window.fbDb.collection('feedback')
+        .orderBy('createdAt', 'desc').limit(100).get();
+      if (snap.empty) {
+        content.innerHTML = '<div class="admin-loading">No feedback yet.</div>';
+        return;
+      }
+      content.innerHTML = '';
+      snap.docs.forEach((doc) => {
+        const f = doc.data();
+        const item = document.createElement('div');
+        item.className = 'admin-feedback-item' + (f.read ? '' : ' unread');
+        const who = f.displayName
+          ? `${f.displayName} · ${f.email || ''}`
+          : (f.email || f.uid || 'Unknown');
+        item.innerHTML = `
+          <div class="admin-feedback-head">
+            <div class="admin-feedback-who">${escapeHtml(who)}</div>
+            <div class="admin-feedback-date">${f.createdAt ? timeAgo(f.createdAt) : ''}</div>
+          </div>
+          <div class="admin-feedback-text">${escapeHtml(f.text || '')}</div>
+          <div class="admin-feedback-actions">
+            <button class="admin-feedback-read-btn${f.read ? '' : ' unread'}">${f.read ? 'Read' : 'Mark as read'}</button>
+          </div>`;
+        item.querySelector('.admin-feedback-read-btn').addEventListener('click', async () => {
+          try {
+            await window.fbDb.collection('feedback').doc(doc.id).update({ read: !f.read });
+            loadAdminFeedback();
+            renderAdminFeedbackTile(); // keep the Home tile count in sync
+          } catch (e) { console.warn('feedback read toggle failed', e); }
+        });
+        content.appendChild(item);
+      });
+    } catch (e) {
+      console.warn('loadAdminFeedback failed', e);
+      content.innerHTML = '<div class="admin-loading">Couldn\'t load feedback.</div>';
+    }
+  }
+
+  // Admin-only Home tile: "You have new feedback" (count of unread docs).
+  async function renderAdminFeedbackTile() {
+    const tiles = $('home-tiles');
+    const existing = $('admin-feedback-tile');
+    if (!tiles) return;
+    if (!isAdmin()) { if (existing) existing.remove(); return; }
+    try {
+      const snap = await window.fbDb.collection('feedback').where('read', '==', false).get();
+      if (snap.empty) { if (existing) existing.remove(); return; }
+      const n = snap.size;
+      let tile = existing;
+      if (!tile) {
+        tile = document.createElement('div');
+        tile.id = 'admin-feedback-tile';
+        tile.className = 'home-tile admin-feedback-tile';
+        tile.setAttribute('role', 'button');
+        tile.addEventListener('click', () => {
+          openAdminDashboard();
+          loadAdminData('feedback');
+        });
+        tiles.prepend(tile);
+      }
+      tile.innerHTML = `
+        <div class="home-tile-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="9" y1="10" x2="15" y2="10"/></svg></div>
+        <div class="home-tile-body">
+          <div class="home-tile-label">Admin</div>
+          <div class="home-tile-title">You have ${n} new feedback</div>
+          <div class="home-tile-sub">Tap to review</div>
+        </div>`;
+    } catch (e) { console.warn('admin feedback tile failed', e); }
   }
 
   async function blockUser(uid, displayName, email) {
@@ -6902,6 +7106,64 @@ ${numbered}`;
       });
     }
 
+    // ── Share with family (native share sheet, clipboard fallback) ──
+    const shareAppBtn = $('settings-share-app');
+    if (shareAppBtn) shareAppBtn.addEventListener('click', async () => {
+      const shareData = {
+        title: 'mySanskar',
+        text: 'Devotional music, stories, and Gujarati learning for little ones 🪔',
+        url: 'https://mysanskar.vercel.app',
+      };
+      try {
+        if (navigator.share) await navigator.share(shareData);
+        else {
+          await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
+          toast('Link copied — send it to family!');
+        }
+      } catch {} // user cancelled the share sheet — not an error
+    });
+
+    // ── Suggest a feature → in-app feedback sheet → Firestore ──
+    const feedbackRow = $('settings-feedback-row');
+    if (feedbackRow) feedbackRow.addEventListener('click', () => {
+      if (isGuestMode() || !state.user) {
+        toast('Create a free account to send feedback');
+        return;
+      }
+      $('feedback-input').value = '';
+      $('feedback-modal').classList.remove('hidden');
+      setTimeout(() => $('feedback-input').focus(), 80);
+    });
+    const closeFeedback = () => closeModal('feedback-modal');
+    $('feedback-cancel')?.addEventListener('click', closeFeedback);
+    $('feedback-modal')?.addEventListener('click', (e) => {
+      if (!e.target.closest('.modal-sheet')) closeFeedback();
+    });
+    $('feedback-send')?.addEventListener('click', async () => {
+      const text = $('feedback-input').value.trim();
+      if (!text) { toast('Write a little something first'); return; }
+      if (!state.user) { toast('Sign in to send feedback'); return; }
+      const btn = $('feedback-send');
+      btn.disabled = true;
+      try {
+        await window.fbDb.collection('feedback').add({
+          text,
+          uid: state.user.uid,
+          email: state.user.email || '',
+          displayName: state.user.displayName || '',
+          createdAt: Date.now(),
+          read: false,
+        });
+        closeFeedback();
+        toast('🙏 Thank you — feedback sent!');
+      } catch (e) {
+        console.warn('feedback send failed', e);
+        toast("Couldn't send feedback. Try again?");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
     $('settings-refresh').addEventListener('click', async () => {
       closeModal('settings-modal');
       document.body.classList.add('refreshing');
@@ -6987,6 +7249,25 @@ ${numbered}`;
       });
     }
     initEkadashiReminderSettings();
+
+    // Eternal Virtue tile → daily prasang sheet
+    const vTile = $('virtue-tile');
+    if (vTile) {
+      vTile.addEventListener('click', openVirtueSheet);
+      vTile.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          // stopPropagation: the document-level shortcut maps Space to play/pause
+          // and would fire alongside opening the sheet.
+          e.preventDefault(); e.stopPropagation(); openVirtueSheet();
+        }
+      });
+    }
+    const vModal = $('virtue-modal');
+    if (vModal) {
+      vModal.addEventListener('click', (e) => {
+        if (!e.target.closest('.modal-sheet')) closeModal('virtue-modal');
+      });
+    }
 
     // New playlist
     $('new-playlist-btn').addEventListener('click', () => {
@@ -8015,9 +8296,10 @@ ${numbered}`;
   function abCoverGradient(name) {
     let h = 0;
     for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
-    const hue = Math.abs(h) % 360;
-    const hue2 = (hue + 40) % 360;
-    return `linear-gradient(135deg, hsl(${hue},45%,20%), hsl(${hue2},50%,30%))`;
+    // Warm band only (saffron→terracotta) so covers stay on-brand.
+    const hue = 16 + (Math.abs(h) % 34);
+    const hue2 = hue + 12;
+    return `linear-gradient(135deg, hsl(${hue},42%,22%), hsl(${hue2},48%,31%))`;
   }
 
   // ── Progress helpers ──────────────────────────────────────────
@@ -8196,7 +8478,7 @@ ${numbered}`;
           <div class="ab-continue-cover">
             ${book.coverFileId
               ? `<img src="${abCoverUrl(book.coverFileId)}" alt="${book.name}" loading="lazy">`
-              : `<div class="ab-cover-placeholder" style="background:${abCoverGradient(book.name)}">📖</div>`}
+              : `<div class="ab-cover-placeholder" style="background:${abCoverGradient(book.name)}"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/></svg></div>`}
           </div>
           <div class="ab-continue-bar-wrap"><div class="ab-continue-bar-fill" style="width:${pctPct}%"></div></div>
           <div class="ab-continue-info">
@@ -8254,7 +8536,7 @@ ${numbered}`;
         <div class="ab-book-cover">
           ${book.coverFileId
             ? `<img src="${abCoverUrl(book.coverFileId)}" alt="${book.name}" loading="lazy">`
-            : `<div class="ab-cover-placeholder" style="background:${abCoverGradient(book.name)}">📖</div>`}
+            : `<div class="ab-cover-placeholder" style="background:${abCoverGradient(book.name)}"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/></svg></div>`}
           ${barHtml}
         </div>
         <div class="ab-book-info">
@@ -8293,7 +8575,7 @@ ${numbered}`;
         <div class="ab-hero-cover">
           ${book.coverFileId
             ? `<img src="${abCoverUrl(book.coverFileId)}" alt="${book.name}">`
-            : `<div class="ab-cover-placeholder" style="background:${abCoverGradient(book.name)}">📖</div>`}
+            : `<div class="ab-cover-placeholder" style="background:${abCoverGradient(book.name)}"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/></svg></div>`}
         </div>
         <div class="ab-hero-info">
           <div class="ab-hero-title">${book.name}</div>

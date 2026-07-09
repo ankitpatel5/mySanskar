@@ -1,0 +1,69 @@
+{
+  "" : {
+    "diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInSwift-primary.dia",
+    "emit-module-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInSwift-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInSwift-primary-emit-module.dia",
+    "pch" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInSwift-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInSwift-primary.swiftdeps"
+  },
+  "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/DerivedSources/resource_bundle_accessor.swift" : {
+    "const-values" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/resource_bundle_accessor.swiftconstvalues",
+    "dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/resource_bundle_accessor.d",
+    "diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/resource_bundle_accessor.dia",
+    "index-unit-output-path" : "/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/resource_bundle_accessor.o",
+    "llvm-bc" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/resource_bundle_accessor.bc",
+    "object" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/resource_bundle_accessor.o",
+    "swift-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/resource_bundle_accessor.swiftdeps",
+    "swiftmodule" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/resource_bundle_accessor~partial.swiftmodule"
+  },
+  "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/SourcePackages/checkouts/GoogleSignIn-iOS/GoogleSignInSwift/Sources/GoogleSignInButton.swift" : {
+    "const-values" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButton.swiftconstvalues",
+    "dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButton.d",
+    "diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButton.dia",
+    "index-unit-output-path" : "/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButton.o",
+    "llvm-bc" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButton.bc",
+    "object" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButton.o",
+    "swift-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButton.swiftdeps",
+    "swiftmodule" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButton~partial.swiftmodule"
+  },
+  "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/SourcePackages/checkouts/GoogleSignIn-iOS/GoogleSignInSwift/Sources/GoogleSignInButtonBundleExtensions.swift" : {
+    "const-values" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonBundleExtensions.swiftconstvalues",
+    "dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonBundleExtensions.d",
+    "diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonBundleExtensions.dia",
+    "index-unit-output-path" : "/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonBundleExtensions.o",
+    "llvm-bc" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonBundleExtensions.bc",
+    "object" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonBundleExtensions.o",
+    "swift-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonBundleExtensions.swiftdeps",
+    "swiftmodule" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonBundleExtensions~partial.swiftmodule"
+  },
+  "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/SourcePackages/checkouts/GoogleSignIn-iOS/GoogleSignInSwift/Sources/GoogleSignInButtonStrings.swift" : {
+    "const-values" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonStrings.swiftconstvalues",
+    "dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonStrings.d",
+    "diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonStrings.dia",
+    "index-unit-output-path" : "/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonStrings.o",
+    "llvm-bc" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonStrings.bc",
+    "object" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonStrings.o",
+    "swift-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonStrings.swiftdeps",
+    "swiftmodule" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonStrings~partial.swiftmodule"
+  },
+  "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/SourcePackages/checkouts/GoogleSignIn-iOS/GoogleSignInSwift/Sources/GoogleSignInButtonStyling.swift" : {
+    "const-values" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonStyling.swiftconstvalues",
+    "dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonStyling.d",
+    "diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonStyling.dia",
+    "index-unit-output-path" : "/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonStyling.o",
+    "llvm-bc" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonStyling.bc",
+    "object" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonStyling.o",
+    "swift-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonStyling.swiftdeps",
+    "swiftmodule" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonStyling~partial.swiftmodule"
+  },
+  "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/SourcePackages/checkouts/GoogleSignIn-iOS/GoogleSignInSwift/Sources/GoogleSignInButtonViewModel.swift" : {
+    "const-values" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonViewModel.swiftconstvalues",
+    "dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonViewModel.d",
+    "diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonViewModel.dia",
+    "index-unit-output-path" : "/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonViewModel.o",
+    "llvm-bc" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonViewModel.bc",
+    "object" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonViewModel.o",
+    "swift-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonViewModel.swiftdeps",
+    "swiftmodule" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphonesimulator/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInButtonViewModel~partial.swiftmodule"
+  }
+}

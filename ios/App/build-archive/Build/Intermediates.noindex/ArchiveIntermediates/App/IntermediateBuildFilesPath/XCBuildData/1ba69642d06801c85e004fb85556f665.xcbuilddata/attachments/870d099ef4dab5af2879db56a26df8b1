@@ -1,0 +1,4 @@
+module GoogleUtilities_Environment {
+umbrella "/Users/ankit/Documents/AI Projects/drift/ios/App/build-archive/SourcePackages/checkouts/GoogleUtilities/GoogleUtilities/Environment/Public"
+export *
+}

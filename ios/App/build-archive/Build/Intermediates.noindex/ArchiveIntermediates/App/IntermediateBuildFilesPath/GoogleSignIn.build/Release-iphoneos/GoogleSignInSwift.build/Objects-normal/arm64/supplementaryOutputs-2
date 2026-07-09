@@ -1,0 +1,12 @@
+{
+  "/Users/ankit/Documents/AI Projects/drift/ios/App/build-archive/Build/Intermediates.noindex/ArchiveIntermediates/App/IntermediateBuildFilesPath/GoogleSignIn.build/Release-iphoneos/GoogleSignInSwift.build/DerivedSources/resource_bundle_accessor.swift" : {
+    "abi-baseline-json" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-archive/Build/Intermediates.noindex/ArchiveIntermediates/App/IntermediateBuildFilesPath/GoogleSignIn.build/Release-iphoneos/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInSwift.abi.json",
+    "const-values" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-archive/Build/Intermediates.noindex/ArchiveIntermediates/App/IntermediateBuildFilesPath/GoogleSignIn.build/Release-iphoneos/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInSwift-primary.swiftconstvalues",
+    "dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-archive/Build/Intermediates.noindex/ArchiveIntermediates/App/IntermediateBuildFilesPath/GoogleSignIn.build/Release-iphoneos/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInSwift-primary.d",
+    "diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-archive/Build/Intermediates.noindex/ArchiveIntermediates/App/IntermediateBuildFilesPath/GoogleSignIn.build/Release-iphoneos/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInSwift-primary.dia",
+    "objc-header" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-archive/Build/Intermediates.noindex/ArchiveIntermediates/App/IntermediateBuildFilesPath/GoogleSignIn.build/Release-iphoneos/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInSwift-Swift.h",
+    "swiftdoc" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-archive/Build/Intermediates.noindex/ArchiveIntermediates/App/IntermediateBuildFilesPath/GoogleSignIn.build/Release-iphoneos/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInSwift.swiftdoc",
+    "swiftmodule" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-archive/Build/Intermediates.noindex/ArchiveIntermediates/App/IntermediateBuildFilesPath/GoogleSignIn.build/Release-iphoneos/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInSwift.swiftmodule",
+    "swiftsourceinfo" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-archive/Build/Intermediates.noindex/ArchiveIntermediates/App/IntermediateBuildFilesPath/GoogleSignIn.build/Release-iphoneos/GoogleSignInSwift.build/Objects-normal/arm64/GoogleSignInSwift.swiftsourceinfo"
+  }
+}

@@ -1,0 +1,10 @@
+dependencies: \
+  /Users/ankit/Documents/AI\ Projects/drift/ios/App/build-archive/SourcePackages/checkouts/GoogleSignIn-iOS/GoogleSignIn/Sources/GIDAuthStateMigration/Implementation/GIDAuthStateMigration.m \
+  /Users/ankit/Documents/AI\ Projects/drift/ios/App/build-archive/Build/Intermediates.noindex/ArchiveIntermediates/App/IntermediateBuildFilesPath/GoogleSignIn.build/Release-iphoneos/GoogleSignIn.build/DerivedSources/resource_bundle_accessor.h \
+  /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks/Foundation.framework/Modules/module.modulemap \
+  /Users/ankit/Documents/AI\ Projects/drift/ios/App/build-archive/SourcePackages/checkouts/GoogleSignIn-iOS/GoogleSignIn/Sources/GIDAuthStateMigration/GIDAuthStateMigration.h \
+  /Users/ankit/Documents/AI\ Projects/drift/ios/App/build-archive/SourcePackages/checkouts/GoogleSignIn-iOS/GoogleSignIn/Sources/GIDSignInCallbackSchemes.h \
+  /Users/ankit/Documents/AI\ Projects/drift/ios/App/build-archive/Build/Intermediates.noindex/ArchiveIntermediates/App/IntermediateBuildFilesPath/GeneratedModuleMaps-iphoneos/GTMAppAuth.modulemap \
+  /Users/ankit/Documents/AI\ Projects/drift/ios/App/build-archive/Build/Intermediates.noindex/ArchiveIntermediates/App/IntermediateBuildFilesPath/GeneratedModuleMaps-iphoneos/GTMSessionFetcherCore.modulemap \
+  /Users/ankit/Documents/AI\ Projects/drift/ios/App/build-archive/Build/Intermediates.noindex/ArchiveIntermediates/App/IntermediateBuildFilesPath/GeneratedModuleMaps-iphoneos/AppAuth.modulemap \
+  /Users/ankit/Documents/AI\ Projects/drift/ios/App/build-archive/Build/Intermediates.noindex/ArchiveIntermediates/App/IntermediateBuildFilesPath/GeneratedModuleMaps-iphoneos/AppAuthCore.modulemap

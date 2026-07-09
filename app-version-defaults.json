@@ -6,7 +6,7 @@
     "appStoreId": "6774448007"
   },
   "android": {
-    "latest": "1.3",
+    "latest": "1.5",
     "min": "1.0"
   }
 }

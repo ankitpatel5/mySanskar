@@ -1,0 +1,4 @@
+module AppCheckCore {
+umbrella header "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/SourcePackages/checkouts/app-check/AppCheckCore/Sources/Public/AppCheckCore/AppCheckCore.h"
+export *
+}

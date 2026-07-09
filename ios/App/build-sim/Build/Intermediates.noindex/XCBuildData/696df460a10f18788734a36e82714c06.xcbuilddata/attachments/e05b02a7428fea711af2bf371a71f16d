@@ -1,0 +1,69 @@
+{
+  "" : {
+    "diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/App-primary.dia",
+    "emit-module-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/App-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/App-primary-emit-module.dia",
+    "pch" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/App-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/App-primary.swiftdeps"
+  },
+  "/Users/ankit/Documents/AI Projects/drift/ios/App/App/AppDelegate.swift" : {
+    "const-values" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/AppDelegate.swiftconstvalues",
+    "dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/AppDelegate.d",
+    "diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/AppDelegate.dia",
+    "index-unit-output-path" : "/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/AppDelegate.o",
+    "llvm-bc" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/AppDelegate.bc",
+    "object" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/AppDelegate.o",
+    "swift-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/AppDelegate.swiftdeps",
+    "swiftmodule" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/AppDelegate~partial.swiftmodule"
+  },
+  "/Users/ankit/Documents/AI Projects/drift/ios/App/App/GoogleSignInPlugin.swift" : {
+    "const-values" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/GoogleSignInPlugin.swiftconstvalues",
+    "dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/GoogleSignInPlugin.d",
+    "diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/GoogleSignInPlugin.dia",
+    "index-unit-output-path" : "/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/GoogleSignInPlugin.o",
+    "llvm-bc" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/GoogleSignInPlugin.bc",
+    "object" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/GoogleSignInPlugin.o",
+    "swift-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/GoogleSignInPlugin.swiftdeps",
+    "swiftmodule" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/GoogleSignInPlugin~partial.swiftmodule"
+  },
+  "/Users/ankit/Documents/AI Projects/drift/ios/App/App/NityaWidgetPlugin.swift" : {
+    "const-values" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/NityaWidgetPlugin.swiftconstvalues",
+    "dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/NityaWidgetPlugin.d",
+    "diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/NityaWidgetPlugin.dia",
+    "index-unit-output-path" : "/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/NityaWidgetPlugin.o",
+    "llvm-bc" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/NityaWidgetPlugin.bc",
+    "object" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/NityaWidgetPlugin.o",
+    "swift-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/NityaWidgetPlugin.swiftdeps",
+    "swiftmodule" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/NityaWidgetPlugin~partial.swiftmodule"
+  },
+  "/Users/ankit/Documents/AI Projects/drift/ios/App/App/SignInWithApplePlugin.swift" : {
+    "const-values" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/SignInWithApplePlugin.swiftconstvalues",
+    "dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/SignInWithApplePlugin.d",
+    "diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/SignInWithApplePlugin.dia",
+    "index-unit-output-path" : "/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/SignInWithApplePlugin.o",
+    "llvm-bc" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/SignInWithApplePlugin.bc",
+    "object" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/SignInWithApplePlugin.o",
+    "swift-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/SignInWithApplePlugin.swiftdeps",
+    "swiftmodule" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/SignInWithApplePlugin~partial.swiftmodule"
+  },
+  "/Users/ankit/Documents/AI Projects/drift/ios/App/App/ViewController.swift" : {
+    "const-values" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/ViewController.swiftconstvalues",
+    "dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/ViewController.d",
+    "diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/ViewController.dia",
+    "index-unit-output-path" : "/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/ViewController.o",
+    "llvm-bc" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/ViewController.bc",
+    "object" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/ViewController.o",
+    "swift-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/ViewController.swiftdeps",
+    "swiftmodule" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/ViewController~partial.swiftmodule"
+  },
+  "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/ankit/Documents/AI Projects/drift/ios/App/build-sim/Build/Intermediates.noindex/App.build/Debug-iphonesimulator/App.build/Objects-normal/arm64/GeneratedAssetSymbols~partial.swiftmodule"
+  }
+}

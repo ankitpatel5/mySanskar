@@ -186,6 +186,17 @@
               </div>
             </div>
 
+            <!-- Today's Eternal Virtue — daily prasang from Pramukh Swami Maharaj's life -->
+            <div class="home-tile virtue-tile hidden" id="virtue-tile" role="button" tabindex="0" aria-label="Today's Eternal Virtue">
+              <div class="home-tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5c1.7 2 2.6 3.9 2.6 5.9a2.6 2.6 0 0 1-5.2 0c0-2 .9-3.9 2.6-5.9z"/><path d="M3.5 12.5c2.2 3.9 5.1 5.9 8.5 5.9s6.3-2 8.5-5.9c-1.7-.9-3.3-1.3-4.9-1.3-1.4 0-2.6.3-3.6 1-1-.7-2.2-1-3.6-1-1.6 0-3.2.4-4.9 1.3z"/></svg></div>
+              <div class="home-tile-body">
+                <div class="home-tile-label">Today's Eternal Virtue</div>
+                <div class="home-tile-title" id="virtue-title">—</div>
+                <div class="home-tile-sub" id="virtue-sub"></div>
+              </div>
+              <div class="ekadashi-tile-chevron"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+            </div>
+
           </div>
 
           <!-- Nitya — quick-play shortcuts (own frame, below the daily tiles) -->
@@ -845,6 +856,7 @@
           <button class="admin-tab" data-atab="viptts">VIP TTS</button>
           <button class="admin-tab" data-atab="audiobooks">Audiobooks</button>
           <button class="admin-tab" data-atab="lyrics">Lyrics</button>
+          <button class="admin-tab" data-atab="feedback">Feedback</button>
         </div>
         <div class="admin-content" id="admin-content">
           <div class="admin-loading">Loading…</div>
@@ -1147,8 +1159,8 @@
           <div class="settings-group-label">Child</div>
           <div class="settings-group">
             <button class="settings-row settings-row-nav" id="settings-child-row">
-              <div class="settings-row-icon">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <div class="settings-chip chip-rose">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
               </div>
               <div class="settings-row-main">
                 <div class="settings-row-title" id="settings-child-summary">Add your child</div>
@@ -1161,7 +1173,12 @@
           <div class="settings-group-label">Preferences</div>
           <div class="settings-group">
             <div class="settings-row settings-row-stacked">
-              <div class="settings-row-title">Story language</div>
+              <div class="settings-stacked-head">
+                <div class="settings-chip chip-rose">
+                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h7"/><path d="M9 3v2c0 4.418-2.239 8-5 8"/><path d="M5 9c0 2.144 2.952 3.908 6.7 4"/><path d="M12 20l4-9 4 9"/><path d="M19.1 18h-6.2"/></svg>
+                </div>
+                <div class="settings-row-title">Story language</div>
+              </div>
               <div class="settings-lang-row">
                 <button class="settings-lang-btn active" data-lang="en">English</button>
                 <button class="settings-lang-btn" data-lang="gu">ગુજરાતી</button>
@@ -1169,7 +1186,12 @@
               </div>
             </div>
             <div class="settings-row settings-row-stacked">
-              <div class="settings-row-title">Appearance</div>
+              <div class="settings-stacked-head">
+                <div class="settings-chip chip-violet">
+                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+                </div>
+                <div class="settings-row-title">Appearance</div>
+              </div>
               <div class="settings-theme-row">
                 <button class="settings-theme-btn" data-theme-choice="dark">
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
@@ -1182,6 +1204,9 @@
               </div>
             </div>
             <div class="settings-row">
+              <div class="settings-chip chip-saffron">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+              </div>
               <div class="settings-row-main">
                 <div class="settings-row-title">Audiobooks tab</div>
                 <div class="settings-row-sub">Curated books for parents</div>
@@ -1196,6 +1221,9 @@
           <div class="settings-group-label hidden" id="settings-notif-label">Notifications</div>
           <div class="settings-group hidden" id="settings-notif-group">
             <div class="settings-row">
+              <div class="settings-chip chip-violet">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              </div>
               <div class="settings-row-main">
                 <div class="settings-row-title">Ekadashi reminders</div>
                 <div class="settings-row-sub">Before each fast · 9:00 AM</div>
@@ -1220,8 +1248,8 @@
           <div class="settings-group-label">Storage</div>
           <div class="settings-group" id="settings-storage-group">
             <button class="settings-row settings-row-nav" id="settings-downloads-row" style="display:none">
-              <div class="settings-row-icon">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <div class="settings-chip chip-green">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               </div>
               <div class="settings-row-main">
                 <div class="settings-row-title">Downloads</div>
@@ -1230,12 +1258,34 @@
               <svg class="settings-row-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
             <button class="settings-row settings-row-nav" id="settings-refresh">
-              <div class="settings-row-icon">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
+              <div class="settings-chip chip-neutral">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
               </div>
               <div class="settings-row-main">
                 <div class="settings-row-title">Resync music library</div>
               </div>
+            </button>
+          </div>
+
+          <div class="settings-group-label">Share the sanskar</div>
+          <div class="settings-group">
+            <button class="settings-row settings-row-nav" id="settings-share-app">
+              <div class="settings-chip chip-saffron">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>
+              </div>
+              <div class="settings-row-main">
+                <div class="settings-row-title">Share with family</div>
+              </div>
+              <svg class="settings-row-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+            <button class="settings-row settings-row-nav" id="settings-feedback-row">
+              <div class="settings-chip chip-violet">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="9" y1="10" x2="15" y2="10"/></svg>
+              </div>
+              <div class="settings-row-main">
+                <div class="settings-row-title">Suggest a feature</div>
+              </div>
+              <svg class="settings-row-chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           </div>
 
@@ -1436,6 +1486,20 @@
       </div>
     </div>
 
+    <!-- Feedback sheet -->
+    <div id="feedback-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Suggest a feature">
+      <div class="modal-backdrop"></div>
+      <div class="modal-sheet prompt-sheet">
+        <h3 class="prompt-title">Suggest a feature</h3>
+        <p class="prompt-sub">What would make mySanskar better for your family?</p>
+        <textarea id="feedback-input" class="feedback-input" rows="4" placeholder="I wish the app could…"></textarea>
+        <div class="prompt-actions">
+          <button id="feedback-cancel" class="modal-item cancel">Cancel</button>
+          <button id="feedback-send" class="modal-item">Send</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Ekadashi calendar sheet -->
     <div id="ekadashi-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Ekadashi calendar">
       <div class="modal-backdrop"></div>
@@ -1446,6 +1510,22 @@
           <p class="ek-sheet-sub" id="ek-sheet-sub"></p>
         </div>
         <div class="ek-sheet-list" id="ek-sheet-list"></div>
+      </div>
+    </div>
+
+    <!-- Today's Eternal Virtue sheet -->
+    <div id="virtue-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Today's Eternal Virtue">
+      <div class="modal-backdrop"></div>
+      <div class="modal-sheet virtue-sheet">
+        <div class="sheet-handle"></div>
+        <div class="virtue-sheet-head">
+          <p class="virtue-sheet-kicker">Today's Eternal Virtue</p>
+          <h3 class="virtue-sheet-virtue" id="virtue-sheet-virtue">—</h3>
+          <p class="virtue-sheet-gu" id="virtue-sheet-gu"></p>
+        </div>
+        <h4 class="virtue-sheet-title" id="virtue-sheet-title">—</h4>
+        <p class="virtue-sheet-text" id="virtue-sheet-text"></p>
+        <p class="virtue-sheet-foot">From the life of Pramukh Swami Maharaj</p>
       </div>
     </div>
 

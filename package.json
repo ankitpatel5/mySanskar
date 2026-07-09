@@ -11,7 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build:ios": "bash scripts/build-www.sh && npx cap sync ios",
-    "build:android": "bash scripts/build-www.sh && npx cap sync android",
+    "build:android": "bash scripts/build-www.sh && npx cap sync android && node scripts/stamp-android-version.js",
     "open:ios": "npx cap open ios",
     "open:android": "npx cap open android"
   },

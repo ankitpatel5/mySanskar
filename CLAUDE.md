@@ -47,6 +47,13 @@ This does everything:
 
 **Never skip staging. Never push straight to prod without the user's explicit go-ahead.**
 
+**Ship-chain gotcha (hit 2026-07-08):** the `&&`-chain can die mid-way at
+`git checkout staging` on a transient `.git/index.lock` — pushes succeed but
+`vercel --prod` + native builds never run, and the pipe through `tail` hides the
+failure (exit 0). If ship output ends with an index.lock error: verify branch,
+`git checkout staging`, then run `npx vercel --prod && npm run build:ios &&
+npm run build:android` manually and verify prod sw.js got the new sha stamp.
+
 ### Service-worker cache (web users)
 `sw.js` is CACHE-FIRST for all shell assets keyed on `const CACHE = 'sanskar-…'`.
 **Now auto-stamped on every Vercel deploy** (scripts/generate-config.js rewrites it
@@ -71,6 +78,43 @@ Edit `firestore.rules`, then deploy with
 - **Stale-www gotcha**: `npx cap sync ios` copies `www/` AS-IS — after editing
   app.js/index.html/styles.css you MUST run `npm run build:ios` (build-www + sync)
   or the native app ships stale assets (this caused the "empty Nitya widget" bug).
+
+## Google Play release (Android) — prepped 2026-07-09 for UNLISTED production
+- **Signing** already set up: upload keystore `~/mysanskar-release.jks`, gitignored
+  `android/keystore.properties` (alias `mysanskar`). Build the store bundle:
+  `cd android && JAVA_HOME=<AS jbr> ./gradlew bundleRelease`
+  → `android/app/build/outputs/bundle/release/app-release.aab` (signed; `jar verified`).
+  On first Play upload opt into **Play App Signing** (upload key becomes resettable).
+- **Version**: build.gradle `versionName` kept in lockstep with iOS (now 1.5);
+  `versionCode` is the monotonic int (now 1, +1 each upload). `build:android` now runs
+  `scripts/stamp-android-version.js` after cap sync so the Android bundle's app-build.js
+  reports the ANDROID version (not iOS's) — fixes the update-banner version-stamp gap.
+- **android.latest** in app-version-defaults.json is MANUAL (no Play version API) — bump
+  it per Play release; that's what fires the Android in-app update banner.
+- **Listing kit** (copy, data-safety answers, unlisted steps, asset paths):
+  `~/Desktop/appstore-shots/PLAY_LISTING.md`. Feature graphic (1024×500):
+  `~/Desktop/appstore-shots/play-feature-graphic.{html,png}`. Icon: `icons/icon-512.png`.
+  Screenshots: reuse `out-69/` (1320×2868). Privacy policy already live at /privacy.
+- **Target audience = adults (parents)**, NOT Designed-for-Families (parent Audiobooks
+  shelf has adult titles). Ekadashi + update-banner verified working on Android.
+
+## Android CLI build + emulator (verified working 2026-07-09)
+- **No Java on PATH** — Gradle needs JAVA_HOME. Use Android Studio's bundled JBR:
+  `export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"` (JDK 21).
+- **Build debug APK**: `npm run build:android` (build-www + cap sync — re-stamps
+  app-build.js from iOS MARKETING_VERSION, so it reads 1.5 even though the Android
+  package version is separate) then `cd android && ./gradlew assembleDebug`
+  → `android/app/build/outputs/apk/debug/app-debug.apk`.
+- **Emulator**: SDK at `~/Library/Android/sdk`; one AVD `Pixel_10`. Boot:
+  `~/Library/Android/sdk/emulator/emulator -avd Pixel_10 -no-snapshot-load`.
+  Wait for boot: `until [ "$(adb shell getprop sys.boot_completed|tr -d '\r')" = 1 ]`.
+  Install/launch: `adb -s emulator-5554 install -r <apk>` then
+  `adb -s emulator-5554 shell monkey -p com.ankit.mysanskar -c android.intent.category.LAUNCHER 1`.
+  (A phantom `emulator-5556 offline` entry may appear — harmless; target 5554 with `-s`.)
+- **Android package** `com.ankit.mysanskar`; build.gradle versionName/Code are still
+  the template `1.0`/`1` — bump before any Play Store submission (in-app "Version"
+  shows the iOS-derived 1.5(1) from app-build.js, which is display-only).
+- **Screenshots via adb**: `adb -s emulator-5554 exec-out screencap -p > out.png`.
 
 ## iOS native builds — ALWAYS verify the bundle (don't trust incremental builds)
 
@@ -173,6 +217,11 @@ When the user says anything like "build for iOS submission", "archive for App St
 - **Audiobooks**: `abBookProgress` estimates whole-book % via average chapter duration;
   linear progress bars only (rings removed by design); transport prev·−30s·play·+30s·next
   with speed+sleep accessory row.
+  **Covers** (`abCoverUrl` / `__abCoverFallback`): primary = lh3 CDN
+  `lh3.googleusercontent.com/d/<fileId>=w400` (direct, fast); on error → retry via
+  `drive.google.com/thumbnail?id=<id>&sz=w400` → then gradient placeholder. Fixes
+  broken-image icons from Drive's /thumbnail throttling a cold burst of ~31 covers.
+  NEVER leave a Drive `<img>` without an onerror fallback.
 - **AI stories**: `buildStoryPrompt` — LANGUAGE RULES block targets 3–4-year-old
   vocabulary (short sentences, everyday words, sounds/repetition, no abstractions).
   Bump `STORY_PROMPT_VERSION` on material prompt changes → cached Stories of the Day
@@ -227,6 +276,13 @@ When the user says anything like "build for iOS submission", "archive for App St
   locally — seed `localStorage['drift.ekadashiCache.v2']` for Ekadashi UI work.
 - Guest entry in preview: un-hide `#guest-signin-btn` → click → `ob-next-2` →
   `ob-guest-enter`. Google popup is blocked in preview; signed-in flows need device/sim.
+- **Debug the running Android app's WebView (no Chrome UI needed)**: it's a
+  Capacitor debug build, so DevTools is exposed. `PID=$(adb -s emulator-5554 shell
+  pidof com.ankit.mysanskar)`; `adb forward tcp:9222 localabstract:webview_devtools_remote_$PID`;
+  `curl -s localhost:9222/json` → grab the page's webSocketDebuggerUrl; drive it with a
+  tiny Node script (global WebSocket, Node 22+) calling Runtime.evaluate to read live DOM
+  / eval JS in-page. This is how the audiobook-cover failure was diagnosed (read img
+  naturalWidth, compared lh3 vs /thumbnail endpoints). Note: page origin is `https://localhost`.
 - Gemini prompts testable headless: extract prompt from app.js, node fetch with
   `geminiKey` from `config.js` (this is how prompt v2 was verified, with before/after
   sentence-length metrics).
@@ -261,14 +317,34 @@ When the user says anything like "build for iOS submission", "archive for App St
   self-serving for iOS (see manifest section) — shipped to prod (`91f4e52`) and
   verified: prod `/app-version.json` serves live ios.latest from Apple's lookup.
 
-- 2026-07-08: **Eternal Virtues feature built** (staged, not yet shipped):
-  208-snippet master MD authored from the full 129-page book pass, uploaded to
-  Firestore `content/eternalVirtues`, gold "Today's Eternal Virtue" Home tile +
-  bottom sheet live for signed-in AND guest users. Verified in preview (guest
-  mode, tile + sheet render, Firestore fetch + cache). Also staged from 07-07:
-  icon/cover system (#4), sw.js v80 + auto-stamp. Awaiting "ship it".
+- 2026-07-08: **Eternal Virtues SHIPPED to prod** (`c1b501f`): 208-snippet master
+  MD from the full 129-page book pass → Firestore `content/eternalVirtues` →
+  gold "Today's Eternal Virtue" Home tile + sheet (works for guests). Before
+  shipping, a 33-agent review fact-checked all 208 snippets against the book
+  (29 content fixes incl. 2 factual errors) and confirmed 5 code bugs (render-
+  before-cache, light-theme sheet, Space-key propagation, uploader zero-guard,
+  rotation remap on republish → daily re-fetch). Same ship carried the
+  icon/cover system (#4) + sw.js auto-stamp — verified live: prod sw.js =
+  `sanskar-c1b501f6fc` (first sha-stamped deploy). Native www synced (iOS +
+  Android); device install still pending for the next iOS build.
+
+- 2026-07-08 (later): **v1.5 (1) uploaded to ASC** (App + NityaWidget in lockstep,
+  MARKETING_VERSION 1.4→1.5, build reset to 1 — fresh train). Carries the Eternal
+  Virtues tile + icon/cover system to native. Archive+export+upload all via CLI,
+  verified archived bundle = 1.5(1) both targets + virtue-tile present.
+  **Still to do in ASC web UI**: create the 1.5 version, fix the 6.9" screenshot
+  slot with `~/Desktop/appstore-shots/out-69/` (native 1320×2868 — the 6.9"/Pro-Max
+  slot still holds v1.3 media), then submit for review.
 
 ## Open items / known bugs
+- **Android update-banner version stamp (fix before Play release)**: `build-www.sh`
+  stamps `app-build.js` from iOS `MARKETING_VERSION` only, so on Android the app
+  reports the iOS version (e.g. "1.5") instead of the Android `versionName` ("1.0").
+  Mechanism + UI both verified working on Android (2026-07-09: platform='android',
+  manifest.android block fetched, banner renders). But real Android update detection
+  needs (a) platform-aware stamping (Android reads android versionName) and (b)
+  `android.latest` bumped manually per Play release — no auto-lookup like iOS iTunes.
+  Ekadashi fully verified working on Android (API returns 12 dates, calendar sheet OK).
 - **iPad Google sign-in hang** ("Signing in…" after OAuth completes): native token
   exchange succeeded but Firebase credential step didn't visibly run; worked on
   retry. Debug rig: `simctl launch --console-pty` + watch ⚡️ lines. Real-user risk.

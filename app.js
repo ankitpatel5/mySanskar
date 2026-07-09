@@ -8289,7 +8289,11 @@ ${numbered}`;
   }
 
   function abCoverUrl(fileId) {
-    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+    // lh3 is Google's image CDN (served directly, no redirect) — faster and far
+    // less throttled than drive.google.com/thumbnail, which returns broken images
+    // when many covers request at once on a cold load. /thumbnail is kept as the
+    // onerror fallback (see __abCoverFallback).
+    return `https://lh3.googleusercontent.com/d/${fileId}=w400`;
   }
 
   // ── Deterministic cover gradient from book name ───────────────
@@ -8301,6 +8305,27 @@ ${numbered}`;
     const hue2 = hue + 12;
     return `linear-gradient(135deg, hsl(${hue},42%,22%), hsl(${hue2},48%,31%))`;
   }
+
+  // Book-cover fallback glyph (also used by the no-cover placeholder).
+  const AB_COVER_SVG = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/></svg>';
+
+  // Cover load failed → try the alternate Drive endpoint once, then swap in the
+  // gradient placeholder. Guarantees a throttled/cold load never shows the
+  // browser's broken-image icon. Exposed on window because inline onerror in
+  // innerHTML runs in the global scope, not this IIFE's.
+  window.__abCoverFallback = function (img) {
+    const fid = img.getAttribute('data-fid');
+    if (img.getAttribute('data-fb') !== '1' && fid) {
+      img.setAttribute('data-fb', '1');
+      img.src = `https://drive.google.com/thumbnail?id=${fid}&sz=w400`;
+      return;
+    }
+    const ph = document.createElement('div');
+    ph.className = 'ab-cover-placeholder';
+    ph.style.background = abCoverGradient(img.getAttribute('data-cn') || '');
+    ph.innerHTML = AB_COVER_SVG;
+    img.replaceWith(ph);
+  };
 
   // ── Progress helpers ──────────────────────────────────────────
 
@@ -8477,8 +8502,8 @@ ${numbered}`;
         card.innerHTML = `
           <div class="ab-continue-cover">
             ${book.coverFileId
-              ? `<img src="${abCoverUrl(book.coverFileId)}" alt="${book.name}" loading="lazy">`
-              : `<div class="ab-cover-placeholder" style="background:${abCoverGradient(book.name)}"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/></svg></div>`}
+              ? `<img src="${abCoverUrl(book.coverFileId)}" alt="${escapeHtml(book.name)}" loading="lazy" data-fid="${book.coverFileId}" data-cn="${escapeHtml(book.name)}" onerror="__abCoverFallback(this)">`
+              : `<div class="ab-cover-placeholder" style="background:${abCoverGradient(book.name)}">${AB_COVER_SVG}</div>`}
           </div>
           <div class="ab-continue-bar-wrap"><div class="ab-continue-bar-fill" style="width:${pctPct}%"></div></div>
           <div class="ab-continue-info">
@@ -8535,8 +8560,8 @@ ${numbered}`;
       tile.innerHTML = `
         <div class="ab-book-cover">
           ${book.coverFileId
-            ? `<img src="${abCoverUrl(book.coverFileId)}" alt="${book.name}" loading="lazy">`
-            : `<div class="ab-cover-placeholder" style="background:${abCoverGradient(book.name)}"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/></svg></div>`}
+            ? `<img src="${abCoverUrl(book.coverFileId)}" alt="${escapeHtml(book.name)}" loading="lazy" data-fid="${book.coverFileId}" data-cn="${escapeHtml(book.name)}" onerror="__abCoverFallback(this)">`
+            : `<div class="ab-cover-placeholder" style="background:${abCoverGradient(book.name)}">${AB_COVER_SVG}</div>`}
           ${barHtml}
         </div>
         <div class="ab-book-info">
@@ -8574,8 +8599,8 @@ ${numbered}`;
       hero.innerHTML = `
         <div class="ab-hero-cover">
           ${book.coverFileId
-            ? `<img src="${abCoverUrl(book.coverFileId)}" alt="${book.name}">`
-            : `<div class="ab-cover-placeholder" style="background:${abCoverGradient(book.name)}"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/></svg></div>`}
+            ? `<img src="${abCoverUrl(book.coverFileId)}" alt="${escapeHtml(book.name)}" data-fid="${book.coverFileId}" data-cn="${escapeHtml(book.name)}" onerror="__abCoverFallback(this)">`
+            : `<div class="ab-cover-placeholder" style="background:${abCoverGradient(book.name)}">${AB_COVER_SVG}</div>`}
         </div>
         <div class="ab-hero-info">
           <div class="ab-hero-title">${book.name}</div>
