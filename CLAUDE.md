@@ -195,10 +195,16 @@ When the user says anything like "build for iOS submission", "archive for App St
 - iOS deep link uses `appStoreId` `6774448007` (unlisted app). Android uses package `com.ankit.mysanskar`.
 - Release cadence now: submit build → (review) → live → banner appears automatically.
   Only remaining manual step is Android's `latest` in `app-version-defaults.json`.
-- **Keep `app-version-defaults.json` ios.latest CURRENT (== live version)**: the iTunes
-  lookup intermittently fails/times out, and the endpoint then serves this fallback. If
-  it's stale (e.g. 1.4 while 1.5 is live), iOS users on the old version miss the banner
-  during those windows. Bump it alongside every release. (Fixed 2026-07-09: 1.4→1.5.)
+- **Update manifest — ROOT CAUSE of the "no iOS banner" bug (found 2026-07-09)**:
+  Apple's iTunes Lookup API is edge-cached PER REGION and lags. From Vercel's `iad1`
+  region the lookup returned a stale **1.4** for a day+ after 1.5 went live (local
+  lookups returned 1.5). The old `api/app-version.js` did `ios.latest = live`
+  unconditionally, so it served that stale 1.4 → 1.4 users saw "you're on latest", no
+  banner. FIX: the function now takes `max(fallback, live)` via cmpVersion — a stale
+  lookup can't lower it below the fallback, a genuinely newer release still wins. So you
+  MUST keep `app-version-defaults.json` ios.latest == the live version each release
+  (it's the floor). Diagnose anytime with `/app-version.json?debug=1` → shows
+  `{fallback, live, chosen, region}`. (Verified: chosen=1.5 while live still 1.4.)
 - **Android upgrade tile VERIFIED end-to-end 2026-07-09**: built a 1.4 debug APK, and
   with prod android.latest=1.5 the tile appeared organically ("Version 1.5 is ready",
   no DOM hack), and "Update" opened the Play Store (com.android.vending) via
