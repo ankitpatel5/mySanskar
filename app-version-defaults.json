@@ -1,7 +1,7 @@
 {
   "_comment": "Latest released version per platform. Bump 'latest' to the new version each time you ship to the App Store / Play Store. 'min' force-updates clients below it (advisory only for now). iOS 'appStoreId' is the numeric App Store ID used for the update deep link.",
   "ios": {
-    "latest": "1.4",
+    "latest": "1.5",
     "min": "1.0",
     "appStoreId": "6774448007"
   },
