@@ -267,6 +267,43 @@ When the user says anything like "build for iOS submission", "archive for App St
   the same date. Rules: `/content/{docId}` public read, admin write. NOTE: ANY republish
   that changes the count remaps `day % count` for everyone (append-only included);
   clients re-fetch daily so they converge within ~a day — keep republishes rare.
+- **Onboarding shows ONCE per user, ever** (2026-07-10): the flag is persisted on the
+  Firestore profile `users/{uid}.onboardingDone` (written by completeOnboarding, merge).
+  `checkOnboarding` is async: localStorage `drift.onboardingDone` is a fast cache; with no
+  local flag it reads the profile BEFORE showing, so a new device/reinstall/cleared cache
+  never re-triggers it. Resolves once (`_onboardingResolved` + `_onboardingChecking` guard
+  against the fast-boot vs real-user double-show race); re-checked in the real-user boot
+  path when auth is ready. Skipped during impersonation. This also fixes account-switch
+  (the Firestore flag governs, not the wiped localStorage).
+- **Admin activity log + impersonation (Debug)**: per-user `users/{uid}/activity`
+  (`logActivity(type,label)` → {type,label,ts}; instrumented in playTrack, openStory,
+  openSOTDStory, openAIStoryReader, openGujHub/Section, openConversationStarters,
+  openAudiobook). Admin Users view: expand a user → `loadUserDetail` shows last-25
+  "Recent activity" (color-coded by ACTIVITY_META) + "Top plays". Per-user **Debug**
+  button → `startImpersonation(u)` stashes {uid,name,...} in sessionStorage + reloads;
+  boot (`proceedAsUser`) detects it (admin only), sets `state.impersonateUid`, clears
+  per-user localStorage, and `activeUid()` routes all user-scoped Firestore READS at
+  the target (replaced `users/${state.user.uid}/` → `users/${activeUid()}/`; sotd callers
+  too). VIEW-ONLY: writes stay on real user (state.user.uid) and are guarded by
+  `isImpersonating()` (syncPlayCount, logActivity, saveAIStory, storyProgress, SOTD gen);
+  target data also protected because rules only grant admin READ, not write. Purple
+  "Impersonating <name>" banner (flow element atop #app) + Exit (`exitImpersonation`
+  clears + reloads). Rules: admin-read added to aiStories/storyOfDay/settings/
+  storyProgress + new activity collection. NOTE: activity grows unbounded per user
+  (admin query limits 25; add pruning if it matters). Legacy `.admin-user-detail` CSS
+  is dead — this uses `.admin-user-log`.
+  IMPERSONATION DATA SAFETY (fixed 2026-07-10 after leak audit): all account-scoped
+  localStorage is in one list `PER_USER_LS_KEYS` (child, aiCharacters, aiStories,
+  aiUsage, imagenQuota, gujProgress, completedStories, nitya, ekRemind/ekRemindDays,
+  audiobooksEnabled, playlists/playCounts/queue/library/lastTrack). On Debug-enter the
+  admin's copy is snapshotted to localStorage `drift.impBackup` (once — not overwritten
+  when switching targets), then cleared so only the target's data shows; boot restores
+  the backup on Exit OR if the app was killed mid-session (restoreImpersonationBackup).
+  Device-only keys (chips, reminders) that aren't in Firestore are therefore never lost.
+  Debug is view-only: markGujDone + the sync/save writes bail on isImpersonating().
+  Clicking a user's name/avatar (not just the chevron) expands their activity feed;
+  onboarding is skipped during impersonation. Local-only recent-character chips show
+  EMPTY in debug (not synced to Firestore, so the target's aren't knowable).
 - **Settings**: reference-style redesign — `.settings-chip` color chips
   (rose=child/stories, violet=night/vrat, saffron=core, green=storage, teal=learn),
   account card + separate CHILD section, "Share the sanskar" group

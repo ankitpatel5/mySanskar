@@ -33,24 +33,35 @@ service cloud.firestore {
     match /users/{userId}/aiStories/{storyId} {
       allow read, write: if request.auth != null
                          && request.auth.uid == userId;
+      allow read: if isAdmin();
     }
 
     // ── Per-user story of the day ──
     match /users/{userId}/storyOfDay/{dateStr} {
       allow read, write: if request.auth != null
                          && request.auth.uid == userId;
+      allow read: if isAdmin();
     }
 
     // ── Per-user settings (child profile, etc.) ──
     match /users/{userId}/settings/{docId} {
       allow read, write: if request.auth != null
                          && request.auth.uid == userId;
+      allow read: if isAdmin();
     }
 
     // ── Per-user story progress (mark as read) ──
     match /users/{userId}/storyProgress/{storyId} {
       allow read, write: if request.auth != null
                          && request.auth.uid == userId;
+      allow read: if isAdmin();
+    }
+
+    // ── Per-user activity log (last-N actions; admin reads for debugging) ──
+    match /users/{userId}/activity/{eventId} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+      allow read: if isAdmin();
     }
 
     // ── Per-user audiobook progress ──

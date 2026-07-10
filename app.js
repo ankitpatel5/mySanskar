@@ -146,14 +146,107 @@
   // Clear user-specific localStorage keys when a different user signs in.
   // Prevents child profile, onboarding state, playlists, and play counts
   // from leaking between accounts on the same device.
+  // Every localStorage key that holds ACCOUNT data (not device/app prefs). Must be
+  // exhaustive: anything left behind leaks the previous user's data into the next
+  // session — this is what showed one user's AI character chips, Gujarati progress,
+  // audiobooks toggle, and Ekadashi reminders under every account in debug mode.
+  const PER_USER_LS_KEYS = [
+    'drift.childName', 'drift.childGender', 'drift.childDob',
+    'drift.onboardingDone',
+    'drift.aiCharacters', 'drift.aiStories', 'drift.aiUsage', 'drift.imagenQuota',
+    'drift.gujProgress', 'drift.completedStories',
+    'drift.nitya', 'drift.nitya.v3',
+    'drift.ekRemind', 'drift.ekRemindDays', 'drift.audiobooksEnabled',
+    LS.playlists, LS.playCounts, LS.lastTrack, LS.queue, LS.library,
+  ];
   function clearPerUserLocalStorage() {
-    const USER_KEYS = [
-      'drift.childName', 'drift.childGender', 'drift.childDob',
-      'drift.onboardingDone',
-      LS.playlists, LS.playCounts, LS.lastTrack,
-      LS.queue, LS.library,
-    ];
-    USER_KEYS.forEach((k) => localStorage.removeItem(k));
+    PER_USER_LS_KEYS.forEach((k) => localStorage.removeItem(k));
+  }
+
+  // ── Impersonation (admin debug) + activity logging ──────────────
+  // activeUid() is the uid whose DATA the app currently shows: the real
+  // signed-in user, or — admin-only, view-only — a user being impersonated.
+  // Firestore READ helpers route through this so impersonation shows their
+  // data. WRITES stay on the real user (state.user.uid) and the sync/save
+  // functions bail when isImpersonating(), so a debug session never mutates
+  // the target's account (the rules also block admin writes as a backstop).
+  function activeUid() { return state.impersonateUid || (state.user && state.user.uid) || null; }
+  function isImpersonating() { return !!state.impersonateUid; }
+
+  // Append one action to the real user's activity log (last-N, admin-visible).
+  // Fire-and-forget; skipped for guests and during impersonation (view-only).
+  function logActivity(type, label) {
+    if (!state.user || isImpersonating() || (typeof isGuestMode === 'function' && isGuestMode())) return;
+    if (!label) return;
+    try {
+      window.fbDb.collection('users').doc(state.user.uid).collection('activity')
+        .add({ type, label: String(label).slice(0, 140), ts: Date.now() })
+        .catch(() => {});
+    } catch (e) { /* never let logging break an action */ }
+  }
+
+  // Enter a view-only debug session as another user. Stashes the target in
+  // sessionStorage and reloads — boot picks it up (see proceedAsUser) and points
+  // activeUid() at them. Admin-only.
+  function startImpersonation(u) {
+    if (!isAdmin() || !u || !u.uid || u.uid === state.user?.uid) return;
+    // Back up the admin's OWN account-scoped localStorage so it can be restored
+    // exactly on exit. Impersonation clears these (at boot) so the view shows only
+    // the target's data — but device-only keys (character chips, Ekadashi
+    // reminders, usage counters) aren't in Firestore and would otherwise be lost.
+    // The backup lives in localStorage (survives an app kill mid-session); boot
+    // recovers it (see restoreImpersonationBackup) even if Exit is never tapped.
+    try {
+      // Only snapshot once — if a backup already exists we're switching targets
+      // mid-session, and the current localStorage is a target's data, not the admin's.
+      if (localStorage.getItem('drift.impBackup') === null) {
+        const backup = {};
+        PER_USER_LS_KEYS.forEach((k) => { const v = localStorage.getItem(k); if (v !== null) backup[k] = v; });
+        localStorage.setItem('drift.impBackup', JSON.stringify(backup));
+      }
+      sessionStorage.setItem('drift.impersonate', JSON.stringify({
+        uid: u.uid,
+        name: u.displayName || u.email || 'user',
+        email: u.email || '',
+        photoURL: u.photoURL || '',
+      }));
+    } catch (e) { /* storage unavailable */ }
+    location.reload();
+  }
+
+  // Restore the admin's backed-up account data and drop the target's leftovers.
+  // Called on boot when a backup exists but we're not (re-)entering impersonation.
+  function restoreImpersonationBackup() {
+    let backup = null;
+    try { backup = JSON.parse(localStorage.getItem('drift.impBackup') || 'null'); } catch (e) {}
+    if (!backup) return;
+    PER_USER_LS_KEYS.forEach((k) => { try { localStorage.removeItem(k); } catch (e) {} });
+    Object.keys(backup).forEach((k) => { try { localStorage.setItem(k, backup[k]); } catch (e) {} });
+    try { localStorage.removeItem('drift.impBackup'); } catch (e) {}
+  }
+
+  function exitImpersonation() {
+    // Just drop the session flag + reload — boot restores the admin's backup.
+    try { sessionStorage.removeItem('drift.impersonate'); } catch (e) {}
+    location.reload();
+  }
+
+  // Fixed banner shown while impersonating, with an Exit control.
+  function renderImpersonationBanner() {
+    const existing = document.getElementById('impersonation-banner');
+    if (!isImpersonating()) { if (existing) existing.remove(); document.body.classList.remove('impersonating'); return; }
+    if (existing) return;
+    const info = state.impersonateInfo || {};
+    const bar = document.createElement('div');
+    bar.id = 'impersonation-banner';
+    bar.innerHTML = `<span class="imp-dot"></span>`
+      + `<span class="imp-text">Impersonating <strong>${escapeHtml(info.name || 'user')}</strong>`
+      + `<span class="imp-sub"> · view-only debug session</span></span>`
+      + `<button class="imp-exit" id="imp-exit-btn">Exit</button>`;
+    const app = document.getElementById('app') || document.body;
+    app.insertBefore(bar, app.firstChild); // flow element on top — pushes the app down cleanly
+    document.body.classList.add('impersonating');
+    document.getElementById('imp-exit-btn').addEventListener('click', exitImpersonation);
   }
 
   async function proceedAsUser(user) {
@@ -171,6 +264,23 @@
 
     // Show UI immediately — don't block on any network call
     state.user = user;
+
+    // Admin debug: if an impersonation target was stashed, view the app as that
+    // user (read-only). activeUid() points reads at them; writes are blocked/denied.
+    // Must run BEFORE loadPersistedState so the admin's cached data isn't shown.
+    try {
+      const imp = JSON.parse(sessionStorage.getItem('drift.impersonate') || 'null');
+      if (imp && imp.uid && user.email === ADMIN_EMAIL && imp.uid !== user.uid) {
+        state.impersonateUid = imp.uid;
+        state.impersonateInfo = imp;
+        clearPerUserLocalStorage();
+      } else if (localStorage.getItem('drift.impBackup')) {
+        // Not impersonating but a backup remains → exited (or the app was killed
+        // mid-session). Restore the admin's own data before it's read below.
+        restoreImpersonationBackup();
+      }
+    } catch (e) { /* ignore */ }
+
     loadPersistedState();
     updateUserUI();
     if (!API_KEY || !ROOT_FOLDER_ID) {
@@ -179,6 +289,7 @@
       return;
     }
     showMain(); // hides loading overlay, shows app
+    renderImpersonationBanner();
 
     setupEventListeners();
     // Restore the tab the user was on — must happen after setupEventListeners
@@ -474,6 +585,7 @@
           updateUserUI();
           updateAdminUI();
           syncUserProfile(user);
+          checkOnboarding(); // re-check with auth ready (fast-boot read may have failed)
           setupBlockedListener(user);
           loadFirestorePlaylists();
           syncCompletedStoriesFromFirestore();
@@ -482,6 +594,8 @@
           loadConvTalked();
           syncAudiobooksSettingFromFirestore();
           syncAudiobookProgressFromFirestore();
+          syncGujProgressFromFirestore();
+          syncNityaFromFirestore();
         } else {
           proceedAsUser(user);
         }
@@ -573,7 +687,7 @@
 
   // ============== FIRESTORE ==============
   function playlistsRef() {
-    return window.fbDb.collection(`users/${state.user.uid}/playlists`);
+    return window.fbDb.collection(`users/${activeUid()}/playlists`);
   }
 
   async function loadFirestorePlaylists() {
@@ -1400,6 +1514,7 @@
     state.playCounts[trackId] = (state.playCounts[trackId] || 0) + 1;
     persist('playCounts');
     syncPlayCountToFirestore(trackId);
+    logActivity('song', t.name);
     audio.src = audioSrc(trackId);
     audio.play().catch((e) => { console.warn('play() rejected', e); });
     updateNowPlayingUI(t, true);
@@ -2232,7 +2347,7 @@
   }
   // Cross-device sync (Firestore, per user). The shortcut list is curated/ordered,
   // so the cloud copy is authoritative on load; a local-only list seeds the cloud.
-  function nityaRef() { return state.user ? window.fbDb.doc(`users/${state.user.uid}/settings/nitya`) : null; }
+  function nityaRef() { return state.user ? window.fbDb.doc(`users/${activeUid()}/settings/nitya`) : null; }
   let _nityaSynced = false;
   let _nityaSaveTimer = null;
   function saveNityaToFirestore() {
@@ -2789,7 +2904,7 @@
 
     try {
       // 1. Check Firestore for today's story
-      const doc = await sotdFirestoreRef(state.user.uid, dateStr).get();
+      const doc = await sotdFirestoreRef(activeUid(), dateStr).get();
       if (_sotdReqId !== myReqId) return; // superseded by a newer call — bail out silently
 
       if (doc.exists && (doc.data().promptVersion || 1) === STORY_PROMPT_VERSION) {
@@ -2803,6 +2918,10 @@
         return;
       }
       // Doc missing OR written by an older prompt — fall through and regenerate.
+
+      // Impersonation is view-only: never generate (would cost a Gemini call and
+      // write to the target's account, which the rules block anyway).
+      if (isImpersonating()) { if (skeleton) skeleton.classList.add('hidden'); return; }
 
       // 2. Not in Firestore — keep skeleton visible while Gemini generates
       const loadingSub = $('sotd-loading-sub');
@@ -2827,7 +2946,7 @@
       };
 
       // 3. Persist to Firestore so subsequent opens are instant
-      sotdFirestoreRef(state.user.uid, dateStr).set(story).catch(() => {});
+      sotdFirestoreRef(activeUid(), dateStr).set(story).catch(() => {});
 
       // 4. Cross-save to "Your Stories" so it appears in Stories tab
       //    (overwrite replaces a stale same-id copy from an older prompt)
@@ -2865,6 +2984,7 @@
 
   function openSOTDStory(story) {
     state.currentStory = { ...story, type: 'text', photo: null, source: 'ai' };
+    logActivity('sotd', `Story of the Day - ${story.title || ''}`);
     state.storyLang = 'en';
     stopTTS();
 
@@ -2915,7 +3035,7 @@
         if (state.currentStory?.id !== story.id) return;
         setStoryHeroImage(dataUrl || null);
         if (dataUrl && state.user) {
-          sotdFirestoreRef(state.user.uid, story.date)
+          sotdFirestoreRef(activeUid(), story.date)
             .update({ imageUrl: dataUrl }).catch(() => {});
         }
       });
@@ -3066,6 +3186,7 @@
     return Array.isArray(p[key]) ? p[key].length : 0;
   }
   function markGujDone(key, idx) {
+    if (isImpersonating()) return; // view-only debug session — don't mark the target's progress
     const p = ensureGujProgress();
     if (!p[key]) p[key] = [];
     if (!p[key].includes(idx)) {
@@ -3076,7 +3197,7 @@
   }
   // Cross-device sync (Firestore, per user) — merged with local so progress is
   // never lost across devices.
-  function gujProgressRef() { return state.user ? window.fbDb.doc(`users/${state.user.uid}/settings/gujProgress`) : null; }
+  function gujProgressRef() { return state.user ? window.fbDb.doc(`users/${activeUid()}/settings/gujProgress`) : null; }
   let _gujSaveTimer = null;
   function saveGujProgressToFirestore() {
     const ref = gujProgressRef(); if (!ref) return;
@@ -3117,6 +3238,7 @@
     const grid = $('guj-hub-grid');
     const data = window.GUJARATI_DATA;
     if (!grid || !data) return;
+    logActivity('learn', 'Learn Gujarati');
     ensureGujProgress();
     grid.innerHTML = '';
     Object.keys(GUJ_META).forEach((key) => {
@@ -3143,6 +3265,7 @@
     const m = GUJ_META[key];
     const d = window.GUJARATI_DATA[key];
     _gujKey = key;
+    logActivity('learn', `Learn Gujarati - ${m.label}`);
     $('guj-section-title').textContent = m.label;
     const body = $('guj-section-body');
     body.innerHTML = '';
@@ -3371,6 +3494,7 @@
     const story = (data.stories[catId] || []).find((s) => s.id === storyId);
     if (!story) return;
     state.currentStory = story;
+    logActivity('story', `${catId.charAt(0).toUpperCase() + catId.slice(1)} - ${story.title}`);
     state.storyLang = 'en'; // always start as English so setStoryLang() below isn't a no-op
     stopTTS();
 
@@ -3493,7 +3617,7 @@
 
   function convTalkedRef() {
     if (!state.user) return null;
-    return window.fbDb.doc(`users/${state.user.uid}/settings/convStartersTalked`);
+    return window.fbDb.doc(`users/${activeUid()}/settings/convStartersTalked`);
   }
 
   async function loadConvTalked() {
@@ -3553,6 +3677,7 @@
   function openConversationStarters(ageKey) {
     const data = window.CONVERSATION_STARTERS;
     if (!data || !data[ageKey]) return;
+    logActivity('conversation', `Conversation Starters - ${data[ageKey].label}`);
     _convActiveAge = ageKey;
     _convActiveCat = 'all';
     _convHideTalked = false;
@@ -3943,7 +4068,7 @@
   }
 
   function aiStoriesRef() {
-    return window.fbDb.collection(`users/${state.user.uid}/aiStories`);
+    return window.fbDb.collection(`users/${activeUid()}/aiStories`);
   }
 
   function loadAISavedStories() {
@@ -3965,7 +4090,7 @@
     }
     try { localStorage.setItem(AI_SAVED_KEY, JSON.stringify(saved)); } catch {}
     // Sync to Firestore so stories persist across devices
-    if (state.user) {
+    if (state.user && !isImpersonating()) {
       aiStoriesRef().doc(story.id).set(story)
         .catch((e) => console.warn('aiStories Firestore save failed', e));
     }
@@ -3977,7 +4102,7 @@
     saved.splice(idx, 1);
     try { localStorage.setItem(AI_SAVED_KEY, JSON.stringify(saved)); } catch {}
     // Remove from Firestore
-    if (state.user && story && story.id) {
+    if (state.user && !isImpersonating() && story && story.id) {
       aiStoriesRef().doc(story.id).delete()
         .catch((e) => console.warn('aiStories Firestore delete failed', e));
     }
@@ -4096,6 +4221,7 @@
 
   function openAIStoryReader(story, savedIdx) {
     state.currentStory = { ...story, type: 'text', photo: null, source: 'ai' };
+    logActivity('custom', `Custom - ${story.title || story.topic || ''}`);
     state.storyLang = 'en'; // always start as English so setStoryLang() below isn't a no-op
     stopTTS();
 
@@ -4495,7 +4621,7 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
     // If auth hasn't resolved yet, syncChildProfileFromFirestore() will upload
     // the localStorage data once auth arrives.
     if (state.user) {
-      window.fbDb.doc(`users/${state.user.uid}/settings/childProfile`)
+      window.fbDb.doc(`users/${activeUid()}/settings/childProfile`)
         .set({ name, gender, dob })
         .catch((e) => console.warn('childProfile Firestore save failed:', e));
     }
@@ -4505,7 +4631,7 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
     if (!state.user) return;
     try {
       const doc = await window.fbDb
-        .doc(`users/${state.user.uid}/settings/childProfile`)
+        .doc(`users/${activeUid()}/settings/childProfile`)
         .get();
 
       if (!doc.exists) {
@@ -4515,7 +4641,7 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
         const local = getChildProfile();
         const localUid = localStorage.getItem('drift.lastUserId');
         if (local.name && localUid === state.user.uid) {
-          window.fbDb.doc(`users/${state.user.uid}/settings/childProfile`)
+          window.fbDb.doc(`users/${activeUid()}/settings/childProfile`)
             .set(local)
             .catch((e) => console.warn('childProfile Firestore upload failed:', e));
         }
@@ -4648,10 +4774,10 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
   }
 
   function storyProgressRef() {
-    return window.fbDb.collection(`users/${state.user.uid}/storyProgress`);
+    return window.fbDb.collection(`users/${activeUid()}/storyProgress`);
   }
   function syncStoryProgressToFirestore(id, completed) {
-    if (!state.user) return;
+    if (!state.user || isImpersonating()) return;
     const ref = storyProgressRef().doc(String(id));
     (completed ? ref.set({ completedAt: Date.now() }) : ref.delete())
       .catch((e) => console.warn('storyProgress sync failed', e));
@@ -5926,7 +6052,7 @@ ${numbered}`;
   }
 
   function syncPlayCountToFirestore(trackId) {
-    if (!state.user) return;
+    if (!state.user || isImpersonating()) return;
     const track = state.trackById[trackId];
     const trackName = track ? track.name : trackId;
     const albumName = track ? track.albumName : '';
@@ -6644,12 +6770,24 @@ ${numbered}`;
           <div class="admin-user-meta">${escapeHtml(u.email || '')}${joined ? ` · Joined ${joined}` : ''} · Last seen ${lastSeen}</div>
         </div>
         <div class="admin-user-actions">
+          ${isMe ? '' : `<button class="admin-debug-btn" title="Debug — enter this user's session (view-only)">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2l1.5 1.5M16 2l-1.5 1.5"/><rect x="8" y="6" width="8" height="12" rx="4"/><path d="M8 10H4M20 10h-4M8 14H4M20 14h-4M12 6V4M9 18l-1.5 2M15 18l1.5 2"/></svg>
+            Debug
+          </button>`}
           ${blockBtnHtml}
-          <button class="admin-user-expand" data-uid="${escapeHtml(u.uid)}" title="View plays">
+          <button class="admin-user-expand" data-uid="${escapeHtml(u.uid)}" title="View activity + plays">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
         </div>
       `;
+      // Debug (impersonate) — view-only session as this user
+      const debugBtn = row.querySelector('.admin-debug-btn');
+      if (debugBtn) {
+        debugBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          startImpersonation(u);
+        });
+      }
       // Block / unblock
       const blockBtn = row.querySelector('.admin-block-btn');
       if (blockBtn) {
@@ -6673,50 +6811,86 @@ ${numbered}`;
           }
         });
       }
-      // Expand play history
-      row.querySelector('.admin-user-expand').addEventListener('click', (e) => {
-        const btn = e.currentTarget;
-        const existing = row.querySelector('.admin-user-songs');
-        if (existing) {
-          existing.remove();
-          btn.classList.remove('open');
-          return;
-        }
-        btn.classList.add('open');
-        loadUserSongs(btn.dataset.uid, row);
-      });
+      // Expand: recent activity + top plays. Both the chevron AND the name/avatar
+      // area toggle it (clicking the name now works).
+      const expandBtn = row.querySelector('.admin-user-expand');
+      const toggleDetail = () => {
+        const existing = row.querySelector('.admin-user-log');
+        if (existing) { existing.remove(); expandBtn.classList.remove('open'); return; }
+        expandBtn.classList.add('open');
+        loadUserDetail(u.uid, row);
+      };
+      expandBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleDetail(); });
+      const infoEl = row.querySelector('.admin-user-info');
+      if (infoEl) { infoEl.style.cursor = 'pointer'; infoEl.addEventListener('click', toggleDetail); }
+      const avatarEl = row.querySelector('.admin-user-avatar');
+      if (avatarEl) { avatarEl.style.cursor = 'pointer'; avatarEl.addEventListener('click', toggleDetail); }
       content.appendChild(row);
     });
   }
 
-  async function loadUserSongs(uid, parentRow) {
-    const placeholder = document.createElement('div');
-    placeholder.className = 'admin-user-songs';
-    placeholder.innerHTML = '<div class="admin-loading" style="padding:8px 16px 4px;">Loading…</div>';
-    parentRow.appendChild(placeholder);
+  // Type → dot colour + short prefix label for the activity feed.
+  const ACTIVITY_META = {
+    song:         { c: '#e8a33d', k: 'Song' },
+    story:        { c: '#e0779a', k: 'Story' },
+    custom:       { c: '#b48ce0', k: 'Custom' },
+    sotd:         { c: '#e0779a', k: 'Story of the Day' },
+    learn:        { c: '#4bb3a3', k: 'Learn' },
+    conversation: { c: '#6377d0', k: 'Conversation' },
+    audiobook:    { c: '#c98a4a', k: 'Audiobook' },
+  };
+
+  async function loadUserDetail(uid, parentRow) {
+    const detail = document.createElement('div');
+    detail.className = 'admin-user-log';
+    detail.innerHTML =
+      '<div class="admin-detail-section" data-sec="activity"><div class="admin-detail-head">Recent activity</div>'
+      + '<div class="admin-loading" style="padding:6px 16px;">Loading…</div></div>'
+      + '<div class="admin-detail-section" data-sec="plays"><div class="admin-detail-head">Top plays</div>'
+      + '<div class="admin-loading" style="padding:6px 16px;">Loading…</div></div>';
+    parentRow.appendChild(detail);
+    const actEl = detail.querySelector('[data-sec="activity"]');
+    const playEl = detail.querySelector('[data-sec="plays"]');
+
+    // Recent activity — last 25 actions
+    try {
+      const snap = await window.fbDb.collection('users').doc(uid)
+        .collection('activity').orderBy('ts', 'desc').limit(25).get();
+      const acts = snap.docs.map((d) => d.data());
+      actEl.innerHTML = '<div class="admin-detail-head">Recent activity</div>' + (acts.length
+        ? acts.map((a) => {
+            const m = ACTIVITY_META[a.type] || { c: '#8a8a8a', k: a.type || '' };
+            return `<div class="admin-act-row">
+              <span class="admin-act-dot" style="background:${m.c}"></span>
+              <span class="admin-act-label">${escapeHtml(a.label || m.k)}</span>
+              <span class="admin-act-time">${a.ts ? timeAgo(a.ts) : ''}</span>
+            </div>`;
+          }).join('')
+        : '<div class="admin-loading" style="padding:6px 16px;">No activity recorded yet.</div>');
+    } catch (e) {
+      actEl.innerHTML = '<div class="admin-detail-head">Recent activity</div><div class="admin-loading" style="padding:6px 16px;">Failed to load.</div>';
+      console.warn('loadUserDetail activity failed', e);
+    }
+
+    // Top plays — existing play-count ranking
     try {
       const snap = await window.fbDb.collection('users').doc(uid)
         .collection('playCounts').orderBy('count', 'desc').limit(20).get();
       const songs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      if (!songs.length) {
-        placeholder.innerHTML =
-          '<div class="admin-loading" style="padding:8px 16px 4px;">No plays recorded yet.</div>';
-        return;
-      }
-      placeholder.innerHTML = songs.map((s, i) => `
-        <div class="admin-ranked-row">
-          <span class="admin-rank">${i + 1}</span>
-          <div class="admin-song-info">
-            <div class="admin-song-name">${escapeHtml(s.trackName || s.id)}</div>
-            <div class="admin-song-meta">${escapeHtml(s.albumName || '')}</div>
-          </div>
-          <span class="admin-song-count">${(s.count || 0).toLocaleString()}×</span>
-        </div>
-      `).join('');
+      playEl.innerHTML = '<div class="admin-detail-head">Top plays</div>' + (songs.length
+        ? songs.map((s, i) => `
+            <div class="admin-ranked-row">
+              <span class="admin-rank">${i + 1}</span>
+              <div class="admin-song-info">
+                <div class="admin-song-name">${escapeHtml(s.trackName || s.id)}</div>
+                <div class="admin-song-meta">${escapeHtml(s.albumName || '')}</div>
+              </div>
+              <span class="admin-song-count">${(s.count || 0).toLocaleString()}×</span>
+            </div>`).join('')
+        : '<div class="admin-loading" style="padding:6px 16px;">No plays recorded yet.</div>');
     } catch (e) {
-      placeholder.innerHTML =
-        '<div class="admin-loading" style="padding:8px 16px 4px;">Failed to load.</div>';
-      console.warn('loadUserSongs failed', e);
+      playEl.innerHTML = '<div class="admin-detail-head">Top plays</div><div class="admin-loading" style="padding:6px 16px;">Failed to load.</div>';
+      console.warn('loadUserDetail plays failed', e);
     }
   }
 
@@ -6966,7 +7140,7 @@ ${numbered}`;
 
       // Also pull fresh from Firestore in case localStorage is empty (e.g. new domain/device)
       if (state.user && !cp.name) {
-        window.fbDb.doc(`users/${state.user.uid}/settings/childProfile`).get()
+        window.fbDb.doc(`users/${activeUid()}/settings/childProfile`).get()
           .then((doc) => {
             if (!doc.exists) return;
             const { name = '', gender = '', dob = '' } = doc.data();
@@ -7915,10 +8089,33 @@ ${numbered}`;
   }
 
   // ============== ONBOARDING ==============
-  function checkOnboarding() {
+  // Onboarding shows ONCE per user, ever. The flag is persisted on the user's
+  // Firestore profile (users/{uid}.onboardingDone) — localStorage is just a fast
+  // cache — so a new device, reinstall, or cleared cache never re-triggers it.
+  let _onboardingResolved = false;
+  let _onboardingChecking = false;
+  async function checkOnboarding() {
+    // debug session, already decided, or a check is already in flight (fast-boot +
+    // real-user paths both call this — the guard prevents a double-show race).
+    if (isImpersonating() || _onboardingResolved || _onboardingChecking) return;
     try {
-      if (localStorage.getItem('drift.onboardingDone')) return;
+      if (localStorage.getItem('drift.onboardingDone')) { _onboardingResolved = true; return; }
     } catch { return; }
+    if (!state.user) return;
+    // No local flag — the user may have completed onboarding on another device.
+    // Check their profile in Firestore BEFORE showing, so returning users never re-see it.
+    _onboardingChecking = true;
+    let done = false;
+    try {
+      const doc = await window.fbDb.collection('users').doc(state.user.uid).get();
+      done = !!(doc.exists && doc.data().onboardingDone);
+    } catch (e) {
+      _onboardingChecking = false;
+      return; // auth/network not ready yet — the real-user boot path re-checks
+    }
+    _onboardingChecking = false;
+    _onboardingResolved = true;
+    if (done) { try { localStorage.setItem('drift.onboardingDone', '1'); } catch {} return; }
     showOnboarding(false);
   }
 
@@ -7987,6 +8184,13 @@ ${numbered}`;
 
     function completeOnboarding() {
       try { localStorage.setItem('drift.onboardingDone', '1'); } catch {}
+      _onboardingResolved = true;
+      // Persist on the user's profile so onboarding never shows again on any device.
+      if (state.user && !isImpersonating()) {
+        window.fbDb.collection('users').doc(state.user.uid)
+          .set({ onboardingDone: true }, { merge: true })
+          .catch((e) => console.warn('onboarding flag save failed', e));
+      }
       overlay.classList.add('ob-fade-out');
       overlay.addEventListener('animationend', () => {
         overlay.classList.add('hidden');
@@ -8012,7 +8216,7 @@ ${numbered}`;
 
     // Also try Firestore in background (handles cross-device case)
     if (state.user) {
-      window.fbDb.doc(`users/${state.user.uid}/settings/childProfile`).get()
+      window.fbDb.doc(`users/${activeUid()}/settings/childProfile`).get()
         .then((doc) => {
           if (!doc.exists) return;
           const { name = '', gender = '', dob = '' } = doc.data();
@@ -8125,11 +8329,11 @@ ${numbered}`;
   // ── Firestore helpers ──────────────────────────────────────────
   function abProgressRef(bookId) {
     if (!state.user) return null;
-    return window.fbDb.doc(`users/${state.user.uid}/audiobookProgress/${bookId}`);
+    return window.fbDb.doc(`users/${activeUid()}/audiobookProgress/${bookId}`);
   }
   function abSettingsRef() {
     if (!state.user) return null;
-    return window.fbDb.doc(`users/${state.user.uid}/settings/appFeatures`);
+    return window.fbDb.doc(`users/${activeUid()}/settings/appFeatures`);
   }
 
   async function syncAudiobooksSettingFromFirestore() {
@@ -8154,7 +8358,7 @@ ${numbered}`;
     try {
       // Load the entire progress collection in one batch
       const snap = await window.fbDb
-        .collection(`users/${state.user.uid}/audiobookProgress`)
+        .collection(`users/${activeUid()}/audiobookProgress`)
         .get();
       snap.docs.forEach(doc => {
         _abProgress[doc.id] = doc.data().chapters || {};
@@ -8575,6 +8779,7 @@ ${numbered}`;
 
   // ── Open a book ───────────────────────────────────────────────
   async function openAudiobook(book, startChapterIdx = 0) {
+    logActivity('audiobook', `Audiobook - ${book.name}`);
     // Fast path: if this single-file book was opened before, its total duration is
     // cached in Firestore. Load progress and pre-expand to virtual chapters BEFORE
     // any rendering so the hero count + chapter list are split from the first frame

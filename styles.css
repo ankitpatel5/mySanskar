@@ -2869,6 +2869,98 @@ button.ab-dl-dot:hover::before {
 .admin-song-name { font-size: 14px; font-weight: 500; color: var(--fg-0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .admin-song-album { font-size: 12px; color: var(--fg-2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .admin-song-count { font-size: 14px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+
+/* ── Admin: Debug (impersonate) button ── */
+.admin-debug-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 10px 0 8px;
+  border-radius: 6px;
+  background: rgba(99, 119, 208, 0.12);
+  border: 1px solid rgba(99, 119, 208, 0.30);
+  color: #8ea0e6;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .15s, color .15s;
+}
+.admin-debug-btn:hover { background: rgba(99, 119, 208, 0.22); color: #aab8f0; }
+
+/* ── Admin: expanded user detail (activity feed + top plays) ── */
+.admin-user-log {
+  grid-column: 1 / -1;
+  background: var(--bg-1, rgba(0,0,0,0.12));
+  border-radius: 8px;
+  margin-top: 4px;
+  padding: 6px 0 10px;
+}
+.admin-detail-section { margin-bottom: 8px; }
+.admin-detail-section:last-child { margin-bottom: 0; }
+.admin-detail-head {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  padding: 8px 20px 4px;
+}
+.admin-act-row {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.admin-act-row:last-child { border-bottom: none; }
+.admin-act-dot { width: 8px; height: 8px; border-radius: 50%; }
+.admin-act-label { font-size: 13.5px; color: var(--fg-0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.admin-act-time { font-size: 12px; color: var(--fg-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* ── Impersonation banner (admin debug session) ── */
+#impersonation-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(8px + env(safe-area-inset-top, 0px)) 16px 8px;
+  background: linear-gradient(180deg, #5b3fb3, #4a3396);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 50;
+  flex-shrink: 0;
+}
+#impersonation-banner .imp-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: #ffd36b; box-shadow: 0 0 0 rgba(255,211,107,0.7);
+  animation: impPulse 1.8s ease-out infinite; flex-shrink: 0;
+}
+@keyframes impPulse {
+  0% { box-shadow: 0 0 0 0 rgba(255,211,107,0.6); }
+  70% { box-shadow: 0 0 0 7px rgba(255,211,107,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,211,107,0); }
+}
+#impersonation-banner .imp-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#impersonation-banner .imp-text strong { font-weight: 700; }
+#impersonation-banner .imp-sub { opacity: 0.75; font-weight: 400; }
+#impersonation-banner .imp-exit {
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.35);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+#impersonation-banner .imp-exit:hover { background: rgba(255,255,255,0.30); }
+/* Banner sits above the topbar in flow; drop the topbar's safe-area gap to avoid doubling. */
+body.impersonating .topbar { padding-top: 8px; height: var(--topbar-h); }
+
 /* ============== LIGHT THEME OVERRIDES ============== */
 [data-theme="light"] body { background: var(--bg-0); }
 [data-theme="light"] .player-sheet {
