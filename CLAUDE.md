@@ -75,6 +75,15 @@ Edit `firestore.rules`, then deploy with
 - Vercel deployments do NOT update these folders — they are completely separate
 - `npm run build:ios` and `npm run build:android` each run `build-www.sh` then `npx cap sync <platform>`
 - Both are **automatically included** in `npm run ship`, so every prod deploy keeps both native projects in sync
+- **www whitelist gotcha (bit us 2026-07-10)**: build-www.sh copies an explicit FILES
+  whitelist — a script referenced by index.html but missing from the list 404s ONLY on
+  native (web serves the repo root, so staging/prod look fine). utils.js was missing →
+  window.AppUtils undefined → every album crawl threw → "No music found" on iPhone.
+  lyrics-data.js + lottie.min.js were ALSO silently missing from every native build to
+  date (lyrics + onboarding confetti broken on native). Now guarded twice: build-www.sh
+  fails loudly if any index.html script src is absent from www/, and
+  tests/build-manifest.test.js fails CI if the whitelist drifts. When adding a new
+  <script src> to index.html, add it to FILES in build-www.sh.
 - **Stale-www gotcha**: `npx cap sync ios` copies `www/` AS-IS — after editing
   app.js/index.html/styles.css you MUST run `npm run build:ios` (build-www + sync)
   or the native app ships stale assets (this caused the "empty Nitya widget" bug).
@@ -226,6 +235,21 @@ When the user says anything like "build for iOS submission", "archive for App St
 - **Sleep timer (shared music+audiobook)**: `setSleep` / `sleepCountdownTick` —
   wall-clock countdown + 15s volume fade (`SLEEP_FADE_MS`); 'eoc' = end of current
   track/chapter; UI hooks `.js-sleep-btn` / `.js-sleep-sheet`.
+- **Library sections**: `AppUtils.parseAlbumFolderName` ("[NS]" Drive-folder prefix
+  → section 'fun', marker stripped at ingest; tests/library-sections.test.js).
+  renderLibrary partitions via `albumSection()` (cached-library fallback) and adds
+  `.library-section-header` rows. Data contract: Drive folders keep the [NS]
+  prefix; the string never renders.
+- **Single-audio rule**: music/audiobook/story-TTS are mutually exclusive via
+  `stopAllOtherAudio(starting)` → AppUtils.enforceSingleAudio; wired at music
+  'play', _abAudio 'play', startTTS AND resumeTTS. tests/audio-focus.test.js
+  covers the exclusion matrix AND greps app.js for the wiring (the regression
+  was a play path missing the call — tests fail if any call site is removed).
+- **Play loading cue**: bufferingCueArm/Resolve/Clear + body.audio-buffering;
+  ring spans (.play-loader) live inside #mini-play/#sheet-play (index.html) and
+  Nitya buttons (icon in .nitya-ic child span — swapping btn.innerHTML would
+  destroy the ring). Tokens: 250ms delay, 400ms min-show, 500ms stall grace,
+  12s watchdog, 1.1s ring. prefers-reduced-motion honored.
 - **Music player**: tri-state repeat `state.repeat` off→all→one (saffron "1" badge,
   `REPEAT_CYCLE`); NEVER use native `audio.loop` (breaks ended-event logic).
 - **Audiobooks**: `abBookProgress` estimates whole-book % via average chapter duration;
@@ -387,6 +411,20 @@ When the user says anything like "build for iOS submission", "archive for App St
   slot with `~/Desktop/appstore-shots/out-69/` (native 1320×2868 — the 6.9"/Pro-Max
   slot still holds v1.3 media), then submit for review.
 
+- 2026-07-10: **v1.6 native builds cut** (admin activity log + view-only Debug
+  impersonation, onboarding persisted to Firestore profile). iOS 1.6 (1) uploaded to
+  ASC (processing → create 1.6 version, attach build, still owes the 6.9" screenshot
+  slot fix). Android 1.6 (2) signed AAB at
+  android/app/build/outputs/bundle/release/app-release.aab (awaiting Play Console acct).
+  Web already on prod (aff2fa7). Version bump committed f5a79d2 (local; rides next ship push).
+
+- 2026-07-10 (later): **1.6 approved + LIVE on iOS.** Shipped next batch and cut
+  **v1.7 (1)**: library Satsang/Fun & Rhymes sections, play-loading ring, single-audio
+  rule (+103-test suite incl. wiring guards + build-manifest guard), and the
+  build-www whitelist fix (utils.js/lyrics-data.js/lottie.min.js now ship to native —
+  lyrics + onboarding confetti were silently broken on ALL native builds through 1.6).
+  Manifest floor ios.latest → 1.6 (live). Android 1.7 (3) AAB rebuilt with same fixes.
+
 ## Open items / known bugs
 - **Android update-banner version stamp (fix before Play release)**: `build-www.sh`
   stamps `app-build.js` from iOS `MARKETING_VERSION` only, so on Android the app
@@ -468,6 +506,29 @@ group for narrower questions (motion → iOS craft; copy/forms → product leade
    it produced.
 
 ## Committee consults
+- **2026-07-10 · Library sections + play-loading feedback · full committee (10 groups).**
+  **Q1 (Satsang/[NS] grouping) DECISION**: one scrolling grid, two inline non-sticky
+  full-width headers reusing `.learn-section-label` verbatim — "Satsang · Kirtans,
+  dhuns & prayers" first, "Fun & Rhymes · Nursery rhymes, lullabies & sing-alongs"
+  second. Headers ONLY when both sections non-empty. Sections strictly equal
+  (order alone = priority; no dots/counts/colors — all rejected as demotion
+  signals). [NS] stripped at INGEST (makeAlbum → AppUtils.parseAlbumFolderName)
+  so it never renders anywhere incl. lock screen; albumDisplay never shows an NS
+  tag even from stale caches. Downloaded card → full-width utility row above both
+  sections. REJECTED: pill toggle (hidden-mode error), collapsible, sub-tab,
+  labels "Non-Satsang"/"More Music"/"Just for Fun"/"Kids' Corner". Escape hatch
+  (only if Satsang >~14 albums): anchor chips that SCROLL, never filter.
+  **Q2 (loading cue) DECISION**: two layers. Layer 1 = 0ms acknowledgment
+  (press-scale 0.94 spring + the already-optimistic play→pause swap). Layer 2 =
+  270° saffron orbit ring ON the button's own edge (white-tint on saffron Nitya
+  discs), through a 250ms delay gate + 400ms min-show; track rows get NO spinner —
+  equalizer bars freeze + pulse ("pre-roll"); 500ms stall grace mid-track; 12s
+  watchdog → error reverts icon to play (the retry affordance) + toast. Implemented
+  as body.audio-buffering CSS keyed off one cue engine (bufferingCueArm/Resolve/
+  Clear in app.js). DEFERRED (P2): pointerdown Drive-redirect prefetch, 8s
+  "RECONNECTING…" caption, buffered-range band on scrubber, haptics/shake, toast
+  Retry button.
+
 - **2026-07-07 · full app (v1.4) · full committee.** Top-5 10x–100x bets, ranked:
   1. **Storybook Mode** — paged picture-book reader, read-aloud paints each word
      (Matas/Victor/Brichter). Core-product 10x.

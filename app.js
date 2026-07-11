@@ -973,18 +973,26 @@
   }
 
   function makeAlbum(id, name, files) {
+    // A "[NS]" prefix on the Drive folder marks non-satsang content ("Fun &
+    // Rhymes" section). It's a data contract only: the section is derived HERE
+    // and the marker stripped at ingest, so it can never render anywhere —
+    // grid, search, Now Playing, lock-screen/CarPlay metadata. Other bracket
+    // tags ("[Eng]") pass through untouched to the albumDisplay tag logic.
+    const parsed = window.AppUtils.parseAlbumFolderName(name);
+    const section = parsed.section;
+    const cleanName = parsed.name;
     const tracks = files.map((f) => ({
       id: f.id,
       name: cleanTrackName(f.name),
       rawName: f.name,
       albumId: id,
-      albumName: name,
+      albumName: cleanName,
       mimeType: f.mimeType,
       modifiedTime: f.modifiedTime,
       size: f.size,
     }));
     tracks.sort((a, b) => naturalCompare(a.name, b.name));
-    return { id, name, tracks };
+    return { id, name: cleanName, section, tracks };
   }
   function cleanTrackName(filename) {
     return filename.replace(/\.[a-zA-Z0-9]+$/, '').replace(/_/g, ' ').trim();
@@ -1299,7 +1307,18 @@
   // Fixes the "[" cover-initial bug and moves language tags out of titles.
   function albumDisplay(name) {
     const m = /^\s*\[([^\]]+)\]\s*(.+)$/.exec(name || '');
-    return m ? { title: m[2].trim(), tag: m[1].trim() } : { title: (name || '').trim(), tag: null };
+    if (!m) return { title: (name || '').trim(), tag: null };
+    const tag = m[1].trim();
+    // Libraries cached by older builds may still carry the "[NS]" section
+    // marker — it's internal taxonomy and must never render.
+    return { title: m[2].trim(), tag: /^ns$/i.test(tag) ? null : tag };
+  }
+
+  // Section for an album; falls back to name-sniffing for libraries cached
+  // before `section` existed on the album object.
+  function albumSection(a) {
+    if (a && a.section) return a.section;
+    return window.AppUtils.parseAlbumFolderName((a && a.name) || '').section;
   }
   function albumInitial(name) {
     const t = albumDisplay(name).title;
@@ -1367,7 +1386,7 @@
       }
     }
 
-    for (const a of state.library.albums) {
+    const makeCard = (a) => {
       const card = document.createElement('div');
       card.className = 'folder-card';
       card.innerHTML = `
@@ -1379,7 +1398,31 @@
       `;
       applyArt(card.querySelector('.folder-art'), a.name);
       card.addEventListener('click', () => openAlbum(a.id));
-      list.appendChild(card);
+      return card;
+    };
+
+    // Inert full-width section header (Learn-tab label grammar).
+    const sectionHeader = (label, caption) => {
+      const el = document.createElement('div');
+      el.className = 'library-section-header';
+      el.setAttribute('role', 'heading');
+      el.setAttribute('aria-level', '2');
+      el.innerHTML = `<p class="learn-section-label">${label}</p><p class="library-section-caption">${caption}</p>`;
+      return el;
+    };
+
+    // Satsang first (product value), Fun & Rhymes after. Headers appear ONLY
+    // when both sections have albums — a lone header is noise (committee
+    // consult 2026-07-10). Order alone signals priority; the cards are equal.
+    const satsang = state.library.albums.filter((a) => albumSection(a) !== 'fun');
+    const fun     = state.library.albums.filter((a) => albumSection(a) === 'fun');
+    if (satsang.length && fun.length) {
+      list.appendChild(sectionHeader('Satsang', 'Kirtans, dhuns & prayers'));
+      satsang.forEach((a) => list.appendChild(makeCard(a)));
+      list.appendChild(sectionHeader('Fun & Rhymes', 'Nursery rhymes, lullabies & sing-alongs'));
+      fun.forEach((a) => list.appendChild(makeCard(a)));
+    } else {
+      state.library.albums.forEach((a) => list.appendChild(makeCard(a)));
     }
   }
 
@@ -1474,21 +1517,97 @@
   }
 
   // ============== AUDIO SETUP ==============
+  // ── Single-audio rule ────────────────────────────────────────────
+  // Music, audiobook, and story TTS must NEVER play simultaneously. Every
+  // play/resume path funnels through this one choke point (pure logic lives in
+  // AppUtils.enforceSingleAudio; wiring is guarded by tests/audio-focus.test.js
+  // — this rule regressed once when TTS was left out of the cross-stop).
+  function stopAllOtherAudio(starting) {
+    return window.AppUtils.enforceSingleAudio(starting, {
+      music:     { playing: () => !!audio && !audio.paused,       stop: () => audio.pause() },
+      audiobook: { playing: () => !!_abAudio && !_abAudio.paused, stop: () => abPause() },
+      // ttsState.active (not just audible) also covers the prerendered-audio
+      // fetch window, where TTS is loading but nothing is playing yet.
+      tts:       { playing: () => ttsState.active,                stop: () => stopTTS() },
+    });
+  }
+
+  // ── Play loading cue (committee consult 2026-07-10) ──────────────
+  // Between tap and audible playback (Drive redirect + buffering) the UI must
+  // show the action was received. The play→pause icon swap is already
+  // optimistic (the 'play' event fires as soon as play() is called); this adds
+  // a saffron orbit ring on the circular controls + a dimmed "pre-roll" state
+  // on the active row's equalizer bars. Tokens: 250ms delay before showing
+  // (fast starts never flash a loader), 400ms minimum show (slow starts never
+  // flicker), 500ms mid-track stall grace, 12s watchdog (nothing is ever
+  // stranded in loading). The cue is pure CSS keyed off body.audio-buffering.
+  const LOADER_DELAY_MS = 250, LOADER_MIN_SHOW_MS = 400, STALL_GRACE_MS = 500, LOAD_WATCHDOG_MS = 12000;
+  let _bufTimer = null, _bufWatchdog = null, _stallTimer = null, _bufShownAt = 0;
+
+  function _setPlayBusy(busy) {
+    ['mini-play', 'sheet-play'].forEach((id) => { const b = $(id); if (b) b.setAttribute('aria-busy', busy ? 'true' : 'false'); });
+    document.querySelectorAll('.nitya-row-play').forEach((b) => b.setAttribute('aria-busy', busy && b.classList.contains('is-current') ? 'true' : 'false'));
+  }
+  function _bufShow() {
+    document.body.classList.add('audio-buffering');
+    _bufShownAt = Date.now();
+    _setPlayBusy(true);
+  }
+  function bufferingCueArm() {
+    bufferingCueClear();
+    _bufTimer = setTimeout(_bufShow, LOADER_DELAY_MS);
+    _bufWatchdog = setTimeout(() => {
+      bufferingCueClear();
+      audio.pause();
+      const t = state.trackById[state.currentTrackId];
+      toast(`Couldn't play${t ? ` "${t.name}"` : ''} — check your connection`);
+    }, LOAD_WATCHDOG_MS);
+  }
+  function bufferingCueResolve() {
+    clearTimeout(_bufTimer); _bufTimer = null;
+    clearTimeout(_bufWatchdog); _bufWatchdog = null;
+    clearTimeout(_stallTimer); _stallTimer = null;
+    if (!document.body.classList.contains('audio-buffering')) return;
+    // Honor the minimum show so a ring that appeared never flickers out.
+    const wait = Math.max(0, LOADER_MIN_SHOW_MS - (Date.now() - _bufShownAt));
+    setTimeout(() => { document.body.classList.remove('audio-buffering'); _setPlayBusy(false); }, wait);
+  }
+  function bufferingCueClear() {
+    clearTimeout(_bufTimer); _bufTimer = null;
+    clearTimeout(_bufWatchdog); _bufWatchdog = null;
+    clearTimeout(_stallTimer); _stallTimer = null;
+    document.body.classList.remove('audio-buffering');
+    _setPlayBusy(false);
+  }
+
   function setupAudio() {
     audio.addEventListener('play', () => {
       state.playing = true;
       updatePlayIcon(); updateMediaSession(); refreshPlayingIndicators();
-      // Pause audiobook when music starts
-      if (_abAudio && !_abAudio.paused) abPause();
+      stopAllOtherAudio('music'); // pause audiobook + stop TTS when music starts
     });
-    audio.addEventListener('pause', () => { state.playing = false; updatePlayIcon(); updateMediaSession(); refreshPlayingIndicators(); });
+    audio.addEventListener('playing', bufferingCueResolve);
+    audio.addEventListener('waiting', () => {
+      // Mid-track stall: keep the pause icon (intent is still "playing") and
+      // re-show the ring only if the stall outlives a 500ms grace window.
+      if (!state.playing) return;
+      clearTimeout(_stallTimer);
+      _stallTimer = setTimeout(_bufShow, STALL_GRACE_MS);
+    });
+    audio.addEventListener('pause', () => {
+      bufferingCueClear(); // tap-during-buffer = cancel; also covers normal pause
+      state.playing = false; updatePlayIcon(); updateMediaSession(); refreshPlayingIndicators();
+    });
     audio.addEventListener('ended', handleTrackEnded);
     audio.addEventListener('timeupdate', updateProgress);
     audio.addEventListener('loadedmetadata', updateDuration);
     audio.addEventListener('error', () => {
       console.warn('audio error', audio.error);
+      bufferingCueClear();
+      // Revert the optimistic pause icon — the play button becomes the retry.
+      state.playing = false; updatePlayIcon(); refreshPlayingIndicators();
       const t = state.trackById[state.currentTrackId];
-      if (t) toast(`Couldn't play "${t.name}"`);
+      if (t) toast(`Couldn't play "${t.name}" — check your connection`);
     });
     // Repeat is handled manually in handleTrackEnded so the 'ended' event always
     // fires (needed for queue/shuffle/sleep logic) — never use native audio.loop.
@@ -1517,6 +1636,7 @@
     logActivity('song', t.name);
     audio.src = audioSrc(trackId);
     audio.play().catch((e) => { console.warn('play() rejected', e); });
+    bufferingCueArm(); // loading ring if playback hasn't started in 250ms
     updateNowPlayingUI(t, true);
     refreshPlayingIndicators();
   }
@@ -2414,7 +2534,10 @@
     document.querySelectorAll('.nitya-row-play[data-track-id]').forEach((btn) => {
       const isThis = btn.dataset.trackId === state.currentTrackId;
       const playing = isThis && state.playing;
-      btn.innerHTML = playing ? NITYA_PAUSE_SVG : NITYA_PLAY_SVG;
+      // Swap only the inner icon span — the loader ring span must survive.
+      const ic = btn.querySelector('.nitya-ic');
+      if (ic) ic.innerHTML = playing ? NITYA_PAUSE_SVG : NITYA_PLAY_SVG;
+      btn.classList.toggle('is-current', playing);
       btn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
       btn.style.paddingLeft = playing ? '0' : '2px';
     });
@@ -2446,7 +2569,7 @@
           <div class="nitya-row-title">${escapeHtml(t.name)}</div>
           <div class="nitya-row-sub">${escapeHtml(t.albumName || '')}</div>
         </div>
-        <button class="nitya-row-play" data-track-id="${s.id}" aria-label="Play">${NITYA_PLAY_SVG}</button>`;
+        <button class="nitya-row-play" data-track-id="${s.id}" aria-label="Play"><span class="nitya-ic">${NITYA_PLAY_SVG}</span><span class="play-loader" aria-hidden="true"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="16.5" pathLength="100"/></svg></span></button>`;
       row.querySelector('.nitya-row-remove').addEventListener('click', (e) => {
         e.stopPropagation();
         state.nitya = (state.nitya || []).filter((x) => x.id !== s.id);
@@ -5427,6 +5550,7 @@ ${numbered}`;
     if (!state.isVIPTTS && !('speechSynthesis' in window)) {
       toast('Text-to-speech not supported on this device'); return;
     }
+    stopAllOtherAudio('tts'); // pause music/audiobook before narration starts
     ttsState.active = true;
     ttsState.paused = false;
     ttsState.loading = false;
@@ -5449,6 +5573,7 @@ ${numbered}`;
 
   function resumeTTS() {
     if (!ttsState.active || !ttsState.paused) return;
+    stopAllOtherAudio('tts'); // music/audiobook may have started while paused
     ttsState.paused = false;
     if (_vipAudio) {
       _vipAudio.play().catch(() => speakParagraph(ttsState.idx));
@@ -8972,8 +9097,7 @@ ${numbered}`;
       _abAudio.addEventListener('play',  () => {
         _abPlaying = true;
         abUpdatePlayBtn();
-        // Pause the music player when audiobook starts
-        if (!audio.paused) audio.pause();
+        stopAllOtherAudio('audiobook'); // pause music + stop TTS when audiobook starts
       });
       _abAudio.addEventListener('pause', () => {
         _abPlaying = false;

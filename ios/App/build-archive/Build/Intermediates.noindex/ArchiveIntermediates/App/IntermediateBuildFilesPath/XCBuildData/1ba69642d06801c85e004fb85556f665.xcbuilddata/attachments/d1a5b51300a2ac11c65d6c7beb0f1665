@@ -1,4 +1,0 @@
-module AppAuthCore {
-umbrella "/Users/ankit/Documents/AI Projects/drift/ios/App/build-archive/SourcePackages/checkouts/AppAuth-iOS/Sources/AppAuthCore"
-export *
-}

@@ -15,6 +15,7 @@ FILES=(
   index.html
   app.js
   app-build.js
+  utils.js
   styles.css
   stories-data.js
   gujarati-data-content.js
@@ -22,6 +23,8 @@ FILES=(
   title-translations.js
   firebase-config.js
   conversation-starters.js
+  lyrics-data.js
+  lottie.min.js
   manifest.json
   baal.png
   sw.js
@@ -65,6 +68,21 @@ if [ -f "$ROOT/config.js" ]; then
   echo "  ✓ config.js copied (API keys included)"
 else
   echo "  ⚠️  config.js not found — AI features and TTS will not work in the app"
+fi
+
+# Guard: every local <script src> in index.html MUST exist in www/ — a missing
+# file 404s only on NATIVE (web serves the repo root), which is how utils.js
+# silently broke the iOS music library once. Fail loudly instead.
+MISSING=0
+for src in $(grep -oE 'src="[A-Za-z0-9._-]+\.js[^"]*"' "$ROOT/index.html" | sed 's/src="//; s/"//; s/\?.*//' | sort -u); do
+  if [ ! -f "$DEST/$src" ]; then
+    echo "  ❌ index.html references $src but it is NOT in www/ — add it to FILES in build-www.sh"
+    MISSING=1
+  fi
+done
+if [ "$MISSING" = "1" ]; then
+  echo "❌ build-www.sh aborted: native bundle would be broken."
+  exit 1
 fi
 
 echo "✅ www/ ready ($(ls "$DEST" | wc -l | tr -d ' ') files)"

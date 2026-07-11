@@ -146,7 +146,41 @@ function splitTextForSarvam(text, maxChars = 450) {
 
 // ── Exports ──────────────────────────────────────────────────────────────────
 
+// ── Audio focus (single-player rule) ────────────────────────────────────────
+// The app has three audio sources — music, audiobook, story TTS — that must be
+// mutually exclusive. Given the source that is starting and a map of
+// { name: { playing: () => bool, stop: () => void } }, stops every OTHER source
+// that reports playing. Pure coordination logic (the app supplies the handles)
+// so the exclusion matrix is unit-testable — this rule regressed once when a
+// play path skipped it (see tests/audio-focus.test.js).
+function enforceSingleAudio(starting, sources) {
+  const stopped = [];
+  Object.keys(sources || {}).forEach((name) => {
+    if (name === starting) return;
+    const src = sources[name];
+    if (!src) return;
+    try {
+      if (src.playing()) { src.stop(); stopped.push(name); }
+    } catch (e) { /* one bad source must not block stopping the rest */ }
+  });
+  return stopped;
+}
+
+// ── Library sections ────────────────────────────────────────────────────────
+// A "[NS]" prefix on a Drive folder name marks non-satsang content (the
+// "Fun & Rhymes" section). The marker is a data contract only — it is stripped
+// here and must never render. Other bracket tags ("[Eng]") are left intact.
+function parseAlbumFolderName(name) {
+  const nsMatch = /^\s*\[\s*ns\s*\]\s*/i.exec(name || '');
+  return {
+    name: nsMatch ? (name || '').slice(nsMatch[0].length).trim() : (name || ''),
+    section: nsMatch ? 'fun' : 'satsang',
+  };
+}
+
 const AppUtils = {
+  enforceSingleAudio,
+  parseAlbumFolderName,
   cleanTrackName,
   naturalCompare,
   formatTime,
