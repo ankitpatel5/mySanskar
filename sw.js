@@ -93,8 +93,10 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Shell assets — cache-first
+  // Shell assets — cache-first. The .catch keeps a failed fallback fetch
+  // (offline, or staging's SSO-blocked subresources) from surfacing as an
+  // unhandled rejection — the request still fails, just without console noise.
   e.respondWith(
-    caches.match(e.request).then((cached) => cached || fetch(e.request))
+    caches.match(e.request).then((cached) => cached || fetch(e.request)).catch(() => Response.error())
   );
 });

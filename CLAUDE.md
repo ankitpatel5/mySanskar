@@ -245,6 +245,20 @@ When the user says anything like "build for iOS submission", "archive for App St
   'play', _abAudio 'play', startTTS AND resumeTTS. tests/audio-focus.test.js
   covers the exclusion matrix AND greps app.js for the wiring (the regression
   was a play path missing the call — tests fail if any call site is removed).
+- **Media-session router** (lock screen / CarPlay identity; consult 2026-07-11):
+  one source at a time owns navigator.mediaSession via `_msSource` + `msClaim(src)`
+  (claimed on the SAME 'play' events as the single-audio rule) / `msPaused(src)`
+  (guarded by AppUtils.msShouldApply — THE race: a dying source's queued 'pause'
+  event lands AFTER the new source's claim and must not stamp over it). Handlers
+  are stable trampolines resolving against `_msSource` at call time. Pure logic in
+  utils.js: MS_ACTION_MAP (audiobook trades prev/next for ±30s slots —
+  intentional), resolveMediaAction, buildMediaSessionMeta, computeAbPositionState
+  (null on non-finite — setPositionState throws). abTogglePlay/abSkip extracted
+  so lock-screen commands share the in-app paths incl. dead-element recovery.
+  TTS re-claims after every per-paragraph _vipAudio.play(). speechSynthesis
+  fallback = no remote controls (platform limitation). Lock-screen scrubbing
+  (seekto) deliberately deferred. tests/media-session.test.js guards matrix,
+  metadata, position math, race guard, AND app.js wiring.
 - **Play loading cue**: bufferingCueArm/Resolve/Clear + body.audio-buffering;
   ring spans (.play-loader) live inside #mini-play/#sheet-play (index.html) and
   Nitya buttons (icon in .nitya-ic child span — swapping btn.innerHTML would
@@ -260,6 +274,13 @@ When the user says anything like "build for iOS submission", "archive for App St
   `drive.google.com/thumbnail?id=<id>&sz=w400` → then gradient placeholder. Fixes
   broken-image icons from Drive's /thumbnail throttling a cold burst of ~31 covers.
   NEVER leave a Drive `<img>` without an onerror fallback.
+  **Playback resilience (2026-07-11)**: _abAudio has an 'error' listener (was
+  silent!); dead-element recovery in abTogglePlay + togglePlay re-resolves src at
+  position (play() on an errored element rejects silently forever — the "play
+  button stopped working" bug); appStateChange resume logs silent element deaths
+  as gray 'diag' rows in the admin activity feed. ±30s seeks resync the virtual
+  Part via AppUtils.virtualChapterIdxForPos (tests/audiobook-parts.test.js) —
+  never abLoadChapter on a backward crossing (it seeks).
 - **AI stories**: `buildStoryPrompt` — LANGUAGE RULES block targets 3–4-year-old
   vocabulary (short sentences, everyday words, sounds/repetition, no abstractions).
   Bump `STORY_PROMPT_VERSION` on material prompt changes → cached Stories of the Day
@@ -424,6 +445,14 @@ When the user says anything like "build for iOS submission", "archive for App St
   build-www whitelist fix (utils.js/lyrics-data.js/lottie.min.js now ship to native —
   lyrics + onboarding confetti were silently broken on ALL native builds through 1.6).
   Manifest floor ios.latest → 1.6 (live). Android 1.7 (3) AAB rebuilt with same fixes.
+
+- 2026-07-11: **1.7 approved + LIVE on iOS.** Shipped media-session router
+  (lock screen/CarPlay always shows + controls the ACTIVE source: music/audiobook/
+  TTS), audiobook playback resilience (error handler, dead-element recovery,
+  resume diagnostics), ±30s virtual-part resync. 138-test suite. Cut **v1.8 (1)**
+  iOS + **1.8 (4)** Android with all of it. Manifest floor ios.latest → 1.7.
+  KNOWN v1 LIMITATION: audiobook lock-screen scrubbing (seekto) is display-only;
+  audiobook lock screen shows ±30s instead of prev/next (intentional slot trade).
 
 ## Open items / known bugs
 - **Android update-banner version stamp (fix before Play release)**: `build-www.sh`

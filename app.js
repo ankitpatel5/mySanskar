@@ -1532,6 +1532,79 @@
     });
   }
 
+  // ── Media-session router (committee consult 2026-07-11) ───────────
+  // One source at a time owns navigator.mediaSession (lock screen / CarPlay).
+  // Ownership (_msSource) is claimed on the SAME 'play' events that enforce the
+  // single-audio rule. Handlers are stable trampolines that resolve against
+  // _msSource AT CALL TIME — a stale CarPlay event can never drive the wrong
+  // player. Every mediaSession touch is individually try/catch'd so session
+  // plumbing can never break playback. Routing/metadata/position math is pure
+  // in AppUtils (tests/media-session.test.js guards matrix AND wiring).
+  let _msSource = null;
+  const MS_ACTIONS = ['play', 'pause', 'previoustrack', 'nexttrack', 'seekbackward', 'seekforward'];
+  const MS_COMMANDS = {
+    'music.toggle': () => togglePlay(), // handles src-restore + error-recovery — what lock-screen resume needs
+    'music.prev':   () => prev(),
+    'music.next':   () => next(),
+    'ab.toggle':    () => abTogglePlay(),
+    'ab.back30':    () => abSkip(-30),
+    'ab.fwd30':     () => abSkip(30),
+    'tts.toggle':   () => { if (!ttsState.active) return; ttsState.paused ? resumeTTS() : pauseTTS(); },
+    'tts.pause':    () => pauseTTS(),
+  };
+
+  function msInfo(source) {
+    if (source === 'music') return state.trackById[state.currentTrackId];
+    if (source === 'audiobook') return (_abBook ? { book: _abBook, idx: _abChapterIdx } : null);
+    return state.currentStory;
+  }
+
+  function msClaim(source) {
+    if (!('mediaSession' in navigator)) return;
+    const info = msInfo(source);
+    if (!info) return;
+    if (source !== _msSource) {
+      _msSource = source;
+      const map = window.AppUtils.MS_ACTION_MAP[source];
+      MS_ACTIONS.forEach((action) => {
+        const handler = map[action]
+          ? () => { const cmd = window.AppUtils.resolveMediaAction(_msSource, action); if (cmd && MS_COMMANDS[cmd]) MS_COMMANDS[cmd](); }
+          : null; // explicitly clear slots the previous source registered
+        try { navigator.mediaSession.setActionHandler(action, handler); } catch {}
+      });
+    }
+    // Same-source claims refresh metadata (part auto-advance, next TTS paragraph).
+    try { navigator.mediaSession.metadata = new MediaMetadata(window.AppUtils.buildMediaSessionMeta(source, info)); } catch {}
+    try {
+      if (source === 'audiobook' && _abBook && _abBook.coverFileId) {
+        navigator.mediaSession.metadata.artwork = [{ src: abCoverUrl(_abBook.coverFileId), sizes: '400x400' }];
+      }
+    } catch {} // cosmetic only — delete if CarPlay misrenders
+    try { navigator.mediaSession.playbackState = 'playing'; } catch {}
+    msRefreshPosition(source);
+  }
+
+  function msPaused(source) {
+    // THE race guard: element 'pause' events are queued tasks — when B starts,
+    // stopAllOtherAudio pauses A, and A's pause listener runs AFTER B's claim.
+    // Without this, A would stamp 'paused' over B's fresh 'playing' session.
+    if (!window.AppUtils.msShouldApply(source, _msSource)) return;
+    try { navigator.mediaSession.playbackState = 'paused'; } catch {}
+  }
+
+  function msRefreshPosition(source) {
+    // Audiobook only: virtual parts need part-relative scrubber math. Music
+    // keeps its native element-derived position; TTS sets nothing (paragraph
+    // durations are estimates — no scrubber beats a lying one).
+    if (source !== 'audiobook' || _msSource !== 'audiobook' || !_abAudio || !_abBook) return;
+    const ch = _abBook.chapters[_abChapterIdx]; if (!ch) return;
+    const ps = window.AppUtils.computeAbPositionState({
+      currentTime: _abAudio.currentTime, duration: _abAudio.duration,
+      startTime: ch.startTime, endTime: ch.endTime, playbackRate: _abSpeed,
+    });
+    if (ps) { try { navigator.mediaSession.setPositionState(ps); } catch {} }
+  }
+
   // ── Play loading cue (committee consult 2026-07-10) ──────────────
   // Between tap and audible playback (Drive redirect + buffering) the UI must
   // show the action was received. The play→pause icon swap is already
@@ -1585,6 +1658,7 @@
       state.playing = true;
       updatePlayIcon(); updateMediaSession(); refreshPlayingIndicators();
       stopAllOtherAudio('music'); // pause audiobook + stop TTS when music starts
+      msClaim('music');
     });
     audio.addEventListener('playing', bufferingCueResolve);
     audio.addEventListener('waiting', () => {
@@ -1597,6 +1671,7 @@
     audio.addEventListener('pause', () => {
       bufferingCueClear(); // tap-during-buffer = cancel; also covers normal pause
       state.playing = false; updatePlayIcon(); updateMediaSession(); refreshPlayingIndicators();
+      msPaused('music');
     });
     audio.addEventListener('ended', handleTrackEnded);
     audio.addEventListener('timeupdate', updateProgress);
@@ -1613,12 +1688,8 @@
     // fires (needed for queue/shuffle/sleep logic) — never use native audio.loop.
     audio.loop = false;
 
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.setActionHandler('play', () => togglePlay());
-      navigator.mediaSession.setActionHandler('pause', () => togglePlay());
-      navigator.mediaSession.setActionHandler('previoustrack', () => prev());
-      navigator.mediaSession.setActionHandler('nexttrack', () => next());
-    }
+    // Lock-screen/CarPlay action handlers are registered per-source by
+    // msClaim() — static music-only handlers here were the CarPlay bug.
   }
 
   function playTrack(trackId, opts = {}) {
@@ -1760,6 +1831,18 @@
     // Restored from previous session — audio.src not yet loaded
     if (!audio.src && state.trackById[state.currentTrackId]) {
       playTrack(state.currentTrackId, { noHistory: true });
+      return;
+    }
+    // Element in an error state (network drop / iOS suspend killed the stream):
+    // play() on it rejects silently forever. Recover by re-resolving the source
+    // and reloading at the same position — this is why "play stopped working".
+    if (audio.error && state.trackById[state.currentTrackId]) {
+      logActivity('diag', `Audio recover (music): code ${audio.error.code}`);
+      const pos = audio.currentTime || 0;
+      audio.src = audioSrc(state.currentTrackId);
+      if (pos > 1) audio.currentTime = pos;
+      audio.play().catch(() => {});
+      bufferingCueArm();
       return;
     }
     if (audio.paused) audio.play().catch(() => {});
@@ -1937,14 +2020,11 @@
 
   function updateMediaSession() {
     if (!('mediaSession' in navigator)) return;
+    if (_msSource && _msSource !== 'music') return; // never overwrite the audiobook/TTS session
     const t = state.trackById[state.currentTrackId];
     if (!t) return;
     try {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: t.name,
-        artist: t.albumName,
-        album: t.albumName,
-      });
+      navigator.mediaSession.metadata = new MediaMetadata(window.AppUtils.buildMediaSessionMeta('music', t));
       navigator.mediaSession.playbackState = state.playing ? 'playing' : 'paused';
     } catch {}
   }
@@ -2456,6 +2536,16 @@
     App.addListener('appUrlOpen', (data) => {
       const id = parseNityaPlayUrl(data?.url);
       if (id) playNityaFromWidget(id);
+    });
+    // Returning from background: iOS may have killed in-flight streams while
+    // suspended. Log any silent element deaths (admin activity feed shows them
+    // as gray "diag" rows) — the play buttons' recovery paths handle the fix.
+    App.addListener('appStateChange', ({ isActive }) => {
+      if (!isActive) return;
+      const errs = [];
+      if (audio && audio.error) errs.push(`music:${audio.error.code}`);
+      if (_abAudio && _abAudio.error) errs.push(`audiobook:${_abAudio.error.code}`);
+      if (errs.length) logActivity('diag', `Audio dead after resume — ${errs.join(', ')}`);
     });
     // Cold launch: app was closed and opened directly by the widget URL.
     try {
@@ -5551,6 +5641,7 @@ ${numbered}`;
       toast('Text-to-speech not supported on this device'); return;
     }
     stopAllOtherAudio('tts'); // pause music/audiobook before narration starts
+    msClaim('tts');
     ttsState.active = true;
     ttsState.paused = false;
     ttsState.loading = false;
@@ -5568,12 +5659,14 @@ ${numbered}`;
     }
     ttsState.paused = true;
     ttsState.loading = false;
+    msPaused('tts');
     updateTTSUI();
   }
 
   function resumeTTS() {
     if (!ttsState.active || !ttsState.paused) return;
     stopAllOtherAudio('tts'); // music/audiobook may have started while paused
+    msClaim('tts');
     ttsState.paused = false;
     if (_vipAudio) {
       _vipAudio.play().catch(() => speakParagraph(ttsState.idx));
@@ -5593,6 +5686,7 @@ ${numbered}`;
   }
 
   function stopTTS() {
+    msPaused('tts'); // iOS convention: the last-played card stays, shown paused
     state.hasPrerenderedTTS = false;  // reset on each new story/stop
     // Stop VIP TTS audio element (ElevenLabs / Sarvam)
     if (_vipAudio) {
@@ -5738,6 +5832,7 @@ ${numbered}`;
         };
         _vipAudio.onerror = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
         await _vipAudio.play();
+        msClaim('tts'); // fresh element per paragraph — re-assert story metadata
         startTTSProgressLoop();
       } catch (e) {
         ttsState.loading = false;
@@ -5769,6 +5864,7 @@ ${numbered}`;
         };
         _vipAudio.onerror = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
         await _vipAudio.play();
+        msClaim('tts'); // fresh element per paragraph — re-assert story metadata
         startTTSProgressLoop();
         return;
       }
@@ -5795,6 +5891,7 @@ ${numbered}`;
         };
         _vipAudio.onerror = () => { if (ttsState.active && !ttsState.paused) speakParagraph(idx + 1); };
         await _vipAudio.play();
+        msClaim('tts'); // fresh element per paragraph — re-assert story metadata
         startTTSProgressLoop();
         if (idx + 1 < paraEls.length) fetchElevenLabsAudio(paraEls[idx + 1].textContent || '').catch(() => {});
         return;
@@ -6963,6 +7060,7 @@ ${numbered}`;
     learn:        { c: '#4bb3a3', k: 'Learn' },
     conversation: { c: '#6377d0', k: 'Conversation' },
     audiobook:    { c: '#c98a4a', k: 'Audiobook' },
+    diag:         { c: '#8a8a8a', k: 'Diagnostic' },
   };
 
   async function loadUserDetail(uid, parentRow) {
@@ -9098,10 +9196,22 @@ ${numbered}`;
         _abPlaying = true;
         abUpdatePlayBtn();
         stopAllOtherAudio('audiobook'); // pause music + stop TTS when audiobook starts
+        msClaim('audiobook');
+      });
+      _abAudio.addEventListener('error', () => {
+        // This element previously had NO error handler — failures were silent
+        // and the play button appeared dead. Surface it + reset UI state; the
+        // play button's error-recovery path reloads the chapter on next tap.
+        console.warn('audiobook audio error', _abAudio.error);
+        _abPlaying = false;
+        abUpdatePlayBtn();
+        logActivity('diag', `Audio error (audiobook): code ${_abAudio.error ? _abAudio.error.code : '?'}`);
+        toast(`Couldn't play this chapter — tap play to retry`);
       });
       _abAudio.addEventListener('pause', () => {
         _abPlaying = false;
         abUpdatePlayBtn();
+        msPaused('audiobook');
         // Save progress immediately on any pause (including iOS audio interruptions).
         if (_abBook && _abAudio.currentTime > 2 && _abAudio.duration) {
           const ch = _abBook.chapters[_abChapterIdx];
@@ -9171,6 +9281,32 @@ ${numbered}`;
     abUpdateProgressBar(0, 0);
     renderAbChapters();
     abWirePlayerControls();
+    if (_msSource === 'audiobook') msClaim('audiobook'); // refresh "Part N of M" on lock screen
+  }
+
+  // Shared by the in-app button AND the lock-screen/CarPlay media-session
+  // command — includes the dead-element recovery (fresh src + saved position),
+  // which is exactly what lock-screen resume after iOS backgrounding needs.
+  function abTogglePlay() {
+    if (!_abAudio) return;
+    if (_abAudio.error && _abBook) {
+      logActivity('diag', `Audio recover (audiobook): code ${_abAudio.error.code}`);
+      _abAudio.removeAttribute('src'); _abAudio.load(); // force a clean reload
+      abLoadChapter(_abChapterIdx, true);
+      return;
+    }
+    _abPlaying ? _abAudio.pause() : _abAudio.play().catch(() => {});
+  }
+
+  // Shared ±N-second seek (in-app buttons + lock-screen seek slots): resyncs
+  // the virtual-part UI if the seek crossed a boundary, then the scrubber.
+  function abSkip(delta) {
+    if (!_abAudio) return;
+    _abAudio.currentTime = delta < 0
+      ? Math.max(0, _abAudio.currentTime + delta)
+      : Math.min(_abAudio.duration || 0, _abAudio.currentTime + delta);
+    abSyncVirtualChapterUI();
+    msRefreshPosition('audiobook');
   }
 
   let _abControlsWired = false;
@@ -9178,16 +9314,9 @@ ${numbered}`;
     if (_abControlsWired) return;
     _abControlsWired = true;
 
-    $('ab-play-btn').addEventListener('click', () => {
-      if (!_abAudio) return;
-      _abPlaying ? _abAudio.pause() : _abAudio.play().catch(() => {});
-    });
-    $('ab-skip-back-btn').addEventListener('click', () => {
-      if (_abAudio) _abAudio.currentTime = Math.max(0, _abAudio.currentTime - 30);
-    });
-    $('ab-skip-fwd-btn').addEventListener('click', () => {
-      if (_abAudio) _abAudio.currentTime = Math.min(_abAudio.duration || 0, _abAudio.currentTime + 30);
-    });
+    $('ab-play-btn').addEventListener('click', abTogglePlay);
+    $('ab-skip-back-btn').addEventListener('click', () => abSkip(-30));
+    $('ab-skip-fwd-btn').addEventListener('click', () => abSkip(30));
     $('ab-prev-btn').addEventListener('click', () => {
       if (_abBook && _abChapterIdx > 0) abLoadChapter(_abChapterIdx - 1, _abPlaying);
     });
@@ -9201,6 +9330,7 @@ ${numbered}`;
       const next = AB_SPEED_STEPS[(AB_SPEED_STEPS.indexOf(_abSpeed) + 1) % AB_SPEED_STEPS.length];
       _abSpeed = next;
       if (_abAudio) _abAudio.playbackRate = _abSpeed;
+      msRefreshPosition('audiobook');
       const btn = $('ab-speed-btn');
       if (btn) btn.textContent = `${_abSpeed}×`;
     });
@@ -9231,8 +9361,30 @@ ${numbered}`;
         const { chStart, chDur } = chBounds();
         _abAudio.currentTime = chStart + rangePct() * chDur;
         _abScrubbing = false;
+        msRefreshPosition('audiobook');
       });
     }
+  }
+
+  // After a manual seek crosses a virtual Part boundary, the AUDIO position is
+  // already correct — re-derive which Part contains it and refresh the UI
+  // (part label + chapter list) to match. Never calls abLoadChapter here: that
+  // would seek to the part's saved position and yank playback around. Also
+  // prevents abOnTimeUpdate's forward auto-advance from firing on a stale index
+  // and seeking backwards after a +30s jump.
+  function abSyncVirtualChapterUI() {
+    if (!_abBook || !_abAudio) return;
+    const idx = window.AppUtils.virtualChapterIdxForPos(
+      _abBook.chapters, _abAudio.currentTime, _abChapterIdx
+    );
+    if (idx === _abChapterIdx) return;
+    _abChapterIdx = idx;
+    const subEl = $('ab-player-sub');
+    if (subEl && _abBook.chapters.length > 1) {
+      subEl.textContent = `Part ${idx + 1} of ${_abBook.chapters.length}`;
+    }
+    renderAbChapters();
+    if (_msSource === 'audiobook') msClaim('audiobook'); // lock-screen part label follows
   }
 
   function abOnTimeUpdate() {

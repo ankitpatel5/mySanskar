@@ -178,9 +178,94 @@ function parseAlbumFolderName(name) {
   };
 }
 
+// ── Audiobook virtual parts ─────────────────────────────────────────────────
+// Single-file audiobooks are split into virtual "Parts" (startTime/endTime
+// offsets into one audio file). After a manual seek (±30s) the absolute
+// position may land in a DIFFERENT part than the UI shows — this resolves
+// which part contains a position. Chapters without startTime (real multi-file
+// books) can't cross, so the caller's current index is returned unchanged.
+function virtualChapterIdxForPos(chapters, absPos, fallbackIdx) {
+  if (!Array.isArray(chapters) || !chapters.length) return fallbackIdx;
+  if (!chapters[0] || chapters[0].startTime === undefined) return fallbackIdx;
+  for (let i = 0; i < chapters.length; i++) {
+    const c = chapters[i];
+    if (c && absPos >= c.startTime && (c.endTime === undefined || absPos < c.endTime)) return i;
+  }
+  if (absPos < chapters[0].startTime) return 0;
+  return chapters.length - 1; // past the final endTime
+}
+
+// ── Media-session router (pure logic; see app.js msClaim/msPaused) ──────────
+// One source at a time owns navigator.mediaSession (lock screen / CarPlay).
+// These tables + resolvers are pure so the routing matrix is unit-testable —
+// the CarPlay-controls-the-wrong-player bug lived exactly here.
+// Every source declares ALL actions; null means "explicitly clear that slot"
+// (iOS maps handlers onto fixed button slots — prev/next and seek± compete,
+// so audiobook nulls prev/next to surface the ±30s glyphs).
+const MS_ACTION_MAP = {
+  music:     { play: 'music.toggle', pause: 'music.toggle', previoustrack: 'music.prev', nexttrack: 'music.next', seekbackward: null, seekforward: null },
+  audiobook: { play: 'ab.toggle',    pause: 'ab.toggle',    previoustrack: null,         nexttrack: null,         seekbackward: 'ab.back30', seekforward: 'ab.fwd30' },
+  tts:       { play: 'tts.toggle',   pause: 'tts.pause',    previoustrack: null,         nexttrack: null,         seekbackward: null, seekforward: null },
+};
+
+function resolveMediaAction(source, action) {
+  const map = MS_ACTION_MAP[source];
+  return (map && map[action]) || null;
+}
+
+// Race guard: element 'pause' events are queued tasks — when source B starts,
+// the single-audio rule pauses A, and A's pause listener runs AFTER B claimed
+// the session. Only the CURRENT owner may stamp playbackState.
+function msShouldApply(source, activeSource) {
+  return source === activeSource;
+}
+
+// MediaMetadata fields must always be strings (never undefined — it can throw).
+function buildMediaSessionMeta(source, info) {
+  if (source === 'music') {
+    const t = info || {};
+    return { title: t.name || '', artist: t.albumName || '', album: t.albumName || '' };
+  }
+  if (source === 'audiobook') {
+    const book = (info && info.book) || { chapters: [] };
+    const idx = (info && info.idx) || 0;
+    const ch = book.chapters[idx] || {};
+    const total = book.chapters.length;
+    const isVirtual = ch.realId != null || ch.startTime != null;
+    return {
+      title: (isVirtual ? book.name : ch.name) || '',
+      artist: total <= 1 ? '' : `${isVirtual ? 'Part' : 'Chapter'} ${idx + 1} of ${total}`,
+      album: book.name || '',
+    };
+  }
+  const story = info || {};
+  return { title: story.title || story.name || 'Story', artist: 'Story time', album: 'mySanskar' };
+}
+
+// Lock-screen scrubber math for virtual audiobook parts. Returns null unless
+// everything is finite (Drive streams report Infinity/NaN before metadata;
+// setPositionState throws on non-finite values or position > duration).
+function computeAbPositionState({ currentTime, duration, startTime, endTime, playbackRate }) {
+  const chStart = startTime ?? 0;
+  const chEnd = (endTime !== undefined && isFinite(endTime)) ? endTime : duration;
+  const chDur = chEnd - chStart;
+  if (!isFinite(chDur) || chDur <= 0 || !isFinite(currentTime)) return null;
+  return {
+    duration: chDur,
+    position: Math.min(Math.max(currentTime - chStart, 0), chDur),
+    playbackRate: playbackRate || 1,
+  };
+}
+
 const AppUtils = {
   enforceSingleAudio,
   parseAlbumFolderName,
+  virtualChapterIdxForPos,
+  MS_ACTION_MAP,
+  resolveMediaAction,
+  msShouldApply,
+  buildMediaSessionMeta,
+  computeAbPositionState,
   cleanTrackName,
   naturalCompare,
   formatTime,
