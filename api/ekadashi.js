@@ -13,6 +13,7 @@ const KNOWN_GAPS = {
 // Name overrides — applied after scraping to customise BAPS's default names.
 const NAME_OVERRIDES = {
   '2026-06-25': 'Bhim Ekadashi',
+  '2026-07-25': 'Devshayani Ekadashi (Start of Chaturmas)',
   '2026-11-21': 'Chaturmas Ends (Prabodhini Ekadashi)',
 };
 

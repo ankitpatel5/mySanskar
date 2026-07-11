@@ -1,4 +1,0 @@
-module LocalNotificationsPlugin {
-header "LocalNotificationsPlugin-Swift.h"
-export *
-}

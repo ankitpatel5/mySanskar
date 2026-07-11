@@ -5,6 +5,49 @@
 	<key>logFormatVersion</key>
 	<integer>12</integer>
 	<key>logs</key>
-	<dict/>
+	<dict>
+		<key>C9335DD4-78AD-40E0-91FC-60B0F0FA1161</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>C9335DD4-78AD-40E0-91FC-60B0F0FA1161.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>App project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>App</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Archiving project App with scheme App</string>
+			<key>timeStartedRecording</key>
+			<real>805431885.84617102</real>
+			<key>timeStoppedRecording</key>
+			<real>805431900.31669497</real>
+			<key>title</key>
+			<string>Archiving project App with scheme App</string>
+			<key>uniqueIdentifier</key>
+			<string>C9335DD4-78AD-40E0-91FC-60B0F0FA1161</string>
+		</dict>
+	</dict>
 </dict>
 </plist>
