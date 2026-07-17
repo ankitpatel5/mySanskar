@@ -560,7 +560,7 @@ When the user says anything like "build for iOS submission", "archive for App St
   child-profile-but-zero-stories cases (e.g. shrivastava.arpit — single
   2-min session on 2026-07-11, likely closed app mid-generation) are
   diagnosable from the admin activity feed. Verified on emulator by
-  impersonating that user. Rides the next ship.
+  impersonating that user.
 
   FIXED 2026-07-17: guest onboarding CTA clipped under the home indicator on
   iPhone 17/17 Pro. Root cause was NOT missing safe-area padding (that was
@@ -568,7 +568,6 @@ When the user says anything like "build for iOS submission", "archive for App St
   .ob-guest-limit AND .ob-guest-limit-body both needed `min-height: 0` so the
   feature list scrolls internally instead of pushing the footer off-screen.
   Verified on iPhone 17 sim: CTA above home indicator, tap → home → soft-ask.
-  Rides the next ship.
 
 ## Open items / known bugs
 - **Android update-banner version stamp (fix before Play release)**: `build-www.sh`
@@ -720,3 +719,9 @@ group for narrower questions (motion → iOS craft; copy/forms → product leade
   existing benchmark; Gujarati cover glyphs ન/અ/ચ via GUJ_GLYPHS map; warm-only
   PALETTES so covers + player sheet stay on-brand; `[Tag]` album names parsed to
   "Title · Tag"). #1/#2/#3/#5 REJECTED by Ankit — do not build.**
+
+- 2026-07-17 (later): **SHIPPED to prod `2fe653de`** (sw `sanskar-2fe653dec0`,
+  verified): SOTD debug placeholder + diag-on-failure, guest-onboarding CTA
+  flex fix. main == staging. Native www synced both platforms — the whole
+  FCM/soft-ask/CTA/SOTD-debug batch still owes the **1.9 cut** (iOS archive +
+  ASC upload, Android AAB) to reach store users.
