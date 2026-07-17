@@ -28,6 +28,7 @@
   },
   "homepage": "https://github.com/ankitpatel5/baal-shravan#readme",
   "dependencies": {
+    "@capacitor-firebase/messaging": "^8.3.0",
     "@capacitor/android": "^8.3.4",
     "@capacitor/app": "^8.1.0",
     "@capacitor/cli": "^8.3.4",

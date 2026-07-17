@@ -156,7 +156,7 @@
     'drift.aiCharacters', 'drift.aiStories', 'drift.aiUsage', 'drift.imagenQuota',
     'drift.gujProgress', 'drift.completedStories',
     'drift.nitya', 'drift.nitya.v3',
-    'drift.ekRemind', 'drift.ekRemindDays', 'drift.audiobooksEnabled',
+    'drift.ekRemind', 'drift.ekRemindDays', 'drift.pushEnabled', 'drift.audiobooksEnabled',
     LS.playlists, LS.playCounts, LS.lastTrack, LS.queue, LS.library,
   ];
   function clearPerUserLocalStorage() {
@@ -2903,6 +2903,143 @@
   }
 
   // Settings UI — toggle + day pills. Section is only revealed on native.
+  // ── Push notifications (FCM — ad-hoc announcements) ──────────────
+  // Native only. Opt-in via the Settings toggle (contextual permission ask, no
+  // boot ambush). Device tokens live on the user's profile (fcmTokens array) so
+  // campaigns can be sent from the Firebase Console with zero code. iOS delivery
+  // additionally requires the APNs key uploaded in Firebase project settings.
+  function pushPlugin() {
+    return (window.Capacitor?.isNativePlatform?.() && window.Capacitor.Plugins?.FirebaseMessaging) || null;
+  }
+
+  async function savePushToken(token, enable) {
+    if (!token || !state.user || isImpersonating() || isGuestMode()) return;
+    const F = firebase.firestore.FieldValue;
+    try {
+      await window.fbDb.collection('users').doc(state.user.uid).set({
+        fcmTokens: enable ? F.arrayUnion(token) : F.arrayRemove(token),
+      }, { merge: true });
+    } catch (e) { console.warn('push token save failed', e); }
+  }
+
+  async function initPushSettings() {
+    const FM = pushPlugin();
+    if (!FM) return; // web: row stays hidden
+    state.pushEnabled = localStorage.getItem('drift.pushEnabled') === '1';
+    $('push-row')?.classList.remove('hidden');
+    const toggle = $('push-toggle');
+    const renderUI = () => toggle?.setAttribute('aria-checked', state.pushEnabled ? 'true' : 'false');
+    renderUI();
+
+    toggle?.addEventListener('click', async () => {
+      if (!state.pushEnabled) {
+        try {
+          let perm = await FM.checkPermissions();
+          if (perm.receive !== 'granted') perm = await FM.requestPermissions();
+          if (perm.receive !== 'granted') {
+            toast('Enable notifications for mySanskar in Settings to get updates');
+            return;
+          }
+          const { token } = await FM.getToken();
+          await savePushToken(token, true);
+          state.pushEnabled = true;
+          try { localStorage.setItem('drift.pushEnabled', '1'); } catch {}
+        } catch (e) {
+          console.warn('push enable failed', e);
+          toast("Couldn't enable notifications");
+          return;
+        }
+      } else {
+        try {
+          const { token } = await FM.getToken();
+          await savePushToken(token, false);
+          await FM.deleteToken();
+        } catch (e) { /* token cleanup is best-effort */ }
+        state.pushEnabled = false;
+        try { localStorage.removeItem('drift.pushEnabled'); } catch {}
+      }
+      renderUI();
+    });
+
+    // Boot with push on: refresh the token (they rotate) + re-save.
+    if (state.pushEnabled) {
+      try { const { token } = await FM.getToken(); savePushToken(token, true); } catch (e) { /* offline */ }
+    }
+    // Foreground arrival: iOS/Android suppress the system banner while the app
+    // is open — surface it as a toast so the message isn't silently lost.
+    try {
+      FM.addListener('notificationReceived', ({ notification }) => {
+        const line = [notification?.title, notification?.body].filter(Boolean).join(' — ');
+        if (line) toast(line);
+      });
+    } catch (e) { /* listener is an enhancement, never fatal */ }
+  }
+
+  // ── First-run notification soft-ask ───────────────────────────
+  // Once per install, on the first home landing after onboarding. iOS grants
+  // exactly ONE system permission prompt per install, so it only fires after
+  // an explicit "Turn on" — dismissing our own card costs nothing and Settings
+  // remains the manual path. Ekadashi reminders + FCM push share the same OS
+  // permission, so a single grant enables both (guests: Ekadashi only — push
+  // tokens are never saved for guest sessions).
+  function maybeShowNotifAsk() {
+    const LN = ekNotifPlugin();
+    if (!LN || isImpersonating()) return;
+    if (localStorage.getItem('drift.notifAsked')) return;
+    const mark = () => { try { localStorage.setItem('drift.notifAsked', '1'); } catch {} };
+    if (state.ekRemind || state.pushEnabled) { mark(); return; }
+    // New users see this AFTER onboarding — completeOnboarding re-calls us.
+    // A returning user on a new device may not have the local flag yet when the
+    // boot call fires; skipping WITHOUT marking self-heals on the next launch.
+    if (!localStorage.getItem('drift.onboardingDone')) return;
+    const ob = $('onboarding-overlay');
+    if (ob && !ob.classList.contains('hidden')) return;
+    const modal = $('notif-ask-modal');
+    if (!modal) return;
+    mark();
+    modal.classList.remove('hidden');
+    const close = () => modal.classList.add('hidden');
+    $('notif-ask-no')?.addEventListener('click', close, { once: true });
+    modal.querySelector('.modal-backdrop')?.addEventListener('click', close, { once: true });
+    $('notif-ask-yes')?.addEventListener('click', async () => {
+      close();
+      const FM = pushPlugin();
+      try {
+        // One permission request covers both plugins (same OS-level grant).
+        const key = FM ? 'receive' : 'display';
+        const P = FM || LN;
+        let perm = await P.checkPermissions();
+        if (perm[key] !== 'granted') perm = await P.requestPermissions();
+        if (perm[key] !== 'granted') {
+          toast('You can turn on notifications anytime in Settings');
+          return;
+        }
+      } catch (e) {
+        console.warn('notif soft-ask permission failed', e);
+        toast("Couldn't enable notifications");
+        return;
+      }
+      // Ekadashi reminders on (keep the Settings toggle UI in sync).
+      state.ekRemind = true;
+      try { localStorage.setItem(LS.ekRemind, '1'); } catch {}
+      $('ek-remind-toggle')?.setAttribute('aria-checked', 'true');
+      $('ek-remind-days-row')?.classList.remove('hidden');
+      syncEkadashiReminders();
+      // Push on — signed-in users only.
+      if (FM && state.user && !isGuestMode()) {
+        try {
+          const { token } = await FM.getToken();
+          await savePushToken(token, true);
+          state.pushEnabled = true;
+          try { localStorage.setItem('drift.pushEnabled', '1'); } catch {}
+          $('push-toggle')?.setAttribute('aria-checked', 'true');
+        } catch (e) { console.warn('notif soft-ask push enable failed', e); }
+      }
+      logActivity('diag', 'notif soft-ask: enabled');
+      toast('🪔 Notifications on');
+    }, { once: true });
+  }
+
   function initEkadashiReminderSettings() {
     const LN = ekNotifPlugin();
     if (!LN) return; // web: leave the whole section hidden
@@ -7666,6 +7803,10 @@ ${numbered}`;
       });
     }
     initEkadashiReminderSettings();
+    initPushSettings();
+    // First-run soft-ask: delayed so boot settles (auth, onboarding check,
+    // home render) before a sheet slides up over the feed.
+    setTimeout(maybeShowNotifAsk, 2500);
 
     // Eternal Virtue tile → daily prasang sheet
     const vTile = $('virtue-tile');
@@ -8556,6 +8697,9 @@ ${numbered}`;
       overlay.addEventListener('animationend', () => {
         overlay.classList.add('hidden');
         overlay.classList.remove('ob-fade-out');
+        // First home landing for a brand-new user — offer notifications
+        // after a beat, once the feed is visible.
+        setTimeout(maybeShowNotifAsk, 1200);
       }, { once: true });
     }
 

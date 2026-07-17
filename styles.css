@@ -5822,3 +5822,51 @@ body.impersonating .topbar { padding-top: 8px; height: var(--topbar-h); }
 .ab-description--loading::after {
   content: 'Loading description…';
 }
+
+/* ── First-run notification soft-ask ─────────────────────────── */
+.notif-ask-sheet {
+  text-align: center;
+  padding: 8px 24px calc(var(--safe-bot) + 20px);
+}
+.notif-ask-icon {
+  font-size: 44px;
+  margin-top: 18px;
+  line-height: 1;
+}
+.notif-ask-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 14px 0 6px;
+}
+.notif-ask-sub {
+  color: var(--text2);
+  font-size: 15px;
+  line-height: 1.45;
+  margin: 0 auto 22px;
+  max-width: 300px;
+}
+.notif-ask-yes {
+  display: block;
+  width: 100%;
+  padding: 15px;
+  border: 0;
+  border-radius: var(--r-lg);
+  background: var(--accent);
+  color: #1a1207;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.notif-ask-yes:active { transform: scale(0.98); }
+.notif-ask-no {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 13px;
+  border: 0;
+  background: none;
+  color: var(--text2);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}

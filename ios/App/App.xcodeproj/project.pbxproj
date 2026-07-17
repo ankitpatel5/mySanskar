@@ -26,6 +26,7 @@
 		BCE0491C2FC65E1500520F19 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = BCE0491B2FC65E1500520F19 /* GoogleSignInSwift */; };
 		BCE0491E2FC65F9B00520F19 /* GoogleSignInPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCE0491D2FC65F9B00520F19 /* GoogleSignInPlugin.swift */; };
 		BCE049232FC6611600520F19 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCE049222FC6611600520F19 /* ViewController.swift */; };
+		C4856D22E2266DE728A1EA33 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = CF195BA4AE3493910A253AE7 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -73,6 +74,7 @@
 		BCE0491D2FC65F9B00520F19 /* GoogleSignInPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignInPlugin.swift; sourceTree = "<group>"; };
 		BCE049212FC6605F00520F19 /* App-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "App-Bridging-Header.h"; sourceTree = "<group>"; };
 		BCE049222FC6611600520F19 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		CF195BA4AE3493910A253AE7 /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		DCD7F1F17A05223F468A86BB /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		F7DA73F9B747CC916003C9AB /* NityaWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NityaWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		FC1AE2561411CD7FECC6A478 /* NityaWidgetPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NityaWidgetPlugin.swift; sourceTree = "<group>"; };
@@ -139,6 +141,7 @@
 				50B271D01FEDC1A000F3C39B /* public */,
 				BCE049212FC6605F00520F19 /* App-Bridging-Header.h */,
 				FC1AE2561411CD7FECC6A478 /* NityaWidgetPlugin.swift */,
+				CF195BA4AE3493910A253AE7 /* GoogleService-Info.plist */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -273,6 +276,7 @@
 				50379B232058CBB4000EE86E /* capacitor.config.json in Resources */,
 				504EC30D1FED79650016851F /* Main.storyboard in Resources */,
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
+				C4856D22E2266DE728A1EA33 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

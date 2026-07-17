@@ -1238,6 +1238,18 @@
                 <span class="settings-feature-toggle-dot"></span>
               </button>
             </div>
+            <div class="settings-row hidden" id="push-row">
+              <div class="settings-chip chip-saffron">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>
+              </div>
+              <div class="settings-row-main">
+                <div class="settings-row-title">News &amp; updates</div>
+                <div class="settings-row-sub">New features, stories &amp; festival specials</div>
+              </div>
+              <button class="settings-feature-toggle" id="push-toggle" role="switch" aria-checked="false">
+                <span class="settings-feature-toggle-dot"></span>
+              </button>
+            </div>
             <div class="settings-row ek-remind-days-row hidden" id="ek-remind-days-row">
               <div class="settings-row-main">
                 <div class="settings-row-title">Remind me</div>
@@ -1503,6 +1515,19 @@
           <button id="feedback-cancel" class="modal-item cancel">Cancel</button>
           <button id="feedback-send" class="modal-item">Send</button>
         </div>
+      </div>
+    </div>
+
+    <!-- First-run notification soft-ask (native only, once per install) -->
+    <div id="notif-ask-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Turn on notifications">
+      <div class="modal-backdrop"></div>
+      <div class="modal-sheet notif-ask-sheet">
+        <div class="sheet-handle"></div>
+        <div class="notif-ask-icon" aria-hidden="true">🔔</div>
+        <h3 class="notif-ask-title">Stay connected</h3>
+        <p class="notif-ask-sub">Ekadashi reminders and other special announcements</p>
+        <button id="notif-ask-yes" class="notif-ask-yes">Turn on notifications</button>
+        <button id="notif-ask-no" class="notif-ask-no">Not now</button>
       </div>
     </div>
 

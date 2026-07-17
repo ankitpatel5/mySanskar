@@ -235,6 +235,39 @@ When the user says anything like "build for iOS submission", "archive for App St
   **Reminders**: `syncEkadashiReminders` — @capacitor/local-notifications, 9:00 AM
   local, N days before (`drift.ekRemind`/`drift.ekRemindDays`, default 1), IDs 618000+,
   title format: "Tomorrow (Jul 11) is Yogini Ekadashi (Regular Fast)", empty body.
+- **Push notifications (FCM)**: `initPushSettings` / `savePushToken` /
+  `pushPlugin` (native-only: `Capacitor.Plugins.FirebaseMessaging`,
+  @capacitor-firebase/messaging). Settings → "News & updates" toggle
+  (`#push-row`/`#push-toggle`, hidden on web; `drift.pushEnabled` in
+  PER_USER_LS_KEYS). Tokens live in `users/{uid}.fcmTokens` array
+  (arrayUnion on enable/refresh, arrayRemove on disable; guarded against
+  guest/impersonation). iOS: aps-environment entitlement in
+  AppRelease.entitlements, GoogleService-Info.plist in App target,
+  `FirebaseApp.configure()` in AppDelegate.
+  **Sending (ad-hoc promos)**: Firebase Console → Messaging → New campaign
+  (zero code, targets all app instances), or FCM HTTP v1
+  `POST /v1/projects/baal-shravan/messages:send` `{message:{token, notification:{title,body}}}`
+  with the cached firebase-tools OAuth token (script pattern in git history:
+  reads fcmTokens from Firestore REST, sends per-token).
+  GOTCHAS: Android delivers NOTHING to a force-stopped app (platform rule —
+  relaunch first; background via Home is fine). Foreground pushes skip the
+  system tray: they hit the `notificationReceived` listener → in-app toast.
+  iOS delivery requires the APNs key uploaded in Firebase Console →
+  Cloud Messaging (DONE 2026-07-16: key R5BT7UVTLG, both dev+prod slots).
+  Console CAMPAIGNS deliver via production APNs only — Debug (sandbox)
+  builds never receive them; direct HTTP v1 token sends reach both.
+  Firebase In-App Messaging is NOT supported (no SDK; campaigns there
+  reach nobody) — use the Notification-messages campaign type.
+- **First-run notification soft-ask**: `maybeShowNotifAsk` — once per
+  install (`drift.notifAsked`, device-level, deliberately NOT in
+  PER_USER_LS_KEYS), on first home landing (boot path 2.5s delay +
+  completeOnboarding hook; whichever finds `drift.onboardingDone` set and
+  the overlay hidden fires — new-device returning users self-heal to next
+  launch). Sheet `#notif-ask-modal` ("Stay connected — Ekadashi reminders
+  and other special announcements"). The iOS system permission prompt is
+  ONE-SHOT per install — it fires only on an explicit "Turn on" tap; on
+  grant both Ekadashi reminders AND push auto-enable + Settings toggles
+  sync (guests: Ekadashi only). Wiring guards: tests/notif-ask.test.js.
 - **Sleep timer (shared music+audiobook)**: `setSleep` / `sleepCountdownTick` —
   wall-clock countdown + 15s volume fade (`SLEEP_FADE_MS`); 'eoc' = end of current
   track/chapter; UI hooks `.js-sleep-btn` / `.js-sleep-sheet`.
@@ -492,6 +525,22 @@ When the user says anything like "build for iOS submission", "archive for App St
   conversation-starters sticky header, Learn Gujarati audio bundled locally
   (1106 clips, 11MB, tap→sound 112ms vs 1802ms remote). 142-test suite.
   guj-audio/ now lives in the repo (rides Vercel for web same-origin serving).
+
+- 2026-07-16: **FCM push plumbing built + verified on Android** (staged, NOT yet
+  shipped): @capacitor-firebase/messaging plugin, iOS capability/plist/configure,
+  `users/{uid}.fcmTokens` registry, Settings "News & updates" toggle (see feature
+  map → Push notifications). End-to-end proof on emulator: toggle → native
+  permission Allow → token in Firestore → FCM HTTP v1 send 200 → notification in
+  system shade. iOS Debug build with plugin installed+launched on Ankit's iPhone.
+  OWNER'S HALF for iOS delivery: Apple Developer → Keys → create APNs key (.p8) →
+  upload to Firebase Console → Project settings → Cloud Messaging → Apple app.
+  Batch rides the next ship + 1.9 cut.
+
+- 2026-07-16 (later): **APNs key uploaded (iOS push verified end-to-end)** —
+  direct HTTP v1 send delivered to Ankit's iPhone (sandbox Debug build).
+  **First-run notification soft-ask built + verified on emulator** (sheet on
+  home landing → one tap → Ekadashi + push both on, 11 reminders scheduled,
+  toggles synced). 148-test suite. Staged, rides the next ship + 1.9 cut.
 
 ## Open items / known bugs
 - **Android update-banner version stamp (fix before Play release)**: `build-www.sh`

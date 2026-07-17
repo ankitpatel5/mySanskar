@@ -19,6 +19,7 @@ ios/App/App.xcworkspace/xcuserdata/
 ios/App/Pods/
 ios/App/.build/
 ios/App/build/
+ios/App/build-sim/
 ios/DerivedData/
 
 # Capacitor Android build output (Gradle generates these)
@@ -52,3 +53,4 @@ package-lock.json
 
 # Local config — contains real API keys, never commit
 config.js
+ios/App/build-sim-log.txt
