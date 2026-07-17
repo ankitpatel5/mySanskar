@@ -550,6 +550,18 @@ When the user says anything like "build for iOS submission", "archive for App St
   Soft-ask is ONCE per install by design ("Not now"/backdrop = asked forever;
   Settings toggles remain the manual path). Possible future: contextual
   re-ask from the Ekadashi sheet after a cool-down (owner aware, not built).
+- 2026-07-17: **SOTD debug visibility** (staged): impersonation now shows a
+  view-only placeholder tile when today's story doc is missing/stale
+  ("No story generated today · generates when the user opens the app") instead
+  of hiding silently — stories are generated CLIENT-SIDE on the user's device
+  at open, so a missing doc usually just means they haven't opened the app
+  today (confirmed against prod: every user's latest story == last active
+  day). SOTD generation failures now logActivity('diag', …) so
+  child-profile-but-zero-stories cases (e.g. shrivastava.arpit — single
+  2-min session on 2026-07-11, likely closed app mid-generation) are
+  diagnosable from the admin activity feed. Verified on emulator by
+  impersonating that user. Rides the next ship.
+
   FIXED 2026-07-17: guest onboarding CTA clipped under the home indicator on
   iPhone 17/17 Pro. Root cause was NOT missing safe-area padding (that was
   already there) — it was the flex min-height:auto shrink trap at TWO levels:

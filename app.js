@@ -3209,6 +3209,8 @@
     // Remove the guest-mode locked tile if the user is now signed in
     const guestTile = $('sotd-guest-tile');
     if (guestTile) guestTile.remove();
+    // Remove a stale debug placeholder (re-added below if still applicable)
+    $('sotd-debug-tile')?.remove();
 
     // Reset all SOTD tiles synchronously. The skeleton is immediately re-shown
     // below (before the first await), so there is no visible flash — the browser
@@ -3278,8 +3280,30 @@
       // Doc missing OR written by an older prompt — fall through and regenerate.
 
       // Impersonation is view-only: never generate (would cost a Gemini call and
-      // write to the target's account, which the rules block anyway).
-      if (isImpersonating()) { if (skeleton) skeleton.classList.add('hidden'); return; }
+      // write to the target's account, which the rules block anyway). Explain the
+      // absence instead of vanishing silently — stories generate on the USER'S
+      // device when they open the app, so "no story today" usually just means
+      // they haven't opened the app yet.
+      if (isImpersonating()) {
+        if (skeleton) skeleton.classList.add('hidden');
+        const homeTiles = $('home-tiles');
+        if (homeTiles && !$('sotd-debug-tile')) {
+          const dbgTile = document.createElement('div');
+          dbgTile.id        = 'sotd-debug-tile';
+          dbgTile.className = 'home-tile sotd-guest-tile';
+          dbgTile.innerHTML = `
+            <div class="sotd-guest-tile-icon"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/></svg></div>
+            <div class="sotd-guest-tile-body">
+              <div class="sotd-guest-tile-label">Today's Story</div>
+              <div class="sotd-guest-tile-title">${doc.exists ? 'Story is from an older prompt version' : 'No story generated today'}</div>
+              <div class="sotd-guest-tile-sub">Generates when the user opens the app · Debug is view-only</div>
+            </div>`;
+          const ekadashi = $('ekadashi-tile') || $('ekadashi-skeleton');
+          if (ekadashi && ekadashi.nextSibling) homeTiles.insertBefore(dbgTile, ekadashi.nextSibling);
+          else homeTiles.appendChild(dbgTile);
+        }
+        return;
+      }
 
       // 2. Not in Firestore — keep skeleton visible while Gemini generates
       const loadingSub = $('sotd-loading-sub');
@@ -3318,8 +3342,11 @@
     } catch (e) {
       if (_sotdReqId !== myReqId) return;
       console.warn('[SOTD] generation failed:', e.message);
+      // Feed stays clean, but leave a diag trail — a user with a child profile
+      // and zero stories is otherwise indistinguishable from one who closed the
+      // app mid-generation (admin activity feed shows these rows).
+      logActivity('diag', `sotd generation failed: ${String(e.message).slice(0, 100)}`);
       if (skeleton) skeleton.classList.add('hidden');
-      // Fail silently — home feed stays clean
     }
   }
 
