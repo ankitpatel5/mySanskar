@@ -5131,12 +5131,17 @@ body.impersonating .topbar { padding-top: 8px; height: var(--topbar-h); }
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-height: 0; /* same shrink trap as the body — see .ob-guest-limit-body */
+  max-height: 100%;
   padding: env(safe-area-inset-top, 0px) 28px calc(env(safe-area-inset-bottom, 0px) + 32px);
   max-width: 420px;
   width: 100%;
   margin: 0 auto;
 }
-.ob-guest-limit-body { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+/* min-height: 0 lets the body shrink and scroll instead of pushing the
+   footer (dots + CTA) past the screen bottom on tall-content viewports
+   (iPhone 17/17 Pro: CTA rendered under the home indicator). */
+.ob-guest-limit-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
 .ob-guest-hero { text-align: center; padding: 40px 0 24px; }
 .ob-guest-icon { font-size: 48px; margin-bottom: 16px; }
 .ob-guest-features {

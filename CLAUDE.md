@@ -550,9 +550,13 @@ When the user says anything like "build for iOS submission", "archive for App St
   Soft-ask is ONCE per install by design ("Not now"/backdrop = asked forever;
   Settings toggles remain the manual path). Possible future: contextual
   re-ask from the Ekadashi sheet after a cool-down (owner aware, not built).
-  POLISH FLAG (not fixed): guest onboarding "Start Exploring" CTA sits flush
-  at the screen bottom on modern iPhones (17/17 Pro) — clipped by the
-  home-indicator zone; wants env(safe-area-inset-bottom) padding.
+  FIXED 2026-07-17: guest onboarding CTA clipped under the home indicator on
+  iPhone 17/17 Pro. Root cause was NOT missing safe-area padding (that was
+  already there) — it was the flex min-height:auto shrink trap at TWO levels:
+  .ob-guest-limit AND .ob-guest-limit-body both needed `min-height: 0` so the
+  feature list scrolls internally instead of pushing the footer off-screen.
+  Verified on iPhone 17 sim: CTA above home indicator, tap → home → soft-ask.
+  Rides the next ship.
 
 ## Open items / known bugs
 - **Android update-banner version stamp (fix before Play release)**: `build-www.sh`
