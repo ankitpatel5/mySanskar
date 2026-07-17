@@ -725,3 +725,14 @@ group for narrower questions (motion → iOS craft; copy/forms → product leade
   flex fix. main == staging. Native www synced both platforms — the whole
   FCM/soft-ask/CTA/SOTD-debug batch still owes the **1.9 cut** (iOS archive +
   ASC upload, Android AAB) to reach store users.
+
+- 2026-07-17 (later): **v1.9 CUT**. iOS 1.9 (1) archived + uploaded to ASC
+  (App + NityaWidget lockstep; archive verified: soft-ask/push/SOTD-debug/CTA
+  fix/1106 guj clips/GoogleService-Info/aps-environment). Android 1.9 (5)
+  signed AAB at android/app/build/outputs/bundle/release/app-release.aab
+  (verified same markers; still awaiting Play Console account).
+  GOTCHA: Release archive FAILS with "unable to resolve module dependency:
+  FirebaseCore" unless it reuses the resolved derived data — always pass
+  `-derivedDataPath ./build` to the archive command too.
+  ASC web-UI steps still owed (owner): create 1.9 version, attach build 1,
+  fix the 6.9" screenshot slot (~/Desktop/appstore-shots/out-69/), submit.
