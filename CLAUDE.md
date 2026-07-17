@@ -534,13 +534,25 @@ When the user says anything like "build for iOS submission", "archive for App St
   system shade. iOS Debug build with plugin installed+launched on Ankit's iPhone.
   OWNER'S HALF for iOS delivery: Apple Developer → Keys → create APNs key (.p8) →
   upload to Firebase Console → Project settings → Cloud Messaging → Apple app.
-  Batch rides the next ship + 1.9 cut.
+  (DONE next day — see 2026-07-16 later entry.)
 
 - 2026-07-16 (later): **APNs key uploaded (iOS push verified end-to-end)** —
   direct HTTP v1 send delivered to Ankit's iPhone (sandbox Debug build).
   **First-run notification soft-ask built + verified on emulator** (sheet on
   home landing → one tap → Ekadashi + push both on, 11 reminders scheduled,
-  toggles synced). 148-test suite. Staged, rides the next ship + 1.9 cut.
+  toggles synced). 148-test suite. Full new-user flow also demoed on iOS
+  Simulator (guest onboarding → home → sheet → iOS dialog → Allow).
+  **SHIPPED to prod `f4558f0b`** (sw `sanskar-f4558f0b30`, verified serving
+  soft-ask code); native www synced both platforms — still owes the 1.9 cut.
+  Ship gotcha fixed: ios/App/build-sim/ (simulator derivedData) blew up the
+  git push (228MB SPM pack > GitHub limit) — now gitignored; the ship-commit
+  had to be amended (`git rm -r --cached`) before push succeeded.
+  Soft-ask is ONCE per install by design ("Not now"/backdrop = asked forever;
+  Settings toggles remain the manual path). Possible future: contextual
+  re-ask from the Ekadashi sheet after a cool-down (owner aware, not built).
+  POLISH FLAG (not fixed): guest onboarding "Start Exploring" CTA sits flush
+  at the screen bottom on modern iPhones (17/17 Pro) — clipped by the
+  home-indicator zone; wants env(safe-area-inset-bottom) padding.
 
 ## Open items / known bugs
 - **Android update-banner version stamp (fix before Play release)**: `build-www.sh`
