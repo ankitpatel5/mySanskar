@@ -257,9 +257,28 @@ function computeAbPositionState({ currentTime, duration, startTime, endTime, pla
   };
 }
 
+// ── Gujarati learning audio: local-first path mapping ───────────────────────
+// The Learn Gujarati clips are bundled into the app (www/guj-audio/) after a
+// trim+re-encode pass (scripts/build-guj-audio.js). This maps a clip's Firebase
+// Storage URL to its bundled path; playback tries local first and falls back
+// to the remote URL (fresh installs of old web caches, missing files).
+function gujLocalAudioPath(url) {
+  const m = /\/o\/([^?]+)/.exec(url || '');
+  if (!m) return null;
+  let path;
+  try { path = decodeURIComponent(m[1]); } catch { return null; }
+  if (!path.startsWith('gujarati/')) return null;
+  const parts = path.slice('gujarati/'.length).split('/').filter((seg) => seg && seg !== 'audio');
+  if (!parts.length) return null;
+  const file = parts.pop();
+  const base = file.replace(/\.[a-z0-9]+$/i, '');
+  return 'guj-audio/' + parts.concat(base).join('_') + '.m4a';
+}
+
 const AppUtils = {
   enforceSingleAudio,
   parseAlbumFolderName,
+  gujLocalAudioPath,
   virtualChapterIdxForPos,
   MS_ACTION_MAP,
   resolveMediaAction,

@@ -489,15 +489,19 @@
           <button class="back-btn" id="conv-starters-back" aria-label="Back">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
-          <div class="view-header">
-            <div>
-              <h2 class="view-title" id="conv-starters-title">Starters</h2>
-              <p class="view-sub" id="conv-starters-sub"></p>
+          <!-- Pinned while the prompts scroll: title + category pills (the
+               wayfinding). The rotating tip scrolls away with the content. -->
+          <div class="conv-sticky-head">
+            <div class="view-header">
+              <div>
+                <h2 class="view-title" id="conv-starters-title">Starters</h2>
+                <p class="view-sub" id="conv-starters-sub"></p>
+              </div>
+              <span id="conv-starters-progress" class="conv-progress-badge hidden"></span>
             </div>
-            <span id="conv-starters-progress" class="conv-progress-badge hidden"></span>
+            <div class="conv-cat-scroll" id="conv-cat-scroll"></div>
           </div>
           <div id="conv-tip-bar" class="conv-tip-bar"></div>
-          <div class="conv-cat-scroll" id="conv-cat-scroll"></div>
           <div id="conv-starters-list" class="conv-starters-list"></div>
         </section>
 

@@ -2217,6 +2217,7 @@
   function switchView(viewId) {
     document.querySelectorAll('#content .view').forEach((v) => v.classList.add('hidden'));
     $(viewId).classList.remove('hidden');
+    state.currentViewId = viewId; // single source of truth for goBack()
   }
   function switchMusicTab(subtab) {
     state.musicSubTab = subtab;
@@ -2540,6 +2541,13 @@
     // Returning from background: iOS may have killed in-flight streams while
     // suspended. Log any silent element deaths (admin activity feed shows them
     // as gray "diag" rows) — the play buttons' recovery paths handle the fix.
+    // Android hardware/gesture back: was previously unhandled (exited the
+    // app from ANY interior view). Same central path as swipe-back.
+    App.addListener('backButton', () => {
+      if (goBack()) return;
+      if (state.currentTab !== 'home') { switchTab('home'); return; }
+      try { App.minimizeApp(); } catch (e) { /* iOS: no-op */ }
+    });
     App.addListener('appStateChange', ({ isActive }) => {
       if (!isActive) return;
       const errs = [];
@@ -3349,7 +3357,19 @@
     if (!_gujAudio) _gujAudio = new Audio();
     if (!audio.paused) audio.pause();            // pause music
     if (_abAudio && !_abAudio.paused) abPause();  // pause audiobook
-    try { _gujAudio.pause(); _gujAudio.src = url; _gujAudio.currentTime = 0; _gujAudio.play().catch(() => {}); } catch {}
+    try {
+      _gujAudio.pause();
+      // Local-first: bundled trimmed clip (instant, offline); remote fallback.
+      const local = window.AppUtils.gujLocalAudioPath(url);
+      _gujAudio.onerror = () => {
+        if (_gujAudio.src && !_gujAudio.src.includes('firebasestorage')) {
+          _gujAudio.src = url; _gujAudio.play().catch(() => {});
+        }
+      };
+      _gujAudio.src = local ? encodeURI(local) : url;
+      _gujAudio.currentTime = 0;
+      _gujAudio.play().catch(() => {});
+    } catch {}
   }
 
   // Hero entry on the Learn tab. Free accounts only — guests see a locked
@@ -8149,6 +8169,7 @@ ${numbered}`;
 
     setupSheetSwipe();
     setupPullToRefresh();
+    setupSwipeBack();
 
     // Track menu
     document.querySelectorAll('#track-menu .modal-item').forEach((btn) => {
@@ -8197,6 +8218,80 @@ ${numbered}`;
     updateLoopUI();
     updateShuffleUI();
   } // end _setupEventListenersInner
+
+  // ── Back navigation (swipe + Android hardware back) ──────────────
+  // There is deliberately NO history stack: goBack() clicks the visible
+  // view's EXISTING back button, so every hardcoded destination, the story
+  // reader's _sotdMode/_aiMode flags, guj-detail's data-dependent parent, and
+  // ab-detail's save-progress side effects all come along for free.
+  const BACK_BTN_BY_VIEW = {
+    'view-album': 'album-back',
+    'view-playlist': 'playlist-back',
+    'view-gujarati-hub': 'guj-hub-back',
+    'view-gujarati-section': 'guj-section-back',
+    'view-gujarati-detail': 'guj-detail-back',
+    'view-ai-stories': 'ai-stories-back',
+    'view-story-list': 'story-list-back',
+    'view-conv-ages': 'conv-ages-back',
+    'view-conv-starters': 'conv-starters-back',
+    'view-audiobook-detail': 'ab-detail-back',
+    'view-story-reader': 'story-reader-back',
+  };
+
+  // Returns true if it consumed the back action.
+  function goBack(source) {
+    // Layered UI first: an open sheet/modal closes before any view navigates.
+    const sheet = $('player-sheet');
+    if (sheet && !sheet.classList.contains('hidden')) { closePlayerSheet(); return true; }
+    const openM = document.querySelector('.modal:not(.hidden)');
+    if (openM) { closeModal(openM.id); return true; }
+    // Tracked view id (set by switchView) — deterministic even if a rendering
+    // quirk ever leaves more than one .view un-hidden (DOM query would then
+    // return the wrong one; this bit an iPhone-only misroute report).
+    const viewId = state.currentViewId
+      || (document.querySelector('#content .view:not(.hidden)') || {}).id;
+    const btnId = viewId && BACK_BTN_BY_VIEW[viewId];
+    if (source === 'swipe') logActivity('diag', `swipe-back: view=${viewId} btn=${btnId || 'none'}`);
+    if (btnId && $(btnId)) { $(btnId).click(); return true; }
+    return false; // tab root
+  }
+
+  // Swipe-right anywhere on the content area → back (interior views only).
+  // Strict horizontal intent so vertical scrolling never misfires; touches
+  // starting on horizontal scrollers / drag surfaces are ignored (same
+  // exclusion pattern as setupPullToRefresh).
+  function setupSwipeBack() {
+    const content = $('content');
+    let startX = 0, startY = 0, armed = false;
+    content.addEventListener('touchstart', (e) => {
+      armed = false;
+      if (e.touches.length !== 1) return;
+      const view = document.querySelector('#content .view:not(.hidden)');
+      if (!view || !BACK_BTN_BY_VIEW[view.id]) return; // tab roots: no swipe-back
+      if (e.target.closest('#conv-cat-scroll, .ab-continue-scroll, .player-sheet, .modal, input[type="range"], .story-tts-bar')) return;
+      startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+      armed = true;
+    }, { passive: true });
+    content.addEventListener('touchmove', (e) => {
+      if (!armed) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      if (Math.abs(dy) > 45 && Math.abs(dy) > Math.abs(dx)) { armed = false; return; } // scroll wins
+      if (dx > 72 && Math.abs(dy) < 45) {
+        armed = false;
+        // goBack FIRST — it navigates by .click()ing the view's back button,
+        // and the suppressor below must never eat that programmatic click
+        // (ordering bug found the hard way: suppressor-first killed its own
+        // navigation). Then swallow WebKit's possible synthetic tap at the
+        // lift point — TRUSTED events only, so it can't touch .click() calls.
+        goBack('swipe');
+        const kill = (ev) => { if (ev.isTrusted) { ev.stopPropagation(); ev.preventDefault(); } };
+        document.addEventListener('click', kill, { capture: true, once: true });
+        setTimeout(() => document.removeEventListener('click', kill, { capture: true }), 400);
+      }
+    }, { passive: true });
+    content.addEventListener('touchcancel', () => { armed = false; }, { passive: true });
+  }
 
   function setupSheetSwipe() {
     const sheet = $('player-sheet');
@@ -8404,6 +8499,49 @@ ${numbered}`;
       track.style.transform = `translateX(-${(n - 2) * screenW}px)`;
       if (n === 4) fireConfetti();
     }
+
+    // Native-feeling pager: the track FOLLOWS the finger (iOS convention —
+    // content tracks touch, so direction is self-evident: drag left reveals
+    // the next screen, drag right the previous). Release past 22% of the
+    // screen commits; otherwise it snaps back on the track's own transition.
+    // Forward mirrors each screen's primary button (the profile screen still
+    // saves a typed name); flow edges rubber-band with 3x resistance; terminal
+    // CTAs (guest enter / finish) remain button-only.
+    (() => {
+      let sx = 0, sy = 0, baseX = 0, screenW = 0, dragging = false, canceled = false;
+      const snap = () => { track.style.transition = ''; goTo(currentScreen); };
+      track.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) { dragging = false; return; }
+        sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+        screenW = overlay.clientWidth || window.innerWidth;
+        baseX = -(currentScreen - 2) * screenW;
+        dragging = true; canceled = false;
+      }, { passive: true });
+      track.addEventListener('touchmove', (e) => {
+        if (!dragging || canceled) return;
+        const dx = e.touches[0].clientX - sx, dy = e.touches[0].clientY - sy;
+        if (Math.abs(dy) > 50 && Math.abs(dy) > Math.abs(dx)) { canceled = true; snap(); return; }
+        const lastScreen = guestMode ? 3 : 4;
+        const atEdge = (currentScreen === 2 && dx > 0) || (currentScreen >= lastScreen && dx < 0);
+        track.style.transition = 'none';
+        track.style.transform = `translateX(${baseX + (atEdge ? dx / 3 : dx)}px)`;
+      }, { passive: true });
+      track.addEventListener('touchend', (e) => {
+        if (!dragging) return; dragging = false;
+        track.style.transition = '';
+        if (canceled) return;
+        const dx = e.changedTouches[0].clientX - sx;
+        const commit = screenW * 0.22;
+        if (dx < -commit) { // forward
+          if (currentScreen === 2) { $('ob-next-2').click(); return; }
+          if (currentScreen === 3 && !guestMode) { $('ob-next-3').click(); return; }
+        } else if (dx > commit && currentScreen > 2) { // back
+          goTo(currentScreen - 1); return;
+        }
+        goTo(currentScreen); // under threshold or edge — snap back
+      }, { passive: true });
+      track.addEventListener('touchcancel', () => { if (dragging) { dragging = false; snap(); } }, { passive: true });
+    })();
 
     function completeOnboarding() {
       try { localStorage.setItem('drift.onboardingDone', '1'); } catch {}

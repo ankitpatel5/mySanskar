@@ -43,6 +43,16 @@ if [ -d "$ROOT/icons" ]; then
   cp -r "$ROOT/icons" "$DEST/icons"
 fi
 
+# Copy bundled Learn Gujarati audio (built by scripts/build-guj-audio.js).
+# gujPlay() tries these local clips first — instant, offline — and falls back
+# to the Firebase Storage URLs if a clip is missing.
+if [ -d "$ROOT/guj-audio" ]; then
+  cp -r "$ROOT/guj-audio" "$DEST/guj-audio"
+  echo "  ✓ guj-audio bundled ($(ls "$ROOT/guj-audio" | wc -l | tr -d ' ') clips)"
+else
+  echo "  ⚠️  guj-audio/ not found — Learn Gujarati audio will stream from Firebase (slower)"
+fi
+
 # Inject the real installed version into www/app-build.js, read from the Xcode
 # project so it always matches the build the user is shipping. (Native bundles
 # load these bundled assets; this keeps the in-app version display accurate.)

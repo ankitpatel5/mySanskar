@@ -5,19 +5,19 @@ Resolve Package Graph
 
 
 Resolved source packages:
-  capacitor-swift-pm: https://github.com/ionic-team/capacitor-swift-pm.git @ 8.3.4
-  AppAuth: https://github.com/openid/AppAuth-iOS.git @ 2.0.0
   CapacitorApp: /Users/ankit/Documents/AI Projects/drift/node_modules/@capacitor/app @ local
+  GTMSessionFetcher: https://github.com/google/gtm-session-fetcher.git @ 3.5.0
+  CapApp-SPM: /Users/ankit/Documents/AI Projects/drift/ios/App/CapApp-SPM @ local
+  capacitor-swift-pm: https://github.com/ionic-team/capacitor-swift-pm.git @ 8.3.4
   Promises: https://github.com/google/promises.git @ 2.4.0
+  GTMAppAuth: https://github.com/google/GTMAppAuth.git @ 5.0.0
   AppCheck: https://github.com/google/app-check.git @ 11.2.0
   CapacitorLocalNotifications: /Users/ankit/Documents/AI Projects/drift/node_modules/@capacitor/local-notifications @ local
-  CapApp-SPM: /Users/ankit/Documents/AI Projects/drift/ios/App/CapApp-SPM @ local
-  GTMAppAuth: https://github.com/google/GTMAppAuth.git @ 5.0.0
-  GTMSessionFetcher: https://github.com/google/gtm-session-fetcher.git @ 3.5.0
   GoogleSignIn: https://github.com/google/GoogleSignIn-iOS @ 9.1.0
   GoogleUtilities: https://github.com/google/GoogleUtilities.git @ 8.1.0
+  AppAuth: https://github.com/openid/AppAuth-iOS.git @ 2.0.0
 
-2026-07-11 18:34:57.852 xcodebuild[10985:3223805] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-07-16 16:23:25.512 xcodebuild[7841:123672] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
 ComputePackagePrebuildTargetDependencyGraph
 
 Prepare packages
@@ -178,11 +178,11 @@ ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeD
 
 ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -x objective-c -c /dev/null
 
-ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -x c -c /dev/null
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/ibtool --version --output-format xml1
 
 ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 /Users/ankit/Documents/AI Projects/drift/ios/App/App/Assets.xcassets
 
-ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/ibtool --version --output-format xml1
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -x c -c /dev/null
 
 ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -x c -c /dev/null
 
@@ -190,8 +190,8 @@ ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeD
 
 ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
 
-Build description signature: 5b87452bde22b83250afae429cfa82a0
-Build description path: /Users/ankit/Documents/AI Projects/drift/ios/App/build/Build/Intermediates.noindex/XCBuildData/5b87452bde22b83250afae429cfa82a0.xcbuilddata
+Build description signature: 84aba5a7c4bf8076a517b0fe4a8fec9c
+Build description path: /Users/ankit/Documents/AI Projects/drift/ios/App/build/Build/Intermediates.noindex/XCBuildData/84aba5a7c4bf8076a517b0fe4a8fec9c.xcbuilddata
 ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/SDKStatCaches.noindex/iphoneos26.5-23F73-688ef53f1462e2c8f657fdc38a81448f32daed1954a7d5dd0789fcaf2a9bb78b.sdkstatcache
     cd /Users/ankit/Documents/AI\ Projects/drift/ios/App/App.xcodeproj
     /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -o /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/SDKStatCaches.noindex/iphoneos26.5-23F73-688ef53f1462e2c8f657fdc38a81448f32daed1954a7d5dd0789fcaf2a9bb78b.sdkstatcache
@@ -200,33 +200,25 @@ ProcessInfoPlistFile /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Bui
     cd /Users/ankit/Documents/AI\ Projects/drift/ios/App
     builtin-infoPlistUtility /Users/ankit/Documents/AI\ Projects/drift/ios/App/NityaWidget/Info.plist -producttype com.apple.product-type.app-extension -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/NityaWidget.appex/Info.plist
 
-ProcessInfoPlistFile /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GoogleUtilities_GoogleUtilities-UserDefaults.bundle/Info.plist /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GoogleUtilities.build/Debug-iphoneos/GoogleUtilities_GoogleUtilities-UserDefaults.build/empty-GoogleUtilities_GoogleUtilities-UserDefaults.plist (in target 'GoogleUtilities_GoogleUtilities-UserDefaults' from project 'GoogleUtilities')
+ProcessInfoPlistFile /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GoogleUtilities_GoogleUtilities-Logger.bundle/Info.plist /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GoogleUtilities.build/Debug-iphoneos/GoogleUtilities_GoogleUtilities-Logger.build/empty-GoogleUtilities_GoogleUtilities-Logger.plist (in target 'GoogleUtilities_GoogleUtilities-Logger' from project 'GoogleUtilities')
     cd /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/SourcePackages/checkouts/GoogleUtilities
-    builtin-infoPlistUtility /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GoogleUtilities.build/Debug-iphoneos/GoogleUtilities_GoogleUtilities-UserDefaults.build/empty-GoogleUtilities_GoogleUtilities-UserDefaults.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GoogleUtilities_GoogleUtilities-UserDefaults.bundle/Info.plist
+    builtin-infoPlistUtility /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GoogleUtilities.build/Debug-iphoneos/GoogleUtilities_GoogleUtilities-Logger.build/empty-GoogleUtilities_GoogleUtilities-Logger.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GoogleUtilities_GoogleUtilities-Logger.bundle/Info.plist
 
 ProcessInfoPlistFile /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/Promises_FBLPromises.bundle/Info.plist /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/Promises.build/Debug-iphoneos/Promises_FBLPromises.build/empty-Promises_FBLPromises.plist (in target 'Promises_FBLPromises' from project 'Promises')
     cd /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/SourcePackages/checkouts/promises
     builtin-infoPlistUtility /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/Promises.build/Debug-iphoneos/Promises_FBLPromises.build/empty-Promises_FBLPromises.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/Promises_FBLPromises.bundle/Info.plist
 
-ProcessInfoPlistFile /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GoogleUtilities_GoogleUtilities-Logger.bundle/Info.plist /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GoogleUtilities.build/Debug-iphoneos/GoogleUtilities_GoogleUtilities-Logger.build/empty-GoogleUtilities_GoogleUtilities-Logger.plist (in target 'GoogleUtilities_GoogleUtilities-Logger' from project 'GoogleUtilities')
+ProcessInfoPlistFile /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GoogleUtilities_GoogleUtilities-UserDefaults.bundle/Info.plist /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GoogleUtilities.build/Debug-iphoneos/GoogleUtilities_GoogleUtilities-UserDefaults.build/empty-GoogleUtilities_GoogleUtilities-UserDefaults.plist (in target 'GoogleUtilities_GoogleUtilities-UserDefaults' from project 'GoogleUtilities')
     cd /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/SourcePackages/checkouts/GoogleUtilities
-    builtin-infoPlistUtility /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GoogleUtilities.build/Debug-iphoneos/GoogleUtilities_GoogleUtilities-Logger.build/empty-GoogleUtilities_GoogleUtilities-Logger.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GoogleUtilities_GoogleUtilities-Logger.bundle/Info.plist
+    builtin-infoPlistUtility /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GoogleUtilities.build/Debug-iphoneos/GoogleUtilities_GoogleUtilities-UserDefaults.build/empty-GoogleUtilities_GoogleUtilities-UserDefaults.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GoogleUtilities_GoogleUtilities-UserDefaults.bundle/Info.plist
 
 ProcessInfoPlistFile /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GoogleUtilities_GoogleUtilities-Environment.bundle/Info.plist /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GoogleUtilities.build/Debug-iphoneos/GoogleUtilities_GoogleUtilities-Environment.build/empty-GoogleUtilities_GoogleUtilities-Environment.plist (in target 'GoogleUtilities_GoogleUtilities-Environment' from project 'GoogleUtilities')
     cd /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/SourcePackages/checkouts/GoogleUtilities
     builtin-infoPlistUtility /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GoogleUtilities.build/Debug-iphoneos/GoogleUtilities_GoogleUtilities-Environment.build/empty-GoogleUtilities_GoogleUtilities-Environment.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GoogleUtilities_GoogleUtilities-Environment.bundle/Info.plist
 
-ProcessInfoPlistFile /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GoogleSignIn_GoogleSignInSwift.bundle/Info.plist /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphoneos/GoogleSignIn_GoogleSignInSwift.build/empty-GoogleSignIn_GoogleSignInSwift.plist (in target 'GoogleSignIn_GoogleSignInSwift' from project 'GoogleSignIn')
-    cd /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/SourcePackages/checkouts/GoogleSignIn-iOS
-    builtin-infoPlistUtility /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphoneos/GoogleSignIn_GoogleSignInSwift.build/empty-GoogleSignIn_GoogleSignInSwift.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GoogleSignIn_GoogleSignInSwift.bundle/Info.plist
-
 ProcessInfoPlistFile /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GoogleSignIn_GoogleSignIn.bundle/Info.plist /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphoneos/GoogleSignIn_GoogleSignIn.build/empty-GoogleSignIn_GoogleSignIn.plist (in target 'GoogleSignIn_GoogleSignIn' from project 'GoogleSignIn')
     cd /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/SourcePackages/checkouts/GoogleSignIn-iOS
     builtin-infoPlistUtility /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphoneos/GoogleSignIn_GoogleSignIn.build/empty-GoogleSignIn_GoogleSignIn.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GoogleSignIn_GoogleSignIn.bundle/Info.plist
-
-ProcessInfoPlistFile /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GTMAppAuth_GTMAppAuth.bundle/Info.plist /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GTMAppAuth.build/Debug-iphoneos/GTMAppAuth_GTMAppAuth.build/empty-GTMAppAuth_GTMAppAuth.plist (in target 'GTMAppAuth_GTMAppAuth' from project 'GTMAppAuth')
-    cd /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/SourcePackages/checkouts/GTMAppAuth
-    builtin-infoPlistUtility /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GTMAppAuth.build/Debug-iphoneos/GTMAppAuth_GTMAppAuth.build/empty-GTMAppAuth_GTMAppAuth.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GTMAppAuth_GTMAppAuth.bundle/Info.plist
 
 ProcessInfoPlistFile /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GTMSessionFetcher_GTMSessionFetcherCore.bundle/Info.plist /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GTMSessionFetcher.build/Debug-iphoneos/GTMSessionFetcher_GTMSessionFetcherCore.build/empty-GTMSessionFetcher_GTMSessionFetcherCore.plist (in target 'GTMSessionFetcher_GTMSessionFetcherCore' from project 'GTMSessionFetcher')
     cd /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/SourcePackages/checkouts/gtm-session-fetcher
@@ -235,6 +227,14 @@ ProcessInfoPlistFile /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Bui
 ProcessInfoPlistFile /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/AppAuth_AppAuthCore.bundle/Info.plist /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/AppAuth.build/Debug-iphoneos/AppAuth_AppAuthCore.build/empty-AppAuth_AppAuthCore.plist (in target 'AppAuth_AppAuthCore' from project 'AppAuth')
     cd /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/SourcePackages/checkouts/AppAuth-iOS
     builtin-infoPlistUtility /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/AppAuth.build/Debug-iphoneos/AppAuth_AppAuthCore.build/empty-AppAuth_AppAuthCore.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/AppAuth_AppAuthCore.bundle/Info.plist
+
+ProcessInfoPlistFile /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GoogleSignIn_GoogleSignInSwift.bundle/Info.plist /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphoneos/GoogleSignIn_GoogleSignInSwift.build/empty-GoogleSignIn_GoogleSignInSwift.plist (in target 'GoogleSignIn_GoogleSignInSwift' from project 'GoogleSignIn')
+    cd /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/SourcePackages/checkouts/GoogleSignIn-iOS
+    builtin-infoPlistUtility /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GoogleSignIn.build/Debug-iphoneos/GoogleSignIn_GoogleSignInSwift.build/empty-GoogleSignIn_GoogleSignInSwift.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GoogleSignIn_GoogleSignInSwift.bundle/Info.plist
+
+ProcessInfoPlistFile /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GTMAppAuth_GTMAppAuth.bundle/Info.plist /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GTMAppAuth.build/Debug-iphoneos/GTMAppAuth_GTMAppAuth.build/empty-GTMAppAuth_GTMAppAuth.plist (in target 'GTMAppAuth_GTMAppAuth' from project 'GTMAppAuth')
+    cd /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/SourcePackages/checkouts/GTMAppAuth
+    builtin-infoPlistUtility /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/GTMAppAuth.build/Debug-iphoneos/GTMAppAuth_GTMAppAuth.build/empty-GTMAppAuth_GTMAppAuth.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/GTMAppAuth_GTMAppAuth.bundle/Info.plist
 
 ProcessInfoPlistFile /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/AppAuth_AppAuth.bundle/Info.plist /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/AppAuth.build/Debug-iphoneos/AppAuth_AppAuth.build/empty-AppAuth_AppAuth.plist (in target 'AppAuth_AppAuth' from project 'AppAuth')
     cd /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/SourcePackages/checkouts/AppAuth-iOS
@@ -258,14 +258,14 @@ ProcessInfoPlistFile /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Bui
 
 CopySwiftLibs /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/App.app (in target 'App' from project 'App')
     cd /Users/ankit/Documents/AI\ Projects/drift/ios/App
-    builtin-swiftStdLibTool --copy --verbose --sign 86D829A1FE19EA4E8242C4735D1F6642F9F673C9 --scan-executable /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/App.app/App.debug.dylib --scan-folder /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/App.app/Frameworks --scan-folder /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/App.app/PlugIns --scan-folder /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/App.app/SystemExtensions --scan-folder /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/App.app/Extensions --platform iphoneos --toolchain /var/run/com.apple.security.cryptexd/mnt/com.apple.MobileAsset.MetalToolchain-v17.6.42.0.S06BqD/Metal.xctoolchain --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/App.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/App.build/Debug-iphoneos/App.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os --back-deploy-swift-span
+    builtin-swiftStdLibTool --copy --verbose --sign 86D829A1FE19EA4E8242C4735D1F6642F9F673C9 --scan-executable /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/App.app/App.debug.dylib --scan-folder /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/App.app/Frameworks --scan-folder /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/App.app/PlugIns --scan-folder /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/App.app/SystemExtensions --scan-folder /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/App.app/Extensions --platform iphoneos --toolchain /var/run/com.apple.security.cryptexd/mnt/com.apple.MobileAsset.MetalToolchain-v17.6.42.0.rFNNZd/Metal.xctoolchain --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/App.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/App.build/Debug-iphoneos/App.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os --back-deploy-swift-span
 
 CodeSign /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/App.app/App.debug.dylib (in target 'App' from project 'App')
     cd /Users/ankit/Documents/AI\ Projects/drift/ios/App
     
     Signing Identity:     "Apple Development: ankitpatel5@gmail.com (83455MABA8)"
     Provisioning Profile: "iOS Team Provisioning Profile: com.ankitpatel5.mysanskar"
-                          (52b71271-e167-4d04-9d12-eb7d20323dd3)
+                          (cb03f974-5611-4aac-a58b-9f9ea1ca5585)
     
     /usr/bin/codesign --force --sign 86D829A1FE19EA4E8242C4735D1F6642F9F673C9 --timestamp\=none --generate-entitlement-der /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/App.app/App.debug.dylib
 /Users/ankit/Documents/AI Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/App.app/App.debug.dylib: replacing existing signature
@@ -275,7 +275,7 @@ CodeSign /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/
     
     Signing Identity:     "Apple Development: ankitpatel5@gmail.com (83455MABA8)"
     Provisioning Profile: "iOS Team Provisioning Profile: com.ankitpatel5.mysanskar"
-                          (52b71271-e167-4d04-9d12-eb7d20323dd3)
+                          (cb03f974-5611-4aac-a58b-9f9ea1ca5585)
     
     /usr/bin/codesign --force --sign 86D829A1FE19EA4E8242C4735D1F6642F9F673C9 --timestamp\=none --generate-entitlement-der /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/App.app/__preview.dylib
 /Users/ankit/Documents/AI Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/App.app/__preview.dylib: replacing existing signature
@@ -285,7 +285,7 @@ CodeSign /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/
     
     Signing Identity:     "Apple Development: ankitpatel5@gmail.com (83455MABA8)"
     Provisioning Profile: "iOS Team Provisioning Profile: com.ankitpatel5.mysanskar"
-                          (52b71271-e167-4d04-9d12-eb7d20323dd3)
+                          (cb03f974-5611-4aac-a58b-9f9ea1ca5585)
     
     /usr/bin/codesign --force --sign 86D829A1FE19EA4E8242C4735D1F6642F9F673C9 --entitlements /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Intermediates.noindex/App.build/Debug-iphoneos/App.build/App.app.xcent --timestamp\=none --generate-entitlement-der /Users/ankit/Documents/AI\ Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/App.app
 /Users/ankit/Documents/AI Projects/drift/ios/App/build/Build/Products/Debug-iphoneos/App.app: replacing existing signature

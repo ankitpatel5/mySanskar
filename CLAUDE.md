@@ -152,7 +152,10 @@ Never tell the user "installed" until the bundle is verified to contain the expe
   xcrun devicectl device install app --device <UDID> build/Build/Products/Debug-iphoneos/App.app
   xcrun devicectl device process launch --device <UDID> com.ankitpatel5.mysanskar
   ```
-  Phone must be unlocked (errors 12040/FBSOpen = locked). Reuse `./build` derived
+  Phone must be unlocked (errors 12040/FBSOpen = locked). **Error 1011 /
+  "unavailable" in `devicectl list devices` = UNREACHABLE (phone not on the
+  Mac's Wi-Fi or needs USB) — NOT a lock issue; retry loops must print the
+  real devicectl error, never assume locked.** Reuse `./build` derived
   data or SPM resolution appears to hang. Run long builds in background with file logging.
 - **Simulator**: same but `-destination 'platform=iOS Simulator,id=<sim-udid>'`
   `-derivedDataPath ./build-sim`; install/launch via `simctl`. **Live JS/bridge console**:
@@ -291,6 +294,35 @@ When the user says anything like "build for iOS submission", "archive for App St
 - **Learn Gujarati**: `renderGujHero` (guest-locked: dimmed + lock icon + toast —
   same pattern as locked story cards), hub `openGujHub`, progress `_gujProgress`.
   Featured in onboarding (card 3) + guest benefits list (locked group, first).
+- **Back navigation**: central `goBack()` clicks the visible view's EXISTING back
+  button (BACK_BTN_BY_VIEW map) — no history stack; polymorphic story-reader
+  flags + guj-detail parent + ab-detail save-progress come free. Consumers:
+  swipe-right gesture on #content (setupSwipeBack — strict horizontal intent,
+  excludes #conv-cat-scroll/.ab-continue-scroll/sheets/scrubbers) and the
+  Capacitor backButton listener (Android hardware/gesture back previously EXITED
+  the app; now back → Home → minimize). Onboarding: finger-tracking pager
+  (track follows the drag; left=forward mirroring each screen's primary button,
+  right=back, 22% commit threshold, edge rubber-band; terminal screens
+  button-only). HARD-WON RULES (2026-07-13 debugging): (1) goBack navigates by
+  .click()ing the view's back button — any capture-phase click suppressor must
+  be armed AFTER goBack and only for ev.isTrusted events, or it eats its own
+  navigation (this exact bug shipped briefly). (2) goBack resolves the view from
+  state.currentViewId (set in switchView) — never trust a DOM :not(.hidden)
+  query alone. (3) Every swipe-back logs `diag | swipe-back: view=X btn=Y` to
+  the admin activity feed — first stop when a misroute is reported. (4) The
+  swallowing try/catch around _setupEventListenersInner means a wiring throw
+  kills all LATER wiring silently — check console for 'setupEventListeners
+  crashed' (console.error, NOT an uncaught exception). (5) Emulator gotcha:
+  onboarding overlay intercepts physical swipes — dismiss before gesture tests;
+  DevTools targets go stale across force-stop/relaunch (re-list, re-forward).
+- **Learn Gujarati audio (local-first, 2026-07-13)**: 1106 clips trimmed
+  (561s silence removed) + re-encoded mono 48k AAC via scripts/build-guj-audio.js
+  (26.5MB Firebase → 11MB bundled in repo `guj-audio/`, copied to www by
+  build-www.sh). gujPlay tries AppUtils.gujLocalAudioPath(url) first (tap→sound
+  112ms vs 1802ms remote, measured on emulator), onerror falls back to the
+  Firebase URL. Mapping is THE contract (tests/guj-audio.test.js); pipeline
+  reuses the same function so names can't diverge. Re-run the script after
+  adding new clips to gujarati-data-content.js.
 - **Guest gating pattern**: `isGuestMode()` + `.story-cat-lock-badge` + benefit-copy
   sub + toast. Free for guests: music, 10 sample stories/category, Ekadashi calendar.
 - **Feedback pipeline**: Settings "Suggest a feature" → `feedback` collection
@@ -454,6 +486,13 @@ When the user says anything like "build for iOS submission", "archive for App St
   KNOWN v1 LIMITATION: audiobook lock-screen scrubbing (seekto) is display-only;
   audiobook lock screen shows ±30s instead of prev/next (intentional slot trade).
 
+- 2026-07-13/14: **Shipped nav + polish batch**: swipe-right-to-go-back on all
+  interior views (central goBack + Android hardware-back wiring + isTrusted
+  phantom-click guard + diag logging), onboarding finger-tracking pager,
+  conversation-starters sticky header, Learn Gujarati audio bundled locally
+  (1106 clips, 11MB, tap→sound 112ms vs 1802ms remote). 142-test suite.
+  guj-audio/ now lives in the repo (rides Vercel for web same-origin serving).
+
 ## Open items / known bugs
 - **Android update-banner version stamp (fix before Play release)**: `build-www.sh`
   stamps `app-build.js` from iOS `MARKETING_VERSION` only, so on Android the app
@@ -535,6 +574,35 @@ group for narrower questions (motion → iOS craft; copy/forms → product leade
    it produced.
 
 ## Committee consults
+- **2026-07-13 · FULL UX AUDIT (v1.8, 15 live emulator screenshots) · full committee.**
+  VERDICT: "the trust floor is far below the craft ceiling" — foundation (tile
+  color identities, Fraunces/Inter, glyph-gradient covers, 4-tab skeleton,
+  one-green discipline, Virtue sheet, Ekadashi status copy) unanimously praised;
+  the gaps are FINISHING shipped systems, not new features. TOP GAPS (post
+  fact-check): (1) mini-player expand — VERIFIED REAL: only #mini-row (title
+  strip) opens the sheet, container+transport dead for expansion, no affordance;
+  merge w/ audit gap 8 (8 cramped targets, ±15s useless for kirtans). NOTE: the
+  audit's "Ekadashi tile dead tap" was a capture artifact — tile verified working.
+  (2) Story of the Day opens to a grey "Painting your illustration…" void —
+  pre-generate daily art server-side, shimmer + glyph-gradient fallback for live
+  gen. (3) cover system stops halfway (story thumbnails near-black, audiobook
+  olive placeholders, coverless album header, generic mini/Nitya art) — make
+  glyph-gradient the universal fallback. (4) subtitle==title ("Arti / Arti") +
+  indistinguishable virtual-part rows — one conditional. (5) masthead stacks over
+  local chrome on interior screens (5 nav layers on album) — page-shell rule:
+  masthead on tab roots only. (6) four competing language controls — one
+  component, one stored pref, text drives voice. (7) Home hero = fast 13 days out
+  while Nitya clips below fold — proximity-weighted layout. (9) "Mischevious"
+  typo in flagship story (list+reader+baked art) + title spell pass. (10, OWNER'S
+  CALL — adjacent to rejected calendar-add) in-sheet "Remind me" pill flipping
+  the existing notification toggle. QUICK WINS batch: red VIDEO tag→neutral chip,
+  (!)→chevron on ab More Details, durations in lists + ab elapsed/total, SOTD
+  badge violet→rose, story-tile chevron, EN/GU corner badge on twin covers,
+  "7% done"→"4h 12m left", conv-starters gradient→warm register, ab section
+  headers→caps-label style, "Other Kirtans" junk drawer. RESURFACED (flagged,
+  NOT ranked): virtue "Mark as read"/"Ask tonight" (edges toward completion
+  mechanics). Decision: NOTHING BUILT — awaiting owner's picks.
+
 - **2026-07-10 · Library sections + play-loading feedback · full committee (10 groups).**
   **Q1 (Satsang/[NS] grouping) DECISION**: one scrolling grid, two inline non-sticky
   full-width headers reusing `.learn-section-label` verbatim — "Satsang · Kirtans,
