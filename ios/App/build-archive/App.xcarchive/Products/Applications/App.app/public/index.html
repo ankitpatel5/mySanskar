@@ -319,6 +319,8 @@
           </div>
           <div class="learn-section-label">Language</div>
           <div class="guj-hero-wrap" id="guj-hero"></div>
+          <div class="learn-section-label">Shastra</div>
+          <div class="guj-hero-wrap" id="sd-hero"></div>
           <div class="learn-section-label">Stories</div>
           <div class="story-cats" id="story-cats"></div>
           <div class="learn-section-label">Conversations</div>
@@ -349,6 +351,45 @@
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <div id="guj-detail-body"></div>
+        </section>
+
+        <!-- Satsang Diksha Mukhpath: locked header + full 315-shlok catalog -->
+        <section id="view-sd-hub" class="view hidden">
+          <div class="sd-fixed">
+            <div class="sd-navrow">
+              <button class="back-btn" id="sd-hub-back" aria-label="Back">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <h2 class="view-title">Satsang Diksha</h2>
+              <button class="sd-goto-btn" id="sd-goto-btn" aria-label="Go to shlok number">#</button>
+            </div>
+            <div class="sd-gotorow hidden" id="sd-gotorow">
+              <input id="sd-goto-input" inputmode="numeric" placeholder="Go to shlok # (1–315)">
+              <button id="sd-goto-go">Go</button>
+            </div>
+            <div class="sd-tracker">
+              <div class="sd-tracker-row">
+                <span class="sd-tracker-n"><b id="sd-mem-count">0</b> of 315 memorized</span>
+                <span class="sd-tracker-lab">Mukhpath</span>
+              </div>
+              <div class="sd-bar"><i id="sd-mem-bar"></i></div>
+            </div>
+            <div class="sd-repeatrow">
+              <span class="sd-repeat-lab">Repeat</span>
+              <div class="sd-seg" id="sd-seg">
+                <button data-n="1">×1</button>
+                <button data-n="3">×3</button>
+                <button data-n="5">×5</button>
+                <button data-n="0">∞</button>
+              </div>
+            </div>
+            <div class="sd-listhint">Tap to add to today’s practice · hold to mark memorized</div>
+          </div>
+          <div id="sd-sections"></div>
+          <div class="sd-startbar" id="sd-startbar">
+            <button class="sd-clear-btn" id="sd-clear">Clear</button>
+            <button class="sd-start-btn" id="sd-start">Start playing</button>
+          </div>
         </section>
 
         <!-- AI Stories: Generator -->
@@ -938,6 +979,13 @@
                 </div>
               </div>
               <div class="ob-card">
+                <div class="ob-card-icon ob-icon-sd">શ્લો</div>
+                <div>
+                  <div class="ob-card-title">Satsang Diksha Mukhpath</div>
+                  <div class="ob-card-desc">Help your kids memorize all 315 shloks</div>
+                </div>
+              </div>
+              <div class="ob-card">
                 <div class="ob-card-icon ob-icon-custom">
                   <!-- Magic wand with sparkles -->
                   <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#f5c842" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -1015,6 +1063,13 @@
                   <div>
                     <div class="ob-guest-feature-title">Learn Gujarati</div>
                     <div class="ob-guest-feature-desc">Letters, words, verbs &amp; sentences</div>
+                  </div>
+                </div>
+                <div class="ob-guest-feature ob-guest-feature--locked">
+                  <div class="ob-guest-feature-icon">🔒</div>
+                  <div>
+                    <div class="ob-guest-feature-title">Satsang Diksha Mukhpath</div>
+                    <div class="ob-guest-feature-desc">Help your kids memorize all 315 shloks</div>
                   </div>
                 </div>
                 <div class="ob-guest-feature ob-guest-feature--locked">
@@ -1578,6 +1633,48 @@
           Add to my library
         </button>
         <button class="modal-item cancel" id="import-cancel">Not now</button>
+      </div>
+    </div>
+
+    <!-- Satsang Diksha Mukhpath: fullscreen chant player (overlay, outside the view system) -->
+    <div id="sd-player" class="hidden">
+      <video id="sd-video" playsinline webkit-playsinline preload="auto"></video>
+      <div class="sd-counter" id="sd-counter"></div>
+      <div class="sd-spin hidden" id="sd-spin"></div>
+      <button class="sd-amb sd-amb--x" id="sd-exit" aria-label="Exit">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <button class="sd-amb sd-amb--prev" id="sd-prev" aria-label="Previous shlok">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <button class="sd-amb sd-amb--pp" id="sd-pp" aria-label="Pause">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+      </button>
+      <button class="sd-amb sd-amb--next" id="sd-next" aria-label="Next shlok">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <div class="sd-veil hidden" id="sd-veil">
+        <div class="sd-veil-round" id="sd-veil-round"></div>
+        <div class="sd-veil-row">
+          <button class="sd-veil-side" id="sd-veil-prev" aria-label="Previous shlok">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <button class="sd-veil-main" id="sd-veil-play" aria-label="Resume">
+            <svg viewBox="0 0 15 16" width="28" height="32" fill="#241a09"><path d="M2 1.5v13l11-6.5z"/></svg>
+          </button>
+          <button class="sd-veil-side" id="sd-veil-next" aria-label="Next shlok">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+        <button class="sd-veil-restart" id="sd-veil-restart">↺&nbsp; Restart this shlok</button>
+        <div class="sd-veil-hint">Freeze on any word — say it together, then resume</div>
+      </div>
+      <div class="sd-breath hidden" id="sd-breath">
+        <div>
+          <div class="sd-breath-r" id="sd-breath-r"></div>
+          <div class="sd-breath-rule" id="sd-breath-rule"></div>
+          <div class="sd-breath-s" id="sd-breath-s"></div>
+        </div>
       </div>
     </div>
 

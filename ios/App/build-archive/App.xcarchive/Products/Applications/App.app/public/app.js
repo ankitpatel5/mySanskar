@@ -155,6 +155,7 @@
     'drift.onboardingDone',
     'drift.aiCharacters', 'drift.aiStories', 'drift.aiUsage', 'drift.imagenQuota',
     'drift.gujProgress', 'drift.completedStories',
+    'drift.sdMem', 'drift.sdRepeat',
     'drift.nitya', 'drift.nitya.v3',
     'drift.ekRemind', 'drift.ekRemindDays', 'drift.pushEnabled', 'drift.audiobooksEnabled',
     LS.playlists, LS.playCounts, LS.lastTrack, LS.queue, LS.library,
@@ -307,6 +308,7 @@
     syncAudiobooksSettingFromFirestore();
     syncAudiobookProgressFromFirestore();
     syncGujProgressFromFirestore();
+    syncSdMemFromFirestore();
     syncNityaFromFirestore();
     initDownloads();
     checkForUpdate();
@@ -595,6 +597,7 @@
           syncAudiobooksSettingFromFirestore();
           syncAudiobookProgressFromFirestore();
           syncGujProgressFromFirestore();
+          syncSdMemFromFirestore();
           syncNityaFromFirestore();
         } else {
           proceedAsUser(user);
@@ -1529,6 +1532,7 @@
       // ttsState.active (not just audible) also covers the prerendered-audio
       // fetch window, where TTS is loading but nothing is playing yet.
       tts:       { playing: () => ttsState.active,                stop: () => stopTTS() },
+      sd:        { playing: () => sdVideoPlaying(),               stop: () => sdPauseFromFocus() },
     });
   }
 
@@ -3427,10 +3431,464 @@
     }
   }
 
+  // ============== SATSANG DIKSHA MUKHPATH ==============
+  // Committee consult 2026-07-19 rev 4 (see CLAUDE.md): Learn-tab tile →
+  // hub with locked header (memorized tracker + repeat picker + # go-to)
+  // over the full 315-shlok catalog in sections of 10; tap-select builds a
+  // practice queue, hold marks memorized (parent-asserted); fullscreen
+  // portrait video player with repeat rounds, ~2s breath beats between
+  // rounds/shloks, ambient exit/prev/pause/next. Karaoke text is baked into
+  // the videos (Drive folder below). Single-audio rule claimed on 'play'.
+
+  const SD_FOLDER_ID = '1YIqwJab0LgL17yaYFKtUzE4GlVpP7EQj';
+  const SD_TOTAL = 315;
+  const SD_CATALOG_KEY = 'drift.sdCatalog.v1';
+  const SD_CATALOG_TTL_MS = 24 * 60 * 60 * 1000;
+
+  let _sdCatalog = null;   // { '1': driveFileId, ... } — null until loaded
+  let _sdSel = new Set();  // today's practice queue (session-only, deliberate)
+  let _sdMem = null;       // Set of memorized shlok numbers (persisted per user)
+  let _sdRepeat = (() => {
+    const v = parseInt(localStorage.getItem('drift.sdRepeat') || '3', 10);
+    return Number.isFinite(v) ? v : 3; // 0 = ∞
+  })();
+  // player session state
+  let _sdQueue = [], _sdQi = 0, _sdRound = 1, _sdBreathT = null, _sdWakeLock = null;
+
+  function sdMem() {
+    if (_sdMem === null) {
+      try { _sdMem = new Set(JSON.parse(localStorage.getItem('drift.sdMem') || '[]')); }
+      catch { _sdMem = new Set(); }
+    }
+    return _sdMem;
+  }
+  function sdSaveMem() {
+    try { localStorage.setItem('drift.sdMem', JSON.stringify([...sdMem()])); } catch {}
+    saveSdMemToFirestore();
+  }
+
+  // ── Memorized set: cross-device persistence (gujProgress pattern) ──
+  // Doc: users/{uid}/settings/sdMem { nums: ['313', ...] }. Debounced save;
+  // union-merge on sign-in. "Memorized" can be un-marked (a parent correcting
+  // a mis-tap), so remote is REPLACED by local after first merge — the union
+  // only runs at sync time to rescue progress made offline on another device.
+  function sdMemRef() { return state.user ? window.fbDb.doc(`users/${activeUid()}/settings/sdMem`) : null; }
+  let _sdMemSaveTimer = null, _sdMemSynced = false;
+  function saveSdMemToFirestore() {
+    if (isImpersonating() || isGuestMode()) return; // view-only / no account
+    const ref = sdMemRef(); if (!ref) return;
+    clearTimeout(_sdMemSaveTimer);
+    _sdMemSaveTimer = setTimeout(() => {
+      ref.set({ nums: [...sdMem()] }, { merge: true }).catch((e) => console.warn('sd mem save failed', e));
+    }, 800);
+  }
+  async function syncSdMemFromFirestore() {
+    const ref = sdMemRef(); if (!ref) return;
+    try {
+      const doc = await ref.get();
+      const remote = (doc.exists && Array.isArray(doc.data().nums)) ? doc.data().nums : [];
+      const local = sdMem();
+      const merged = new Set([...local, ...remote.map(String)]);
+      const localGrew = merged.size > remote.length;
+      _sdMem = merged;
+      _sdMemSynced = true;
+      try { localStorage.setItem('drift.sdMem', JSON.stringify([...merged])); } catch {}
+      if (localGrew && !isImpersonating() && !isGuestMode()) ref.set({ nums: [...merged] }, { merge: true }).catch(() => {});
+      if (!$('view-sd-hub').classList.contains('hidden')) { sdRenderSections(); sdRenderHeader(); }
+    } catch (e) { console.warn('sd mem sync failed', e); }
+  }
+
+  // Catalog: one Drive listing (315 files "Shloka #N.mp4"), cached 24h.
+  // Duplicate-numbered files (e.g. "Shloka #224 (2).mp4") lose to the
+  // first-seen plain name.
+  async function sdEnsureCatalog() {
+    if (_sdCatalog) return _sdCatalog;
+    try {
+      const cached = JSON.parse(localStorage.getItem(SD_CATALOG_KEY) || 'null');
+      if (cached && cached.at && (Date.now() - cached.at) < SD_CATALOG_TTL_MS && cached.map) {
+        _sdCatalog = cached.map;
+        return _sdCatalog;
+      }
+    } catch {}
+    const url = `https://www.googleapis.com/drive/v3/files?q='${SD_FOLDER_ID}'+in+parents+and+trashed=false`
+      + `&key=${encodeURIComponent(API_KEY)}&pageSize=1000&fields=files(id,name)`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`sd catalog HTTP ${res.status}`);
+    const data = await res.json();
+    const map = {};
+    (data.files || []).forEach((f) => {
+      const m = /(\d+)/.exec(f.name || '');
+      if (!m) return;
+      const n = String(parseInt(m[1], 10));
+      const isDupe = /\(\d+\)/.test(f.name);
+      if (!map[n] || (!isDupe && map[n].dupe)) map[n] = { id: f.id, dupe: isDupe };
+    });
+    _sdCatalog = {};
+    Object.keys(map).forEach((n) => { _sdCatalog[n] = map[n].id; });
+    try { localStorage.setItem(SD_CATALOG_KEY, JSON.stringify({ at: Date.now(), map: _sdCatalog })); } catch {}
+    return _sdCatalog;
+  }
+
+  function renderSdHero() {
+    const el = $('sd-hero');
+    if (!el) return;
+    const locked = isGuestMode();
+    const trailing = locked
+      ? '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>'
+      : '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+    el.innerHTML = `
+      <button class="guj-hero sd-hero${locked ? ' guj-hero--locked' : ''}" id="sd-hero-btn">
+        <span class="guj-hero-mark sd-hero-mark">શ્લો<br>ક</span>
+        <span class="guj-hero-text">
+          <span class="guj-hero-title">Satsang Diksha Mukhpath</span>
+        </span>
+        <span class="guj-hero-arrow">${trailing}</span>
+      </button>`;
+    $('sd-hero-btn').addEventListener('click', () => {
+      if (isGuestMode()) {
+        toast('Create a free account to memorize shloks');
+        return;
+      }
+      openSdHub();
+    });
+  }
+
+  function openSdHub() {
+    logActivity('learn', 'Satsang Diksha Mukhpath');
+    sdRenderHeader();
+    sdRenderSections();       // renders instantly from cache or as "loading"
+    switchView('view-sd-hub');
+    $('content').scrollTo({ top: 0, behavior: 'instant' });
+    sdEnsureCatalog()
+      .then(() => sdRenderSections())
+      .catch(() => { const host = $('sd-sections'); if (host && !host.dataset.ready) host.innerHTML = '<div class="sd-empty">Couldn’t load the shloks — check your connection and try again.</div>'; });
+  }
+
+  function sdRenderHeader() {
+    const m = sdMem().size;
+    $('sd-mem-count').textContent = m;
+    $('sd-mem-bar').style.width = `${Math.max(1.5, (m / SD_TOTAL) * 100).toFixed(1)}%`;
+    document.querySelectorAll('#sd-seg button').forEach((b) =>
+      b.classList.toggle('active', parseInt(b.dataset.n, 10) === _sdRepeat));
+    const n = _sdSel.size;
+    $('sd-startbar').classList.toggle('sd-startbar--on', n > 0);
+    $('sd-start').textContent = `▶  Start playing · ${n} shlok${n === 1 ? '' : 's'}`;
+    $('sd-clear').textContent = `Clear (${n})`;
+  }
+
+  // Hold-to-memorize + tap-to-select on one element (chips grammar, rev 3).
+  // Toggles update the DOM IN PLACE — a full re-render here rebuilt the list
+  // and yanked the scroll position (owner-reported jump on select).
+  function sdWireHold(el, num) {
+    let holdT = null, held = false;
+    const down = () => { held = false; holdT = setTimeout(() => { held = true; sdToggleMem(num); }, 550); };
+    const up = () => clearTimeout(holdT);
+    el.addEventListener('touchstart', down, { passive: true });
+    el.addEventListener('mousedown', down);
+    ['touchend', 'touchcancel', 'mouseup', 'mouseleave'].forEach((ev) => el.addEventListener(ev, up));
+    el.addEventListener('click', () => {
+      if (held) { held = false; return; }
+      _sdSel.has(num) ? _sdSel.delete(num) : _sdSel.add(num);
+      sdUpdateRowEl(num); sdUpdateSectionHead(sdSectionStart(num)); sdRenderHeader();
+    });
+    el.addEventListener('contextmenu', (e) => e.preventDefault()); // long-press must not open a menu
+  }
+  function sdToggleMem(num) {
+    const mem = sdMem();
+    mem.has(num) ? mem.delete(num) : mem.add(num);
+    sdSaveMem();
+    sdUpdateRowEl(num); sdUpdateSectionHead(sdSectionStart(num)); sdRenderHeader();
+  }
+
+  // Sections are collapsed by default; the user expands the ones they're
+  // exploring (multiple may be open). Expanded set is session-only.
+  const _sdOpen = new Set();
+  function sdSectionStart(num) { return Math.floor((parseInt(num, 10) - 1) / 10) * 10 + 1; }
+  function sdSectionIds(start) {
+    const ids = [];
+    for (let n = start; n <= Math.min(start + 9, SD_TOTAL); n++) ids.push(String(n));
+    return ids;
+  }
+
+  function sdUpdateRowEl(num) {
+    const row = $(`sd-row-${num}`);
+    if (!row) return; // collapsed section — state applies on next expand
+    row.classList.toggle('sd-row--sel', _sdSel.has(String(num)));
+    row.classList.toggle('sd-row--mem', sdMem().has(String(num)));
+  }
+  function sdUpdateSectionHead(start) {
+    const head = $(`sd-sechead-${start}`);
+    if (!head) return;
+    const ids = sdSectionIds(start);
+    const mem = sdMem();
+    const memN = ids.filter((n) => mem.has(n)).length;
+    const avail = ids.filter((n) => _sdCatalog && _sdCatalog[n]);
+    const allSel = avail.length > 0 && avail.every((n) => _sdSel.has(n));
+    const m = head.querySelector('.sd-sechead-m');
+    if (m) { m.textContent = `${memN}/${ids.length} memorized`; m.classList.toggle('sd-sechead-m--zero', !memN); }
+    const selBtn = head.querySelector('.sd-secsel');
+    if (selBtn) selBtn.textContent = allSel ? 'Deselect' : 'Select';
+  }
+
+  function sdBuildRow(n) {
+    const mem = sdMem();
+    const row = document.createElement('div');
+    const on = _sdCatalog[n];
+    row.id = `sd-row-${n}`;
+    row.className = 'sd-row' + (on ? '' : ' sd-row--off') + (_sdSel.has(n) ? ' sd-row--sel' : '') + (mem.has(n) ? ' sd-row--mem' : '');
+    row.innerHTML = `<span class="sd-row-num">${n}</span>`
+      + `<span class="sd-row-t">Shlok ${n}${on ? '' : ' · coming soon'}</span>`
+      + '<span class="sd-row-mdot"></span><span class="sd-row-selc"></span>';
+    if (on) sdWireHold(row, n);
+    return row;
+  }
+
+  function sdToggleSection(start, forceOpen) {
+    const body = $(`sd-secbody-${start}`);
+    const head = $(`sd-sechead-${start}`);
+    if (!body || !head) return;
+    const open = forceOpen === true ? true : (forceOpen === false ? false : !_sdOpen.has(start));
+    if (open === _sdOpen.has(start) && body.childElementCount > 0 === open) { /* no-op */ }
+    if (open) {
+      _sdOpen.add(start);
+      if (!body.childElementCount) sdSectionIds(start).forEach((n) => body.appendChild(sdBuildRow(n)));
+    } else {
+      _sdOpen.delete(start);
+      body.innerHTML = '';
+    }
+    head.classList.toggle('sd-sechead--open', open);
+  }
+
+  function sdRenderSections() {
+    const host = $('sd-sections');
+    if (!host) return;
+    if (!_sdCatalog) { host.innerHTML = '<div class="sd-empty">Loading shloks…</div>'; return; }
+    host.dataset.ready = '1';
+    const frag = document.createDocumentFragment();
+    for (let start = 1; start <= SD_TOTAL; start += 10) {
+      const end = Math.min(start + 9, SD_TOTAL);
+      const ids = sdSectionIds(start);
+      const avail = ids.filter((n) => _sdCatalog[n]);
+
+      const head = document.createElement('div');
+      head.className = 'sd-sechead' + (_sdOpen.has(start) ? ' sd-sechead--open' : '');
+      head.id = `sd-sechead-${start}`;
+      head.innerHTML = '<span class="sd-sechead-chev"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>'
+        + `<span class="sd-sechead-t">Shloks ${start} – ${end}</span>`
+        + '<span class="sd-sechead-r"><span class="sd-sechead-m"></span>'
+        + (avail.length ? '<button class="sd-secsel"></button>' : '')
+        + '</span>';
+      head.addEventListener('click', (e) => {
+        if (e.target.closest('.sd-secsel')) return; // Select acts, never collapses
+        sdToggleSection(start);
+      });
+      const selBtn = head.querySelector('.sd-secsel');
+      if (selBtn) selBtn.addEventListener('click', () => {
+        const all = avail.every((n) => _sdSel.has(n));
+        ids.forEach((n) => { if (!_sdCatalog[n]) return; all ? _sdSel.delete(n) : _sdSel.add(n); });
+        ids.forEach(sdUpdateRowEl);
+        sdUpdateSectionHead(start); sdRenderHeader();
+      });
+      frag.appendChild(head);
+
+      const body = document.createElement('div');
+      body.className = 'sd-secbody';
+      body.id = `sd-secbody-${start}`;
+      frag.appendChild(body);
+    }
+    host.innerHTML = '';
+    host.appendChild(frag);
+    // Stamp counts/labels + refill any sections the user had expanded.
+    for (let start = 1; start <= SD_TOTAL; start += 10) {
+      sdUpdateSectionHead(start);
+      if (_sdOpen.has(start)) sdToggleSection(start, true);
+    }
+  }
+
+  function sdGotoShlok() {
+    const v = parseInt($('sd-goto-input').value, 10);
+    if (!v || v < 1 || v > SD_TOTAL) return;
+    sdToggleSection(sdSectionStart(v), true); // expand the target's section first
+    const row = $(`sd-row-${v}`);
+    if (!row) return;
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    row.classList.remove('sd-row--flash');
+    void row.offsetWidth;
+    row.classList.add('sd-row--flash');
+  }
+
+  // ── Player ────────────────────────────────────────────────────────
+  const sdVideo = () => $('sd-video');
+  function sdVideoPlaying() {
+    const v = sdVideo();
+    return !!v && !v.paused && !$('sd-player').classList.contains('hidden');
+  }
+  // Another source (music/TTS/audiobook) started: pause the chant + show veil.
+  function sdPauseFromFocus() {
+    const v = sdVideo();
+    if (v) v.pause();
+    if (!$('sd-player').classList.contains('hidden')) sdShowVeil(true);
+  }
+
+  async function sdAcquireWakeLock() {
+    try {
+      if ('wakeLock' in navigator) _sdWakeLock = await navigator.wakeLock.request('screen');
+    } catch {} // denied/unsupported: inline video usually holds iOS awake anyway
+  }
+  function sdReleaseWakeLock() {
+    try { if (_sdWakeLock) { _sdWakeLock.release(); _sdWakeLock = null; } } catch {}
+  }
+  document.addEventListener('visibilitychange', () => {
+    // Screen wake locks auto-release on background; re-acquire when we return
+    // mid-session (the OS shows the video paused state otherwise).
+    if (document.visibilityState === 'visible' && !$('sd-player').classList.contains('hidden')) sdAcquireWakeLock();
+  });
+
+  function sdStartQueue() {
+    const queue = [..._sdSel].filter((n) => _sdCatalog && _sdCatalog[n]).sort((a, b) => +a - +b);
+    if (!queue.length) return;
+    _sdQueue = queue; _sdQi = 0;
+    logActivity('learn', `Mukhpath practice: ${queue.length} shlok${queue.length === 1 ? '' : 's'} ×${_sdRepeat || '∞'}`);
+    $('sd-player').classList.remove('hidden');
+    document.body.classList.add('sd-player-open');
+    sdAcquireWakeLock();
+    sdLoadShlok();
+  }
+
+  function sdLoadShlok() {
+    clearTimeout(_sdBreathT);
+    _sdRound = 1;
+    sdHideBreath(); sdShowVeil(false);
+    const v = sdVideo();
+    const num = _sdQueue[_sdQi];
+    $('sd-spin').classList.remove('hidden');
+    v.src = streamUrl(_sdCatalog[num]);
+    v.currentTime = 0;
+    const p = v.play();
+    if (p && p.catch) p.catch(() => { sdShowVeil(true); }); // autoplay veto → veil offers Play
+    sdUpdateCounter();
+  }
+
+  function sdUpdateCounter() {
+    const r = _sdRepeat === 0 ? `${_sdRound}/∞` : `${_sdRound}/${_sdRepeat}`;
+    $('sd-counter').innerHTML = `${r} <span>· ${_sdQi + 1} of ${_sdQueue.length}</span>`;
+    $('sd-veil-round').textContent = `Paused · Round ${_sdRound}${_sdRepeat ? ` of ${_sdRepeat}` : ''} · Shlok ${_sdQueue[_sdQi]}`;
+    $('sd-prev').disabled = _sdQi === 0;
+    $('sd-next').disabled = _sdQi >= _sdQueue.length - 1;
+  }
+
+  function sdShowBreath(big, small, handoff) {
+    $('sd-breath-r').textContent = big;
+    $('sd-breath-s').textContent = small;
+    $('sd-breath-rule').classList.toggle('hidden', !handoff);
+    $('sd-breath').classList.remove('hidden');
+  }
+  function sdHideBreath() { $('sd-breath').classList.add('hidden'); }
+
+  function sdOnEnded() {
+    const last = _sdRepeat !== 0 && _sdRound >= _sdRepeat;
+    if (!last) {
+      _sdRound += 1;
+      sdShowBreath(`Round ${_sdRound}${_sdRepeat ? ` of ${_sdRepeat}` : ''}`, 'breathe in · here it comes again', false);
+      _sdBreathT = setTimeout(() => {
+        sdHideBreath();
+        const v = sdVideo(); v.currentTime = 0; v.play().catch(() => sdShowVeil(true));
+        sdUpdateCounter();
+      }, 2000);
+      return;
+    }
+    if (_sdQi < _sdQueue.length - 1) {
+      sdShowBreath(`Next · Shlok ${_sdQueue[_sdQi + 1]}`, 'same rhythm · keep chanting', true);
+      _sdBreathT = setTimeout(() => { _sdQi += 1; sdLoadShlok(); }, 2000);
+    } else {
+      sdShowBreath('Practice done', 'back to your shloks', true);
+      _sdBreathT = setTimeout(() => sdClosePlayer(), 1800);
+    }
+  }
+
+  function sdShowVeil(show) {
+    $('sd-veil').classList.toggle('hidden', !show);
+  }
+  function sdTogglePause() {
+    const v = sdVideo();
+    if (!$('sd-breath').classList.contains('hidden')) return; // breath beats aren't interactive
+    if (v.paused) { v.play().catch(() => {}); sdShowVeil(false); }
+    else { v.pause(); sdShowVeil(true); }
+  }
+  function sdJump(dir) {
+    const t = _sdQi + dir;
+    if (t < 0 || t >= _sdQueue.length) return;
+    _sdQi = t;
+    sdLoadShlok();
+  }
+  function sdClosePlayer() {
+    clearTimeout(_sdBreathT);
+    const v = sdVideo();
+    try { v.pause(); v.removeAttribute('src'); v.load(); } catch {}
+    $('sd-player').classList.add('hidden');
+    document.body.classList.remove('sd-player-open');
+    sdHideBreath(); sdShowVeil(false);
+    sdReleaseWakeLock();
+    sdRenderHeader(); // tracker is the quiet payoff on return
+  }
+
+  function setupSdPlayer() {
+    const v = sdVideo();
+    if (!v) return;
+    v.addEventListener('play', () => {
+      stopAllOtherAudio('sd'); // chant never competes — music/TTS/audiobook pause
+      $('sd-spin').classList.add('hidden');
+    });
+    v.addEventListener('playing', () => $('sd-spin').classList.add('hidden'));
+    v.addEventListener('waiting', () => $('sd-spin').classList.remove('hidden'));
+    v.addEventListener('ended', sdOnEnded);
+    v.addEventListener('error', () => {
+      $('sd-spin').classList.add('hidden');
+      toast('Couldn’t play this shlok — check your connection');
+      sdShowVeil(true);
+    });
+    // Whole-screen tap = pause-and-say (controls stop their own propagation).
+    $('sd-player').addEventListener('click', (e) => {
+      if (e.target.closest('.sd-amb, .sd-veil-side, .sd-veil-main, .sd-veil-restart')) return;
+      sdTogglePause();
+    });
+    $('sd-exit').addEventListener('click', (e) => { e.stopPropagation(); sdClosePlayer(); });
+    $('sd-pp').addEventListener('click', (e) => { e.stopPropagation(); sdTogglePause(); });
+    $('sd-prev').addEventListener('click', (e) => { e.stopPropagation(); sdJump(-1); });
+    $('sd-next').addEventListener('click', (e) => { e.stopPropagation(); sdJump(1); });
+    $('sd-veil-play').addEventListener('click', (e) => { e.stopPropagation(); sdTogglePause(); });
+    $('sd-veil-prev').addEventListener('click', (e) => { e.stopPropagation(); sdJump(-1); });
+    $('sd-veil-next').addEventListener('click', (e) => { e.stopPropagation(); sdJump(1); });
+    $('sd-veil-restart').addEventListener('click', (e) => {
+      e.stopPropagation();
+      _sdRound = 1;
+      const vv = sdVideo(); vv.currentTime = 0; vv.play().catch(() => {});
+      sdShowVeil(false); sdUpdateCounter();
+    });
+    // Hub statics
+    $('sd-hub-back').addEventListener('click', () => switchTab('stories'));
+    $('sd-goto-btn').addEventListener('click', () => {
+      $('sd-gotorow').classList.toggle('hidden');
+      if (!$('sd-gotorow').classList.contains('hidden')) $('sd-goto-input').focus();
+    });
+    $('sd-goto-go').addEventListener('click', sdGotoShlok);
+    $('sd-goto-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') sdGotoShlok(); });
+    document.querySelectorAll('#sd-seg button').forEach((b) => {
+      b.addEventListener('click', () => {
+        _sdRepeat = parseInt(b.dataset.n, 10);
+        try { localStorage.setItem('drift.sdRepeat', String(_sdRepeat)); } catch {}
+        sdRenderHeader();
+      });
+    });
+    $('sd-clear').addEventListener('click', () => { _sdSel.clear(); sdRenderSections(); sdRenderHeader(); });
+    $('sd-start').addEventListener('click', sdStartQueue);
+  }
+
   // ============== STORY TIME ==============
 
   function renderStoryCategories() {
     renderGujHero();
+    renderSdHero();
     const data = window.STORIES_DATA;
     if (!data) return;
     const container = $('story-cats');
@@ -7946,6 +8404,9 @@ ${numbered}`;
     // ── Story Time ──────────────────────────────────────
     $('conv-ages-back').addEventListener('click', () => switchTab('stories'));
 
+    // Satsang Diksha Mukhpath (hub statics + player)
+    setupSdPlayer();
+
     // Learn Gujarati navigation
     $('guj-hub-back').addEventListener('click', () => switchTab('stories'));
     $('guj-section-back').addEventListener('click', () => openGujHub());
@@ -8395,6 +8856,7 @@ ${numbered}`;
   const BACK_BTN_BY_VIEW = {
     'view-album': 'album-back',
     'view-playlist': 'playlist-back',
+    'view-sd-hub': 'sd-hub-back',
     'view-gujarati-hub': 'guj-hub-back',
     'view-gujarati-section': 'guj-section-back',
     'view-gujarati-detail': 'guj-detail-back',
@@ -8409,6 +8871,8 @@ ${numbered}`;
   // Returns true if it consumed the back action.
   function goBack(source) {
     // Layered UI first: an open sheet/modal closes before any view navigates.
+    const sdp = $('sd-player');
+    if (sdp && !sdp.classList.contains('hidden')) { sdClosePlayer(); return true; }
     const sheet = $('player-sheet');
     if (sheet && !sheet.classList.contains('hidden')) { closePlayerSheet(); return true; }
     const openM = document.querySelector('.modal:not(.hidden)');

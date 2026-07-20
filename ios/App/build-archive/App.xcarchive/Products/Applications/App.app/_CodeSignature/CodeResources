@@ -86,7 +86,7 @@
 		</data>
 		<key>Frameworks/Capacitor.framework/Capacitor</key>
 		<data>
-		RgFqEcngJ5XvY1KWoYHgE4OWYnU=
+		/rhHiQJA0lE54LQR42lUsNjUTcs=
 		</data>
 		<key>Frameworks/Capacitor.framework/Info.plist</key>
 		<data>
@@ -106,7 +106,7 @@
 		</data>
 		<key>Frameworks/Cordova.framework/Cordova</key>
 		<data>
-		aJm+iY8eMq0RPtrHYIlrL5bXlaY=
+		aLQNBcisAcm6PbZpOlog49EBRKc=
 		</data>
 		<key>Frameworks/Cordova.framework/Info.plist</key>
 		<data>
@@ -580,7 +580,7 @@
 		</data>
 		<key>Info.plist</key>
 		<data>
-		4NMKUpFRsupcT29ddgPgkS2B9gA=
+		UGSR83ApooPxQD0XIDmIwBEGiSk=
 		</data>
 		<key>PkgInfo</key>
 		<data>
@@ -588,15 +588,15 @@
 		</data>
 		<key>PlugIns/NityaWidget.appex/Info.plist</key>
 		<data>
-		Ad9orbykdbESEfYMW1pcHeGtggk=
+		MquLOcd40UqeyJMqz2FikR5F6og=
 		</data>
 		<key>PlugIns/NityaWidget.appex/NityaWidget</key>
 		<data>
-		nliTJqRaq7+HxqZ8gR/YVHZWNbU=
+		bSgCNtBMNc3QeuJnsYwU4ORXR40=
 		</data>
 		<key>PlugIns/NityaWidget.appex/_CodeSignature/CodeResources</key>
 		<data>
-		OA616qbKTw5bZ9zbnwHBwXWLt8k=
+		QwiU+NLsKrU0txpLtftxwAyGbt8=
 		</data>
 		<key>PlugIns/NityaWidget.appex/embedded.mobileprovision</key>
 		<data>
@@ -632,11 +632,11 @@
 		</data>
 		<key>public/app-build.js</key>
 		<data>
-		Z2u7lW3oPDZLkgxV9gDvo01qdfU=
+		ibOiqeXHbXwsn4TbcCQ0Bh5Lk/4=
 		</data>
 		<key>public/app.js</key>
 		<data>
-		NouiY4ULakvRmqNz+IMJzAmcHxk=
+		b1X5cl65j7h6dGCqCyN4d2ziJY4=
 		</data>
 		<key>public/baal.png</key>
 		<data>
@@ -5108,7 +5108,7 @@
 		</data>
 		<key>public/index.html</key>
 		<data>
-		qaZZYzz7/lkRschNmYLN6Ezu/6E=
+		RkZmLKuAk1v73HqXfWgSybIhm+c=
 		</data>
 		<key>public/lottie.min.js</key>
 		<data>
@@ -5128,7 +5128,7 @@
 		</data>
 		<key>public/styles.css</key>
 		<data>
-		3G8zuWtI8cKHeVt0A9Bq7D4ao/o=
+		SXPKrIoRxTezzbN4KE8LBIgXOxk=
 		</data>
 		<key>public/sw.js</key>
 		<data>
@@ -5293,7 +5293,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			z1G5ktB7qhUp5LImjN0emKUR+SccFDIlwucer4AgJPY=
+			K4VYAWQ30oIAjQX+GqhITf6PuYRmHRi5Wg/y65jqbDA=
 			</data>
 		</dict>
 		<key>Frameworks/Capacitor.framework/Info.plist</key>
@@ -5328,7 +5328,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			pYidTBsO/CcBzep2qfW5XlLl9oc0JV+NZ/IzWN3x71Q=
+			eXtXfXqun7jviPKHiDSJjwZElImRi062N0PKDTFqMhs=
 			</data>
 		</dict>
 		<key>Frameworks/Cordova.framework/Info.plist</key>
@@ -5901,21 +5901,21 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			fioZu2WTeeixQu7cvsQvr3f1CQjuWEFno4pOZgyazc8=
+			BY/oPN4iP20AU1se81uJJiVdgsUWYgnHicy/J3gYuZ0=
 			</data>
 		</dict>
 		<key>PlugIns/NityaWidget.appex/NityaWidget</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			xzfh6VccmwJ0B2dIR6uGCVrKb78p05RPW6qgaoreki4=
+			Zk6XX3751ZyG3NYfXg98lz6Z3qhgrlwQqoYFstCwoHI=
 			</data>
 		</dict>
 		<key>PlugIns/NityaWidget.appex/_CodeSignature/CodeResources</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			zsBIiIVvOuzdQ1m7FWGhob7EVkEFXlhkWmqZ35fjf3w=
+			Ld23BrUN/VCFF1ceLiqWW6zInmuztaya7NrSsdpt65Q=
 			</data>
 		</dict>
 		<key>PlugIns/NityaWidget.appex/embedded.mobileprovision</key>
@@ -5978,14 +5978,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			FRJItuPWt+Zz2HEefH2dBrbn2esLMUrBr4khEPT/ehk=
+			Wxw4K5S/vBKLamHrem1A6Xt7659AZ+B7XkgThXvxyXs=
 			</data>
 		</dict>
 		<key>public/app.js</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			JCb0qoHzTALIJzA2A2FftwYqOteKlA69Y2iVKDInQj8=
+			+2vSD2YIY8NkoExzXYkvVRdshXoIBTM9+kXpy78kChc=
 			</data>
 		</dict>
 		<key>public/baal.png</key>
@@ -13811,7 +13811,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			8+1CDtuUZnnWnfHQScqrba+z+LBjpsctLnnwcOor2yA=
+			KgcVaCieh52f0dbd+bZ4spVJaVppzj2SKljmkmxuOsQ=
 			</data>
 		</dict>
 		<key>public/lottie.min.js</key>
@@ -13846,7 +13846,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			36HqLjv6bif57p3a7NTghs0P4tBZd0pwOFynTM3PuyE=
+			+O5xlbUkErmC7jxqYLRBI/83nsNVhbBAN8HFhkJF4Tc=
 			</data>
 		</dict>
 		<key>public/sw.js</key>

@@ -1,1 +1,1 @@
-window.APP_BUILD = { version: "1.9", build: "1" };
+window.APP_BUILD = { version: "1.10", build: "1" };
