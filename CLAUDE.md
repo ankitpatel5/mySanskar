@@ -780,7 +780,8 @@ group for narrower questions (motion → iOS craft; copy/forms → product leade
   surface, no separate View All screen. Global Clear + pinned Start
   unchanged. Player/breath/handoff unchanged from rev 2-3.
   Decision: rev-4 recorded — awaiting owner's go-ahead to build.
-  **BUILT 2026-07-19 (owner approved; on staging).** All 315 videos now in
+  **SHIPPED TO PROD 2026-07-19** (owner tested on iPhone → "ship it";
+  prod sw.js stamp + sd code verified live; both native projects synced). All 315 videos now in
   the Drive folder (SD_FOLDER_ID in app.js; dupe "Shloka #224 (2).mp4"
   loses to plain name at ingest — ask owner to delete; also flag: the
   #315 video's baked badge says #314). Copy tweaks: section headers just
