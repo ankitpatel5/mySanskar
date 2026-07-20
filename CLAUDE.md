@@ -223,6 +223,21 @@ When the user says anything like "build for iOS submission", "archive for App St
   market://details?id=com.ankit.mysanskar (shows "Item not found" until published).
 
 ## Feature map (find things in app.js by function name, not line number)
+- **Satsang Diksha Mukhpath** (Learn tab · shipped to staging 2026-07-19):
+  `renderSdHero` (guest-locked tile) → `openSdHub` (view-sd-hub: sticky
+  `.sd-fixed` header w/ tracker + repeat picker + # go-to over full 315
+  catalog, `sdRenderSections`, sections of 10, per-section select) →
+  `sdStartQueue` → `#sd-player` fixed overlay (`sdLoadShlok`/`sdOnEnded`
+  round+handoff breaths, `sdTogglePause` veil, ambient ✕‹⏸›). Videos
+  stream from Drive `SD_FOLDER_ID` (catalog cached `drift.sdCatalog.v1`
+  24h). Single-audio: `sd` entry in stopAllOtherAudio map +
+  stopAllOtherAudio('sd') on video 'play'. Persistence: `drift.sdMem`,
+  `drift.sdRepeat` (both in PER_USER_LS_KEYS; selection deliberately
+  session-only). Back: BACK_BTN_BY_VIEW + goBack closes #sd-player first.
+  Wake lock: navigator.wakeLock + visibilitychange re-acquire (iOS 16.4+;
+  KeepAwake plugin still open for older iOS). NOT yet done: msClaim('sd')
+  lock-screen identity (utils MS_ACTION_MAP has no 'sd' — foreground
+  feature v1), background-audio-on-lock spike, ghanti tick/haptics.
 - **Nitya home-screen widget**: `nityaSyncToWidget` / `playNityaFromWidget`; native
   `App/NityaWidgetPlugin.swift` + `NityaWidget/NityaWidget.swift` (WidgetKit target);
   App Group `group.com.ankitpatel5.mysanskar`, key `nitya.items`; deep link
@@ -650,6 +665,126 @@ group for narrower questions (motion → iOS craft; copy/forms → product leade
    it produced.
 
 ## Committee consults
+- **2026-07-19 · Satsang Diksha Mukhpath (315 shlok karaoke videos, Learn tab) ·
+  full committee (4 groups).** Artifact: Drive folder (3 test videos #313-315,
+  1080×1920 ~44s ~2.4MB, karaoke word-highlight cards w/ Gujarati +
+  transliteration + meaning + Mahant Swami photo). UNANIMOUS FOUNDATION:
+  (1) **audio-first architecture** — it's a chant that ships inside an mp4; must
+  ride the existing rails (stopAllOtherAudio, msClaim on 'play', mini-player,
+  sleep timer, buffering-cue tokens) and playback MUST survive screen lock
+  (car/bedtime is the core use; if lock kills audio, nothing else matters —
+  lock screen = card still as artwork, prev/next-SHLOK replaces ±15s seek).
+  (2) **The player is the product, the library is scaffolding** (Singer):
+  default mode "repeat N times, then next-in-set"; section OPENS on a
+  resume/repeat card ("Continue — Shlok 313 · played 4×"), list secondary.
+  (3) **Loop-one default ON with a live visible counter** ("3 of 5"), via the
+  tri-state repeat pattern — NEVER native audio.loop (ended-event drives the
+  counter). (4) **Number-first navigation, zero thumbnails** (315 identical
+  cards = chartjunk): milestone-set/decade-banded number-chip grid, row =
+  big numeral + one line of Gujarati, NO English in rows; numeric go-to
+  deferred until corpus >~30. (5) **Identity**: teal `.learn-section-label`
+  section in Learn ("Satsang Diksha · Mukhpath"); the dark card supplies its
+  own devotional identity; saffron only in the orbit buffering ring (around
+  the shlok badge, poster frame so it never lands on black). ADJUDICATED:
+  video shown WHOLE (Tufte: no app pixel over shlok pixels) with one control
+  object in the card's dead zone — repeat dial ×3/×5/×11/∞ (mala numbers,
+  detent haptics) — over Ive's tap-summoned overlay; single-tap does NOT
+  restart (repeat automation makes it redundant; kids' stray taps). Progress:
+  quiet auto `--success` dot at ≥5 plays, green not gold (one-green rule
+  beats Kare's gold), NO streaks/confetti/N-of-315 meters (2026-07-13 line
+  holds); parent long-press "learned" deferred. CRAFT (P2, after core):
+  row→player→mini-player FLIP morph w/ badge as shared element over cached
+  poster; velocity-inherited swipe-back exit; single ghanti tick + light
+  haptic at repetition boundary (app silent otherwise, out of reverence);
+  screenshottable completion frame (frozen last frame + badge morph +
+  "chanted 5×"). v1 SCOPE (3 videos): teal section + resume card + chip row
+  313-315 + fullscreen player w/ repeat dial + counter + background-audio
+  survival + media-session + mini-player + `_sdProgress` localStorage
+  (mirror _gujProgress). TECH SPIKE FIRST: verify <video> audio survives
+  lock in WKWebView/Android WebView (else extract audio track fallback).
+  Vertical swipe pager next/prev (Matas) accepted, preload ±1.
+  **DELTA RECONVENE (same day) — OWNER DIRECTIVE "video is core":** session
+  model = screen-on co-viewing (parent + kid, phone propped, chanting along),
+  NOT locked-phone listening; background audio demoted to graceful
+  degradation. Revised ruling: (1) **Set-and-forget** (LukeW/Singer): repeat
+  count picked PRE-FLIGHT (×3/×5/×11/∞ on the shlok/resume card) → zero
+  required inputs after propping. (2) **Wake-lock + portrait lock asserted
+  explicitly** (KeepAwake plugin or navigator.wakeLock w/ visibilitychange
+  re-acquire; don't trust inline-video to hold Android awake); auto-dim
+  mid-chant = system failure; now v1-core, not polish. (3) **The watched
+  boundary breath** (Allen+Trivedi+Singer+Matas merged): between rounds, one
+  composed ~1.5-2s beat — final-frame hold, dim to 88%, waveform
+  inhale-glow, LARGE "Round 2 of 5" (beat screen is where round messaging
+  lives; during chant only one small counter chip "2/5", Andersson's
+  one-overlay rule, Kare's armed-×N whisper merged into it), ghanti tick +
+  light haptic, 0.97 scale-return. (4) **Tap ADJUDICATED**: single tap =
+  pause + reveal control veil (Victor's pause-and-say teaching freeze +
+  LukeW whole-screen pause; 2 groups beat Brichter's restart — restart is a
+  64pt button on the veil, one tap away while paused); controls auto-hide
+  2.5s; all targets ≥56-64pt (kid fingers, couch distance). (5) **Gesture
+  guards while playing** (Family/Trivedi): vertical paging needs deliberate
+  flick (>0.6px/ms, >60px), swipe-back needs edge-origin (24px) + velocity;
+  rejected kid-touches rubber-band 8px w/ spring — respond, never lock.
+  (6) **Two-beat completion frame** (de With): kid's payoff first ("You
+  chanted it 5 times", 600ms badge bloom + gold tilak dot), parent's
+  progress + share fades in 1.2s later. Unchanged: teal section mount,
+  resume card entry, chip grid/numeral rows, audio-rails plumbing
+  (single-audio + msClaim + mini-player when backgrounded), green-dot-only
+  progress, no streaks. Decision: consult recorded — awaiting owner's
+  go-ahead to build.
+  **REV 2 (same day) — OWNER DIRECTIVES + transport-controls consult:**
+  (1) Learn tile titled "Satsang Diksha Mukhpath" (full name, no NEW badge).
+  (2) Hub: resume card OUT; top = memorized tracker "N of 315 memorized" +
+  quiet green progress bar (owner overrides the no-meters line);
+  mark-memorized is PARENT-ASSERTED via long-press on a shlok chip.
+  Repeat picker = ×1/×3/×5/∞ (×11 dropped). Browse = multi-select chips
+  building a practice queue → single pinned "Start playing · N shloks"
+  button → fullscreen session. (3) Completion celebration screen CUT —
+  between shloks the boundary breath carries "Next · Shlok NNN" (saffron
+  rule, same ~2s rhythm, chip morph); end of queue resolves to hub.
+  (4) CONTROL SPEC (Dye/Matas/Brichter/de With/Family/LukeW focused
+  consult): two layers — resting ambient glyphs + the veil (same elements
+  brightened, nothing appears/disappears wholesale). Rest: ✕ top-left
+  17pt/0.32 opacity/48pt target; ‹ ⏸ › bottom edge 20-22pt glyphs/0.32-0.38
+  /56pt targets, thumb-arc; all bare glyphs w/ baked radial soft shadow
+  (black 40% 8pt blur) — NO bars/strips/edge-hotspots. Touch-down →0.90
+  over 120ms + light haptic. Glyphs strictly = gestures (✕=guarded
+  swipe-back path; ‹›=pager flick to prev/next SELECTED shlok, disabled
+  0.15 at queue ends; ⏸=tap-anywhere veil). ONE chip top-right carries
+  rounds+queue "2/3 · 1 of 4" (Inter semibold 13pt + 11pt 70% trailing),
+  morphs into breath's "Next·Shlok" label — never two counters.
+  Mockup (interactive, verified): claude.ai/code/artifact/ca3da394-ad27-4dbe-839b-78d7e2b2bd72
+  **REV 3 (same day) — browse ergonomics consult (LukeW/Nielsen/Tufte/
+  Brichter/Singer) + owner:** horizontal strip scrolling all 315 REJECTED
+  (63 screen-widths of flicking, no landmarks). RULING = two surfaces, two
+  jobs: hub keeps ONE short curated non-scrolling strip ("This week ·
+  311-315", header gains "Select week" text button scoped to that set) +
+  "View all 315 →" row; VIEW ALL = fullscreen vertical list in sections of
+  10, row = numeral + first-Gujarati-phrase, same tap-select/hold-memorize
+  grammar as chips, section headers carry "n/10 memorized" + per-section
+  Select/Deselect toggle (scoped to their ten). NO global select-all-315
+  anywhere; the only global control is "Clear (N)" next to Start on both
+  surfaces (deselect only). "#" numeric go-to in View All nav → scrolls +
+  flash-highlights, does NOT auto-select. Owner confirmations: video play
+  claims single-audio rule (stopAllOtherAudio + msClaim, same as every
+  player — pauses music/TTS/audiobooks). CONTENT BUG found in source
+  assets: "Shloka #315.mp4" renders badge "Shloka #314" inside the video —
+  flag to asset producer before the 315-batch render.
+  Decision: rev-3 recorded — awaiting owner's go-ahead to build.
+  **REV 4 (same day) — OWNER KILLS THE STRIP:** no curated "This week" chip
+  strip at all. The hub IS the catalog: locked (non-scrolling) header =
+  navrow (+ "#" go-to) + memorized tracker + repeat picker ×1/×3/×5/∞;
+  beneath it the full 315-shlok sectioned list scrolls within the screen
+  (sections of 10, "n/10 memorized" headers, per-section Select/Deselect,
+  tap-select/hold-memorize rows, numeral + first-Gujarati-phrase). One
+  surface, no separate View All screen. Global Clear + pinned Start
+  unchanged. Player/breath/handoff unchanged from rev 2-3.
+  Decision: rev-4 recorded — awaiting owner's go-ahead to build.
+  **BUILT 2026-07-19 (owner approved; on staging).** All 315 videos now in
+  the Drive folder (SD_FOLDER_ID in app.js; dupe "Shloka #224 (2).mp4"
+  loses to plain name at ingest — ask owner to delete; also flag: the
+  #315 video's baked badge says #314). Copy tweaks: section headers just
+  "Shloks 1 – 10" (no Pratham Prakaran), tile has no subtitle.
 - **2026-07-13 · FULL UX AUDIT (v1.8, 15 live emulator screenshots) · full committee.**
   VERDICT: "the trust floor is far below the craft ceiling" — foundation (tile
   color identities, Fraunces/Inter, glyph-gradient covers, 4-tab skeleton,

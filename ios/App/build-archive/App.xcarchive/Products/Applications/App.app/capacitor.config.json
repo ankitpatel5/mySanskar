@@ -1,0 +1,25 @@
+{
+	"appId": "com.ankitpatel5.mysanskar",
+	"appName": "mySanskar",
+	"webDir": "www",
+	"ios": {
+		"backgroundColor": "#000000",
+		"contentInset": "always"
+	},
+	"android": {
+		"backgroundColor": "#000000"
+	},
+	"plugins": {
+		"SplashScreen": {
+			"launchAutoHide": false,
+			"backgroundColor": "#000000",
+			"androidSplashResourceName": "splash",
+			"showSpinner": false
+		}
+	},
+	"packageClassList": [
+		"FirebaseMessagingPlugin",
+		"AppPlugin",
+		"LocalNotificationsPlugin"
+	]
+}
