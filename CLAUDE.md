@@ -222,6 +222,14 @@ When the user says anything like "build for iOS submission", "archive for App St
   no DOM hack), and "Update" opened the Play Store (com.android.vending) via
   market://details?id=com.ankit.mysanskar (shows "Item not found" until published).
 
+- 2026-07-19 (late): **v1.10 CUT — Mukhpath release**. iOS 1.10 (1) archived
+  (App+Widget lockstep, bundle verified: mukhpath/collapse/mem-sync/ob-card
+  markers + 1106 guj clips) + uploaded to ASC. Android 1.10 (6) signed AAB
+  built (needs JAVA_HOME=Android Studio jbr — plain shell has no Java).
+  ASC web steps owed (owner): create 1.10 version, attach build 1, upload
+  out-69 screenshots incl NEW appstore-11-mukhpath.png, submit. After it
+  goes LIVE: bump app-version-defaults.json ios.latest to 1.10 (the floor).
+
 ## Feature map (find things in app.js by function name, not line number)
 - **Satsang Diksha Mukhpath** (Learn tab · shipped to staging 2026-07-19):
   `renderSdHero` (guest-locked tile) → `openSdHub` (view-sd-hub: sticky
