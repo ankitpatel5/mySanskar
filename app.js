@@ -308,6 +308,7 @@
     syncAudiobooksSettingFromFirestore();
     syncAudiobookProgressFromFirestore();
     syncGujProgressFromFirestore();
+    syncSdMemFromFirestore();
     syncNityaFromFirestore();
     initDownloads();
     checkForUpdate();
@@ -596,6 +597,7 @@
           syncAudiobooksSettingFromFirestore();
           syncAudiobookProgressFromFirestore();
           syncGujProgressFromFirestore();
+          syncSdMemFromFirestore();
           syncNityaFromFirestore();
         } else {
           proceedAsUser(user);
@@ -3462,6 +3464,38 @@
   }
   function sdSaveMem() {
     try { localStorage.setItem('drift.sdMem', JSON.stringify([...sdMem()])); } catch {}
+    saveSdMemToFirestore();
+  }
+
+  // ── Memorized set: cross-device persistence (gujProgress pattern) ──
+  // Doc: users/{uid}/settings/sdMem { nums: ['313', ...] }. Debounced save;
+  // union-merge on sign-in. "Memorized" can be un-marked (a parent correcting
+  // a mis-tap), so remote is REPLACED by local after first merge — the union
+  // only runs at sync time to rescue progress made offline on another device.
+  function sdMemRef() { return state.user ? window.fbDb.doc(`users/${activeUid()}/settings/sdMem`) : null; }
+  let _sdMemSaveTimer = null, _sdMemSynced = false;
+  function saveSdMemToFirestore() {
+    if (isImpersonating() || isGuestMode()) return; // view-only / no account
+    const ref = sdMemRef(); if (!ref) return;
+    clearTimeout(_sdMemSaveTimer);
+    _sdMemSaveTimer = setTimeout(() => {
+      ref.set({ nums: [...sdMem()] }, { merge: true }).catch((e) => console.warn('sd mem save failed', e));
+    }, 800);
+  }
+  async function syncSdMemFromFirestore() {
+    const ref = sdMemRef(); if (!ref) return;
+    try {
+      const doc = await ref.get();
+      const remote = (doc.exists && Array.isArray(doc.data().nums)) ? doc.data().nums : [];
+      const local = sdMem();
+      const merged = new Set([...local, ...remote.map(String)]);
+      const localGrew = merged.size > remote.length;
+      _sdMem = merged;
+      _sdMemSynced = true;
+      try { localStorage.setItem('drift.sdMem', JSON.stringify([...merged])); } catch {}
+      if (localGrew && !isImpersonating() && !isGuestMode()) ref.set({ nums: [...merged] }, { merge: true }).catch(() => {});
+      if (!$('view-sd-hub').classList.contains('hidden')) { sdRenderSections(); sdRenderHeader(); }
+    } catch (e) { console.warn('sd mem sync failed', e); }
   }
 
   // Catalog: one Drive listing (315 files "Shloka #N.mp4"), cached 24h.
@@ -3543,6 +3577,8 @@
   }
 
   // Hold-to-memorize + tap-to-select on one element (chips grammar, rev 3).
+  // Toggles update the DOM IN PLACE — a full re-render here rebuilt the list
+  // and yanked the scroll position (owner-reported jump on select).
   function sdWireHold(el, num) {
     let holdT = null, held = false;
     const down = () => { held = false; holdT = setTimeout(() => { held = true; sdToggleMem(num); }, 550); };
@@ -3553,7 +3589,7 @@
     el.addEventListener('click', () => {
       if (held) { held = false; return; }
       _sdSel.has(num) ? _sdSel.delete(num) : _sdSel.add(num);
-      sdRenderSections(); sdRenderHeader();
+      sdUpdateRowEl(num); sdUpdateSectionHead(sdSectionStart(num)); sdRenderHeader();
     });
     el.addEventListener('contextmenu', (e) => e.preventDefault()); // long-press must not open a menu
   }
@@ -3561,7 +3597,66 @@
     const mem = sdMem();
     mem.has(num) ? mem.delete(num) : mem.add(num);
     sdSaveMem();
-    sdRenderSections(); sdRenderHeader();
+    sdUpdateRowEl(num); sdUpdateSectionHead(sdSectionStart(num)); sdRenderHeader();
+  }
+
+  // Sections are collapsed by default; the user expands the ones they're
+  // exploring (multiple may be open). Expanded set is session-only.
+  const _sdOpen = new Set();
+  function sdSectionStart(num) { return Math.floor((parseInt(num, 10) - 1) / 10) * 10 + 1; }
+  function sdSectionIds(start) {
+    const ids = [];
+    for (let n = start; n <= Math.min(start + 9, SD_TOTAL); n++) ids.push(String(n));
+    return ids;
+  }
+
+  function sdUpdateRowEl(num) {
+    const row = $(`sd-row-${num}`);
+    if (!row) return; // collapsed section — state applies on next expand
+    row.classList.toggle('sd-row--sel', _sdSel.has(String(num)));
+    row.classList.toggle('sd-row--mem', sdMem().has(String(num)));
+  }
+  function sdUpdateSectionHead(start) {
+    const head = $(`sd-sechead-${start}`);
+    if (!head) return;
+    const ids = sdSectionIds(start);
+    const mem = sdMem();
+    const memN = ids.filter((n) => mem.has(n)).length;
+    const avail = ids.filter((n) => _sdCatalog && _sdCatalog[n]);
+    const allSel = avail.length > 0 && avail.every((n) => _sdSel.has(n));
+    const m = head.querySelector('.sd-sechead-m');
+    if (m) { m.textContent = `${memN}/${ids.length} memorized`; m.classList.toggle('sd-sechead-m--zero', !memN); }
+    const selBtn = head.querySelector('.sd-secsel');
+    if (selBtn) selBtn.textContent = allSel ? 'Deselect' : 'Select';
+  }
+
+  function sdBuildRow(n) {
+    const mem = sdMem();
+    const row = document.createElement('div');
+    const on = _sdCatalog[n];
+    row.id = `sd-row-${n}`;
+    row.className = 'sd-row' + (on ? '' : ' sd-row--off') + (_sdSel.has(n) ? ' sd-row--sel' : '') + (mem.has(n) ? ' sd-row--mem' : '');
+    row.innerHTML = `<span class="sd-row-num">${n}</span>`
+      + `<span class="sd-row-t">Shlok ${n}${on ? '' : ' · coming soon'}</span>`
+      + '<span class="sd-row-mdot"></span><span class="sd-row-selc"></span>';
+    if (on) sdWireHold(row, n);
+    return row;
+  }
+
+  function sdToggleSection(start, forceOpen) {
+    const body = $(`sd-secbody-${start}`);
+    const head = $(`sd-sechead-${start}`);
+    if (!body || !head) return;
+    const open = forceOpen === true ? true : (forceOpen === false ? false : !_sdOpen.has(start));
+    if (open === _sdOpen.has(start) && body.childElementCount > 0 === open) { /* no-op */ }
+    if (open) {
+      _sdOpen.add(start);
+      if (!body.childElementCount) sdSectionIds(start).forEach((n) => body.appendChild(sdBuildRow(n)));
+    } else {
+      _sdOpen.delete(start);
+      body.innerHTML = '';
+    }
+    head.classList.toggle('sd-sechead--open', open);
   }
 
   function sdRenderSections() {
@@ -3569,48 +3664,51 @@
     if (!host) return;
     if (!_sdCatalog) { host.innerHTML = '<div class="sd-empty">Loading shloks…</div>'; return; }
     host.dataset.ready = '1';
-    const mem = sdMem();
     const frag = document.createDocumentFragment();
     for (let start = 1; start <= SD_TOTAL; start += 10) {
       const end = Math.min(start + 9, SD_TOTAL);
-      const ids = [];
-      for (let n = start; n <= end; n++) ids.push(String(n));
+      const ids = sdSectionIds(start);
       const avail = ids.filter((n) => _sdCatalog[n]);
-      const memN = ids.filter((n) => mem.has(n)).length;
-      const allSel = avail.length > 0 && avail.every((n) => _sdSel.has(n));
 
       const head = document.createElement('div');
-      head.className = 'sd-sechead';
-      head.innerHTML = `<span class="sd-sechead-t">Shloks ${start} – ${end}</span>`
-        + `<span class="sd-sechead-r"><span class="sd-sechead-m${memN ? '' : ' sd-sechead-m--zero'}">${memN}/${ids.length} memorized</span>`
-        + (avail.length ? `<button class="sd-secsel">${allSel ? 'Deselect' : 'Select'}</button>` : '')
+      head.className = 'sd-sechead' + (_sdOpen.has(start) ? ' sd-sechead--open' : '');
+      head.id = `sd-sechead-${start}`;
+      head.innerHTML = '<span class="sd-sechead-chev"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>'
+        + `<span class="sd-sechead-t">Shloks ${start} – ${end}</span>`
+        + '<span class="sd-sechead-r"><span class="sd-sechead-m"></span>'
+        + (avail.length ? '<button class="sd-secsel"></button>' : '')
         + '</span>';
+      head.addEventListener('click', (e) => {
+        if (e.target.closest('.sd-secsel')) return; // Select acts, never collapses
+        sdToggleSection(start);
+      });
       const selBtn = head.querySelector('.sd-secsel');
       if (selBtn) selBtn.addEventListener('click', () => {
-        ids.forEach((n) => { if (!_sdCatalog[n]) return; allSel ? _sdSel.delete(n) : _sdSel.add(n); });
-        sdRenderSections(); sdRenderHeader();
+        const all = avail.every((n) => _sdSel.has(n));
+        ids.forEach((n) => { if (!_sdCatalog[n]) return; all ? _sdSel.delete(n) : _sdSel.add(n); });
+        ids.forEach(sdUpdateRowEl);
+        sdUpdateSectionHead(start); sdRenderHeader();
       });
       frag.appendChild(head);
 
-      ids.forEach((n) => {
-        const row = document.createElement('div');
-        const on = _sdCatalog[n];
-        row.id = `sd-row-${n}`;
-        row.className = 'sd-row' + (on ? '' : ' sd-row--off') + (_sdSel.has(n) ? ' sd-row--sel' : '') + (mem.has(n) ? ' sd-row--mem' : '');
-        row.innerHTML = `<span class="sd-row-num">${n}</span>`
-          + `<span class="sd-row-t">Shlok ${n}${on ? '' : ' · coming soon'}</span>`
-          + '<span class="sd-row-mdot"></span><span class="sd-row-selc"></span>';
-        if (on) sdWireHold(row, n);
-        frag.appendChild(row);
-      });
+      const body = document.createElement('div');
+      body.className = 'sd-secbody';
+      body.id = `sd-secbody-${start}`;
+      frag.appendChild(body);
     }
     host.innerHTML = '';
     host.appendChild(frag);
+    // Stamp counts/labels + refill any sections the user had expanded.
+    for (let start = 1; start <= SD_TOTAL; start += 10) {
+      sdUpdateSectionHead(start);
+      if (_sdOpen.has(start)) sdToggleSection(start, true);
+    }
   }
 
   function sdGotoShlok() {
     const v = parseInt($('sd-goto-input').value, 10);
     if (!v || v < 1 || v > SD_TOTAL) return;
+    sdToggleSection(sdSectionStart(v), true); // expand the target's section first
     const row = $(`sd-row-${v}`);
     if (!row) return;
     row.scrollIntoView({ behavior: 'smooth', block: 'center' });

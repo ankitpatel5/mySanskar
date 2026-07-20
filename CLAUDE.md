@@ -231,9 +231,11 @@ When the user says anything like "build for iOS submission", "archive for App St
   round+handoff breaths, `sdTogglePause` veil, ambient ✕‹⏸›). Videos
   stream from Drive `SD_FOLDER_ID` (catalog cached `drift.sdCatalog.v1`
   24h). Single-audio: `sd` entry in stopAllOtherAudio map +
-  stopAllOtherAudio('sd') on video 'play'. Persistence: `drift.sdMem`,
-  `drift.sdRepeat` (both in PER_USER_LS_KEYS; selection deliberately
-  session-only). Back: BACK_BTN_BY_VIEW + goBack closes #sd-player first.
+  stopAllOtherAudio('sd') on video 'play'. Persistence: `drift.sdMem` mirrors
+  Firestore `users/{uid}/settings/sdMem {nums:[]}` (gujProgress pattern:
+  debounced save, union-merge at sign-in, impersonation/guest write-guard —
+  memorized survives devices/reinstalls); `drift.sdRepeat` local-only;
+  selection deliberately session-only. Back: BACK_BTN_BY_VIEW + goBack closes #sd-player first.
   Wake lock: navigator.wakeLock + visibilitychange re-acquire (iOS 16.4+;
   KeepAwake plugin still open for older iOS). NOT yet done: msClaim('sd')
   lock-screen identity (utils MS_ACTION_MAP has no 'sd' — foreground
