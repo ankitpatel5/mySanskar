@@ -782,9 +782,11 @@ group for narrower questions (motion → iOS craft; copy/forms → product leade
   Decision: rev-4 recorded — awaiting owner's go-ahead to build.
   **SHIPPED TO PROD 2026-07-19** (owner tested on iPhone → "ship it";
   prod sw.js stamp + sd code verified live; both native projects synced). All 315 videos now in
-  the Drive folder (SD_FOLDER_ID in app.js; dupe "Shloka #224 (2).mp4"
-  loses to plain name at ingest — ask owner to delete; also flag: the
-  #315 video's baked badge says #314). Copy tweaks: section headers just
+  the Drive folder (SD_FOLDER_ID in app.js). Content status 2026-07-19:
+  owner deleted the dupe "Shloka #224 (2).mp4" (ingest prefers plain names
+  anyway, so it never mattered); #315's chant/audio is CORRECT — only the
+  baked-in badge graphic says "314" (typo for the video producer to fix in
+  the source template; no app change needed). Copy tweaks: section headers just
   "Shloks 1 – 10" (no Pratham Prakaran), tile has no subtitle.
 - **2026-07-13 · FULL UX AUDIT (v1.8, 15 live emulator screenshots) · full committee.**
   VERDICT: "the trust floor is far below the craft ceiling" — foundation (tile
