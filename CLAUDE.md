@@ -230,6 +230,19 @@ When the user says anything like "build for iOS submission", "archive for App St
   out-69 screenshots incl NEW appstore-11-mukhpath.png, submit. After it
   goes LIVE: bump app-version-defaults.json ios.latest to 1.10 (the floor).
 
+- **API usage telemetry + admin graph** (2026-07-21): `apiTally(api)` counts
+  this client's external-API calls (drive-list/drive-media via driveList/
+  streamUrl, r2 via sdVideoUrl, gemini incl Imagen, tts=Sarvam, ekadashi,
+  fs-read/fs-write via compat-SDK prototype wrap in instrumentFirestore —
+  call-count not doc-count). Hourly buckets → `apiUsage/{YYYY-MM-DD}`
+  (LOCAL dates/hours; one merged increment write per 30s flush or on
+  visibilitychange-hidden; guests/impersonation drop; _apiFlushing guards
+  self-count loop). Admin → API tab: `loadAdminApiUsage`/`drawApiChart`
+  canvas line chart, 24h/7d/30d range chips, legend toggles, crosshair
+  tooltip; series math pure in AppUtils.buildApiUsageSeries
+  (tests/api-usage.test.js). Rules: apiUsage create/update any-authed,
+  read admin. NOT counted: guest traffic (no auth), Drive thumbnail <img>
+  loads, native FCM sends.
 ## Feature map (find things in app.js by function name, not line number)
 - **Satsang Diksha Mukhpath** (Learn tab · shipped to staging 2026-07-19):
   `renderSdHero` (guest-locked tile) → `openSdHub` (view-sd-hub: sticky

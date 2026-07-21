@@ -164,6 +164,66 @@
     PER_USER_LS_KEYS.forEach((k) => localStorage.removeItem(k));
   }
 
+  // ── API usage telemetry (admin → API tab) ─────────────────────────
+  // Counts this client's calls to each external API in hourly buckets:
+  // apiUsage/{YYYY-MM-DD} → { 'HH': { api: n } } (device-local hours).
+  // Batched: ONE Firestore write per 30s flush (or on background), so the
+  // meter costs ~0.1% of what it measures. Guests can't write (no auth) —
+  // their pending counts are dropped at flush, so the graph shows
+  // signed-in traffic. _apiFlushing guards the flush's own Firestore call
+  // from re-tallying itself into an endless 1-write-per-30s tick.
+  const API_TALLY_FLUSH_MS = 30000;
+  let _apiTally = {}, _apiTallyT = null, _apiFlushing = false;
+  function apiTally(api) {
+    _apiTally[api] = (_apiTally[api] || 0) + 1;
+    if (!_apiTallyT) _apiTallyT = setTimeout(flushApiTally, API_TALLY_FLUSH_MS);
+  }
+  function flushApiTally() {
+    clearTimeout(_apiTallyT); _apiTallyT = null;
+    const pending = _apiTally; _apiTally = {};
+    if (!Object.keys(pending).length) return;
+    if (!state.user || isImpersonating() || state.isGuest) return;
+    try {
+      _apiFlushing = true;
+      const now = new Date();
+      const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const hour = String(now.getHours()).padStart(2, '0');
+      const bucket = {};
+      Object.keys(pending).forEach((api) => {
+        bucket[api] = firebase.firestore.FieldValue.increment(pending[api]);
+      });
+      window.fbDb.collection('apiUsage').doc(day)
+        .set({ [hour]: bucket }, { merge: true })
+        .catch(() => {});
+    } catch {} finally { _apiFlushing = false; }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushApiTally();
+  });
+
+  // Firestore self-instrumentation: wrap the compat SDK prototypes once so
+  // every read/write anywhere in the app is counted (call-count, not
+  // doc-count — a 100-doc query tallies 1 fs-read).
+  (function instrumentFirestore() {
+    try {
+      const F = firebase.firestore;
+      const wrap = (proto, name, api) => {
+        const orig = proto && proto[name];
+        if (!orig || orig.__tallied) return;
+        const w = function (...a) { if (!_apiFlushing) apiTally(api); return orig.apply(this, a); };
+        w.__tallied = true;
+        proto[name] = w;
+      };
+      wrap(F.DocumentReference.prototype, 'get', 'fs-read');
+      wrap(F.Query.prototype, 'get', 'fs-read');
+      wrap(F.DocumentReference.prototype, 'onSnapshot', 'fs-read');
+      wrap(F.DocumentReference.prototype, 'set', 'fs-write');
+      wrap(F.DocumentReference.prototype, 'update', 'fs-write');
+      wrap(F.DocumentReference.prototype, 'delete', 'fs-write');
+      wrap(F.CollectionReference.prototype, 'add', 'fs-write');
+    } catch (e) { console.warn('fs instrumentation skipped', e); }
+  })();
+
   // ── Impersonation (admin debug) + activity logging ──────────────
   // activeUid() is the uid whose DATA the app currently shows: the real
   // signed-in user, or — admin-only, view-only — a user being impersonated.
@@ -885,6 +945,7 @@
 
   // ============== GOOGLE DRIVE CLIENT ==============
   async function driveList(params) {
+    apiTally('drive-list');
     const url = new URL('https://www.googleapis.com/drive/v3/files');
     url.searchParams.set('key', API_KEY);
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
@@ -1012,6 +1073,7 @@
   // element which adds complexity for browser playback; the uc endpoint
   // works without it since we're not reading the bytes ourselves.
   function streamUrl(fileId) {
+    apiTally('drive-media');
     // Official Drive API media endpoint. Serves raw bytes (not HTML pages),
     // supports HTTP Range requests for seeking, returns proper CORS headers,
     // and bypasses the virus-scan interstitial entirely.
@@ -2764,6 +2826,7 @@
     const _ekadashiBase = (window.Capacitor && window.Capacitor.isNativePlatform?.())
       ? 'https://mysanskar.vercel.app'
       : '';
+    apiTally('ekadashi');
     const resp = await fetch(`${_ekadashiBase}/api/ekadashi`);
     if (!resp.ok) throw new Error(resp.status);
     const data = await resp.json();
@@ -3446,7 +3509,7 @@
 
   const SD_TOTAL = 315;
   const SD_MEDIA_BASE = 'https://media.mysanskar.workers.dev/satsang-diksha';
-  function sdVideoUrl(num) { return `${SD_MEDIA_BASE}/shloka-${num}.mp4`; }
+  function sdVideoUrl(num) { apiTally('r2'); return `${SD_MEDIA_BASE}/shloka-${num}.mp4`; }
   // All 315 exist in R2 — the "catalog" is now a static full map (kept as a
   // map so the availability checks stay unchanged if a future batch is ever
   // partial again).
@@ -4806,6 +4869,7 @@
     const key = (window.DRIFT_CONFIG || {}).geminiKey || '';
     if (!key || isImagenQuotaExhausted()) return null;
 
+    apiTally('gemini');
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGEN_MODEL}:predict?key=${key}`;
     const body = {
       instances: [{ prompt: buildImagenPrompt(topic, character) }],
@@ -5430,6 +5494,7 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
   }
 
   async function callGemini(key, prompt) {
+    apiTally('gemini');
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
     const body = JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -6085,6 +6150,7 @@ ${numbered}`;
     const chunks = splitTextForSarvam(preprocessGujaratiForTTS(text));
 
     const fetchChunk = async (chunk) => {
+      apiTally('tts');
       const res = await fetch('https://api.sarvam.ai/text-to-speech', {
         method: 'POST',
         headers: {
@@ -7101,8 +7167,142 @@ ${numbered}`;
       await loadAdminLyrics();
     } else if (adminCurrentTab === 'feedback') {
       await loadAdminFeedback();
+    } else if (adminCurrentTab === 'api') {
+      await loadAdminApiUsage();
     } else {
       await loadAdminSongs();
+    }
+  }
+
+
+  // ── Admin: API usage graph ────────────────────────────────────────
+  // Client-instrumented call counts (apiTally) bucketed hourly in
+  // apiUsage/{day}; this view fetches the range's day-docs (≤31 reads),
+  // builds series via AppUtils.buildApiUsageSeries, and draws an
+  // interactive canvas line chart (pointer = crosshair + tooltip,
+  // legend chips toggle series).
+  const API_CHART_COLORS = {
+    'drive-media': '#6fa8ff', 'drive-list': '#3d6fd6', 'fs-read': '#4fc2b0',
+    'fs-write': '#2e8a7d', 'r2': '#e8a33d', 'gemini': '#a78bfa',
+    'tts': '#ff8fa3', 'ekadashi': '#e3c88a',
+  };
+  let _apiChart = null; // { labels, buckets, apis, hidden:Set, mode }
+
+  async function loadAdminApiUsage(mode) {
+    const content = $('admin-content');
+    mode = mode || (_apiChart && _apiChart.mode) || '24h';
+    content.innerHTML = '<div class="admin-loading">Loading…</div>';
+    try {
+      const days = mode === '30d' ? 31 : (mode === '7d' ? 8 : 2); // +1 covers midnight spans
+      const ids = [];
+      for (let i = 0; i < days; i++) {
+        const dt = new Date(Date.now() - i * 86400000);
+        ids.push(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`);
+      }
+      const snaps = await Promise.all(ids.map((id) => window.fbDb.collection('apiUsage').doc(id).get()));
+      const docs = snaps.filter((sn) => sn.exists).map((sn) => ({ id: sn.id, data: sn.data() }));
+      const series = window.AppUtils.buildApiUsageSeries(docs, mode, new Date());
+      _apiChart = Object.assign(series, { hidden: (_apiChart && _apiChart.hidden) || new Set(), mode });
+
+      const chips = ['24h', '7d', '30d'].map((m) =>
+        `<button class="api-range-chip${m === mode ? ' active' : ''}" data-range="${m}">${m}</button>`).join('');
+      const legend = series.apis.map((api) =>
+        `<button class="api-legend-chip${_apiChart.hidden.has(api) ? ' off' : ''}" data-api="${api}">
+          <i style="background:${API_CHART_COLORS[api] || '#948a78'}"></i>${api} · ${series.totals[api].toLocaleString()}
+        </button>`).join('');
+      content.innerHTML = `
+        <div class="api-usage-head">
+          <div class="api-range-chips">${chips}</div>
+          <div class="api-usage-note">calls made by the app · signed-in devices · local time</div>
+        </div>
+        <div class="api-legend">${legend || '<span class="api-usage-note">No usage recorded yet — counts appear as the app is used.</span>'}</div>
+        <div class="api-chart-wrap">
+          <canvas id="api-chart"></canvas>
+          <div class="api-tooltip hidden" id="api-tooltip"></div>
+        </div>`;
+      content.querySelectorAll('.api-range-chip').forEach((b) =>
+        b.addEventListener('click', () => loadAdminApiUsage(b.dataset.range)));
+      content.querySelectorAll('.api-legend-chip').forEach((b) =>
+        b.addEventListener('click', () => {
+          const api = b.dataset.api;
+          _apiChart.hidden.has(api) ? _apiChart.hidden.delete(api) : _apiChart.hidden.add(api);
+          b.classList.toggle('off');
+          drawApiChart();
+        }));
+      drawApiChart();
+      const canvas = $('api-chart');
+      canvas.addEventListener('pointermove', (e) => drawApiChart(e));
+      canvas.addEventListener('pointerleave', () => drawApiChart());
+    } catch (e) {
+      console.warn('api usage load failed', e);
+      content.innerHTML = '<div class="admin-loading">Couldn’t load API usage.</div>';
+    }
+  }
+
+  function drawApiChart(pointerEv) {
+    const c = _apiChart, canvas = $('api-chart');
+    if (!c || !canvas) return;
+    const wrap = canvas.parentElement;
+    const W = wrap.clientWidth, H = 240, dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    canvas.style.height = `${H}px`;
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    const padL = 40, padR = 10, padT = 10, padB = 24;
+    const iw = W - padL - padR, ih = H - padT - padB;
+    const apis = c.apis.filter((a) => !c.hidden.has(a));
+    const n = c.labels.length;
+    const maxV = Math.max(1, ...c.buckets.map((b) => Math.max(0, ...apis.map((a) => b[a] || 0))));
+    const x = (i) => padL + (n <= 1 ? 0 : (i / (n - 1)) * iw);
+    const y = (v) => padT + ih - (v / maxV) * ih;
+
+    // gridlines + y labels
+    ctx.font = '10px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+    for (let g = 0; g <= 4; g++) {
+      const gv = (maxV / 4) * g, gy = y(gv);
+      ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(W - padR, gy); ctx.stroke();
+      ctx.fillText(String(Math.round(gv)), 6, gy + 3);
+    }
+    // x labels (sparse)
+    const step = Math.ceil(n / 6);
+    for (let i = 0; i < n; i += step) ctx.fillText(c.labels[i], x(i) - 12, H - 8);
+
+    // series
+    apis.forEach((api) => {
+      ctx.strokeStyle = API_CHART_COLORS[api] || '#948a78';
+      ctx.lineWidth = 2; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      c.buckets.forEach((b, i) => {
+        const py = y(b[api] || 0);
+        i === 0 ? ctx.moveTo(x(i), py) : ctx.lineTo(x(i), py);
+      });
+      ctx.stroke();
+    });
+
+    // crosshair + tooltip
+    const tip = $('api-tooltip');
+    if (pointerEv && n) {
+      const rect = canvas.getBoundingClientRect();
+      const px = pointerEv.clientX - rect.left;
+      const i = Math.max(0, Math.min(n - 1, Math.round(((px - padL) / iw) * (n - 1))));
+      ctx.strokeStyle = 'rgba(232,163,61,0.5)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x(i), padT); ctx.lineTo(x(i), padT + ih); ctx.stroke();
+      apis.forEach((api) => {
+        ctx.fillStyle = API_CHART_COLORS[api] || '#948a78';
+        ctx.beginPath(); ctx.arc(x(i), y(c.buckets[i][api] || 0), 3, 0, 7); ctx.fill();
+      });
+      const rows = apis.map((api) =>
+        `<div><i style="background:${API_CHART_COLORS[api] || '#948a78'}"></i>${api}: <b>${(c.buckets[i][api] || 0).toLocaleString()}</b></div>`).join('');
+      tip.innerHTML = `<div class="api-tooltip-t">${c.labels[i]}</div>${rows || 'no calls'}`;
+      tip.classList.remove('hidden');
+      const tw = tip.offsetWidth;
+      tip.style.left = `${Math.min(Math.max(0, x(i) - tw / 2), W - tw)}px`;
+    } else if (tip) {
+      tip.classList.add('hidden');
     }
   }
 
@@ -10468,7 +10668,8 @@ ${numbered}`;
 
 Respond in this exact JSON format with no extra text:
 {"author": "Author Name", "description": "Description here."}`;
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
+          apiTally('gemini');
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
           const body = JSON.stringify({
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: 'application/json', temperature: 0.3, maxOutputTokens: 300 },

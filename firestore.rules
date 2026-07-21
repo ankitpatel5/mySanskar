@@ -125,6 +125,14 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    // ── API usage telemetry (admin graph) ──
+    // Any signed-in client may increment the hourly counters (create/update
+    // only — no reads, no deletes); the admin reads them for the usage graph.
+    match /apiUsage/{day} {
+      allow create, update: if request.auth != null;
+      allow read: if isAdmin();
+    }
+
     // ── Global app content (Eternal Virtues, etc.) ──
     // Static devotional content shown to everyone, including guests.
     match /content/{docId} {

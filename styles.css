@@ -6108,3 +6108,34 @@ body.impersonating .topbar { padding-top: 8px; height: var(--topbar-h); }
   object-fit: contain; background: #1e1912; z-index: 1; pointer-events: none;
 }
 .sd-poster.hidden { display: none; }
+
+/* Admin: API usage graph */
+.api-usage-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.api-range-chips { display: flex; gap: 6px; }
+.api-range-chip {
+  border: 1px solid var(--line-2); background: var(--bg-1); color: var(--fg-1);
+  border-radius: 99px; padding: 5px 14px; font-size: 12px; font-weight: 600;
+}
+.api-range-chip.active { background: var(--accent); border-color: var(--accent); color: #241a09; }
+.api-usage-note { font-size: 10.5px; color: var(--fg-3); }
+.api-legend { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.api-legend-chip {
+  display: flex; align-items: center; gap: 6px;
+  border: 1px solid var(--line); background: var(--bg-1); color: var(--fg-1);
+  border-radius: 99px; padding: 4px 10px; font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.api-legend-chip i { width: 8px; height: 8px; border-radius: 50%; display: block; }
+.api-legend-chip.off { opacity: 0.35; }
+.api-chart-wrap { position: relative; }
+.api-chart-wrap canvas { width: 100%; display: block; touch-action: pan-y; }
+.api-tooltip {
+  position: absolute; top: 0; z-index: 2; pointer-events: none;
+  background: var(--bg-elev); border: 1px solid var(--line-2); border-radius: 10px;
+  padding: 8px 10px; font-size: 11px; color: var(--fg-1);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.api-tooltip.hidden { display: none; }
+.api-tooltip-t { font-weight: 700; color: var(--fg-0); margin-bottom: 4px; }
+.api-tooltip div { display: flex; align-items: center; gap: 6px; }
+.api-tooltip i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
