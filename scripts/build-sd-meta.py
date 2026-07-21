@@ -140,7 +140,7 @@ def load_meta():
 # #53's threshold was noise-poisoned. #284 (combined 283-284 video) has NO
 # separate full-chant section: -1 = "always plays in full" (the app shows a
 # gentle notice when line-repeats are toggled off).
-MANUAL_OVERRIDES = {'53': 31.0, '222': 33.0, '267': 32.0, '284': -1}
+MANUAL_OVERRIDES = {'53': 30.75, '222': 32.75, '267': 31.75, '284': -1}  # 0.25s lead per owner
 
 def save_meta(meta):
     meta.update(MANUAL_OVERRIDES)
