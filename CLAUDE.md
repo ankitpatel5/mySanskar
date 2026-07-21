@@ -713,6 +713,50 @@ group for narrower questions (motion → iOS craft; copy/forms → product leade
    it produced.
 
 ## Committee consults
+- **2026-07-21 · FULL PIXEL AUDIT v1.11 (26 live emulator screenshots, signed-in
+  admin acct) · full committee (4 groups).** Rig: Pixel_10 emulator + CDP
+  DOM-driving + screencap (screens in session scratchpad/audit/). VERDICT:
+  same as v1.8 — foundation praised (one-green held everywhere, Fraunces
+  voice, tile identities, Settings anatomy, Mukhpath hub "our spec built
+  with care", veil copy "best line in the app"), gaps are FINISHING.
+  **PRIOR-GAP CHECK: ~14 of 15 gaps from 2026-07-13 STILL PRESENT** (story
+  covers partially fixed; ab-detail got durations). CONSENSUS TOP (3-4
+  groups each): (1) **Status bar dark-icons-on-dark app-wide** except
+  player sheet — set light-content globally (Capacitor StatusBar style).
+  (2) **Story reader double void** (grey ramp + frozen "Translating…"
+  spinner + 🎨 emoji, zero words) — 3rd audit; show cached EN text
+  instantly, glyph-gradient shimmer for art. (3) **SD hub pinned Start bar
+  BUGS**: saffron sliver leaks under tab bar at 0 selection (translateY
+  insufficient — hide fully), occludes last rows when active (add
+  list bottom padding = bar height), "Clear (N)" reads disabled.
+  (4) **SD veil violates own REV-2 ruling**: wholesale blur + SECOND
+  transport while resting ‹⏸› still visible + second counter (chip should
+  morph into "Paused·Round n"); ✕ lost under scrim; Restart under 44pt.
+  (5) **Oval pause in player sheet** (#sheet-play 52×68) — oldest P0,
+  measured live at 125×147px. (6) **Nav state lies**: "Playlists" segment
+  lit on Library album; "Home" tab lit on Playlists view. (7) **Arti/Arti
+  subtitle==title now on 5 surfaces** incl admin — one conditional.
+  (8) **Player-sheet action row clips "+ Ad/to…"** at edge, no fade.
+  (9) **Ekadashi sheet**: hero row truncates its own name ("Start of
+  Ch…" → wrap 2 lines), last row struck by gesture bar (no bottom
+  safe-area inset), masthead not dimmed. (10) **API graph (new)**: zero
+  left padding, non-round ticks (42/83/125/166), fs-read/fs-write +
+  drive-list/drive-media color pairs indistinguishable (one-green rule
+  hit), x-labels stop before data, annotate self-inflicted spikes.
+  SECONDARY BATCH: red VIDEO tag (3rd audit), 3 language controls (3rd),
+  Conversations cluster cold gradients + emoji icons (👶🍼🚶⭐💬💡🎨 →
+  drawn glyphs, warm register), album header coverless, guj-detail
+  truncation "pinea…/insen…" + upstream "insense"→incense typo + mixed
+  photo/vector art, "10 numbers" copy grammar, Audiobooks sentence-case
+  headers + 2px progress hairline, playlists empty-state void, admin
+  indigo→warm re-token + wrap fixes, SD hub row anatomy (uppercase-as-row
+  -title + leading chevrons unique in app), "Shloka #/Shlok/SHLOKS"
+  spelling unification, settings off-toggle stating a schedule, status of
+  "7% done"→time-left unshipped. VIDEO-ASSET notes (producer, not app):
+  #315 badge typo, neon "LEARN" template register.
+  Decision: RECORDED — nothing built; owner picks the v1.12 finishing
+  batch. Full four-group reports in session transcripts 2026-07-21.
+
 - **2026-07-19 · Satsang Diksha Mukhpath (315 shlok karaoke videos, Learn tab) ·
   full committee (4 groups).** Artifact: Drive folder (3 test videos #313-315,
   1080×1920 ~44s ~2.4MB, karaoke word-highlight cards w/ Gujarati +
