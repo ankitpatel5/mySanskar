@@ -243,6 +243,12 @@ When the user says anything like "build for iOS submission", "archive for App St
   (tests/api-usage.test.js). Rules: apiUsage create/update any-authed,
   read admin. NOT counted: guest traffic (no auth), Drive thumbnail <img>
   loads, native FCM sends.
+- 2026-07-21: **v1.11 CUT — Mukhpath 2.0 + telemetry**. iOS 1.11 (1)
+  archived (bundle verified: Worker media URL, sd-meta 315, apiTally
+  telemetry, lines-toggle, 222 poster) + uploaded to ASC. Android 1.11 (7)
+  signed AAB built. ASC web steps owed (owner): create 1.11, attach build,
+  submit. After LIVE: bump app-version-defaults.json ios.latest → 1.11.
+
 ## Feature map (find things in app.js by function name, not line number)
 - **Satsang Diksha Mukhpath** (Learn tab · shipped to staging 2026-07-19):
   `renderSdHero` (guest-locked tile) → `openSdHub` (view-sd-hub: sticky
