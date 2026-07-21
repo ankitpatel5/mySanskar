@@ -2816,10 +2816,15 @@ body.audio-buffering .track-row.playing .playing-bars { animation: bars-preroll 
   display: flex;
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
+  overflow-x: auto;                 /* 7 tabs no longer fit a phone row */
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+.admin-tabs::-webkit-scrollbar { display: none; }
 .admin-tab {
-  flex: 1;
-  padding: 13px;
+  flex: 1 0 auto;
+  white-space: nowrap;
+  padding: 13px 16px;
   font-size: 14px;
   font-weight: 500;
   color: var(--fg-2);
