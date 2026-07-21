@@ -237,8 +237,18 @@ When the user says anything like "build for iOS submission", "archive for App St
   catalog, `sdRenderSections`, sections of 10, per-section select) →
   `sdStartQueue` → `#sd-player` fixed overlay (`sdLoadShlok`/`sdOnEnded`
   round+handoff breaths, `sdTogglePause` veil, ambient ✕‹⏸›). Videos
-  stream from Drive `SD_FOLDER_ID` (catalog cached `drift.sdCatalog.v1`
-  24h). Single-audio: `sd` entry in stopAllOtherAudio map +
+  stream from **Cloudflare R2** (`SD_MEDIA_BASE` in app.js →
+  pub-0d9a353ce013482c97d324294573a245.r2.dev/satsang-diksha/shloka-N.mp4;
+  migrated off Drive 2026-07-20 after Drive's IP-abuse blocker took out
+  playback for the dev network — see scripts/upload-sd-local.py, creds in
+  gitignored .r2-creds.json, source of truth = ~/Desktop/Satsang Diksha +
+  the R2 bucket mysanskar-media). No catalog fetch — deterministic names,
+  static 1-315 map. sd-meta.js: 311/315 full-chant timestamps
+  (visual+audio detector; #53/#222/#267/#284 undetectable → play full).
+  ⚠ r2.dev is the rate-limited DEV url: before large-scale prod use,
+  connect a custom domain (or free Worker proxy) and swap SD_MEDIA_BASE.
+  Note: this Mac's network TLS-blocks r2.cloudflarestorage.com (S3 API) —
+  uploads must go via api.cloudflare.com REST (upload-sd-local.py does). Single-audio: `sd` entry in stopAllOtherAudio map +
   stopAllOtherAudio('sd') on video 'play'. Persistence: `drift.sdMem` mirrors
   Firestore `users/{uid}/settings/sdMem {nums:[]}` (gujProgress pattern:
   debounced save, union-merge at sign-in, impersonation/guest write-guard —

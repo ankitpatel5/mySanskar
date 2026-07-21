@@ -6079,3 +6079,12 @@ body.impersonating .topbar { padding-top: 8px; height: var(--topbar-h); }
   font-weight: 600;
   font-family: var(--font-display);
 }
+
+/* Mukhpath: repeat-each-line toggle row (locked header) */
+.sd-linesrow {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 12px; padding: 11px 14px;
+  border-radius: 13px; border: 1px solid var(--line); background: var(--bg-1);
+}
+.sd-linesrow-t { font-size: 13.5px; font-weight: 600; color: var(--fg-0); }
+.sd-linesrow-s { font-size: 11px; color: var(--fg-3); margin-top: 2px; }

@@ -54,3 +54,4 @@ package-lock.json
 # Local config — contains real API keys, never commit
 config.js
 ios/App/build-sim-log.txt
+.r2-creds.json
