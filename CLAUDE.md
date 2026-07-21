@@ -243,8 +243,12 @@ When the user says anything like "build for iOS submission", "archive for App St
   playback for the dev network — see scripts/upload-sd-local.py, creds in
   gitignored .r2-creds.json, source of truth = ~/Desktop/Satsang Diksha +
   the R2 bucket mysanskar-media). No catalog fetch — deterministic names,
-  static 1-315 map. sd-meta.js: 311/315 full-chant timestamps
-  (visual+audio detector; #53/#222/#267/#284 undetectable → play full).
+  static 1-315 map. sd-meta.js: 315/315 covered — 311 auto-detected
+  (visual+audio) + owner-verified MANUAL_OVERRIDES in build-sd-meta.py
+  (#53=31s noise-poisoned threshold, #222=33s chant-over-black-fade,
+  #267=32s chant-over-white-text, #284=-1 sentinel: combined 283-284 video
+  has NO separate full chant → always plays whole + gentle #sd-notice when
+  the repeat-lines toggle is off).
   ⚠ r2.dev is the rate-limited DEV url: before large-scale prod use,
   connect a custom domain (or free Worker proxy) and swap SD_MEDIA_BASE.
   Note: this Mac's network TLS-blocks r2.cloudflarestorage.com (S3 API) —

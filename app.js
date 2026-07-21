@@ -3473,7 +3473,7 @@
     return (typeof t === 'number' && t > 0) ? t : 0;
   }
   // player session state
-  let _sdQueue = [], _sdQi = 0, _sdRound = 1, _sdBreathT = null, _sdWakeLock = null, _sdSeekTo = 0;
+  let _sdQueue = [], _sdQi = 0, _sdRound = 1, _sdBreathT = null, _sdWakeLock = null, _sdSeekTo = 0, _sdNoticeT = null;
 
   function sdMem() {
     if (_sdMem === null) {
@@ -3772,6 +3772,20 @@
     $('sd-spin').classList.remove('hidden');
     sdArmWatchdog();
     _sdSeekTo = sdStartTime(num); // applied on loadedmetadata (can't seek before)
+    // #284-style videos have no separate full-chant section (SD_META -1):
+    // when the parent asked to skip line repeats, say why we can't — gently.
+    const noFullChant = window.SD_META && window.SD_META[num] === -1;
+    const notice = $('sd-notice');
+    clearTimeout(_sdNoticeT);
+    if (notice) {
+      if (!_sdRepeatLines && noFullChant) {
+        notice.textContent = 'This shlok is chanted line by line all the way through — enjoy it in full';
+        notice.classList.remove('hidden');
+        _sdNoticeT = setTimeout(() => notice.classList.add('hidden'), 4500);
+      } else {
+        notice.classList.add('hidden');
+      }
+    }
     v.src = sdVideoUrl(num) + (_sdSeekTo ? `#t=${_sdSeekTo}` : '');
     const p = v.play();
     if (p && p.catch) p.catch(() => { sdShowVeil(true); }); // autoplay veto → veil offers Play
@@ -3831,7 +3845,8 @@
     sdLoadShlok();
   }
   function sdClosePlayer() {
-    clearTimeout(_sdBreathT); clearTimeout(_sdWatchT);
+    clearTimeout(_sdBreathT); clearTimeout(_sdWatchT); clearTimeout(_sdNoticeT);
+    const notice = $('sd-notice'); if (notice) notice.classList.add('hidden');
     const v = sdVideo();
     try { v.pause(); v.removeAttribute('src'); v.load(); } catch {}
     $('sd-player').classList.add('hidden');

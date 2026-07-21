@@ -135,7 +135,15 @@ def load_meta():
     m = re.search(r'window\.SD_META\s*=\s*(\{.*?\});', open(META_JS).read(), re.S)
     return json.loads(m.group(1)) if m else {}
 
+# Owner-verified corrections (2026-07-20) for videos whose layout defeats the
+# detector: #222 fades to black for the chant, #267 chants over white text,
+# #53's threshold was noise-poisoned. #284 (combined 283-284 video) has NO
+# separate full-chant section: -1 = "always plays in full" (the app shows a
+# gentle notice when line-repeats are toggled off).
+MANUAL_OVERRIDES = {'53': 31.0, '222': 33.0, '267': 32.0, '284': -1}
+
 def save_meta(meta):
+    meta.update(MANUAL_OVERRIDES)
     ordered = {k: meta[k] for k in sorted(meta, key=int)}
     body = json.dumps(ordered, indent=2)
     with open(META_JS, 'w') as f:
