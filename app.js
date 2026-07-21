@@ -3439,13 +3439,13 @@
   // portrait video player with repeat rounds, ~2s breath beats between
   // rounds/shloks, ambient exit/prev/pause/next. Karaoke text is baked into
   // the videos. Single-audio rule claimed on 'play'.
-  // Videos stream from Cloudflare R2 (migrated off Drive 2026-07-20 after
-  // Drive's IP-abuse blocker took out playback): deterministic names, no
-  // catalog listing, no per-IP heuristics. r2.dev is the DEV url — swap
-  // SD_MEDIA_BASE to the custom domain before large-scale production use.
+  // Videos stream from Cloudflare R2 via the media Worker (2026-07-20):
+  // workers/media-proxy.js on the free plan (100k req/day) serves the
+  // bucket with byte ranges + immutable cache headers — no r2.dev rate
+  // limits, no Drive abuse heuristics, no catalog listing.
 
   const SD_TOTAL = 315;
-  const SD_MEDIA_BASE = 'https://pub-0d9a353ce013482c97d324294573a245.r2.dev/satsang-diksha';
+  const SD_MEDIA_BASE = 'https://media.mysanskar.workers.dev/satsang-diksha';
   function sdVideoUrl(num) { return `${SD_MEDIA_BASE}/shloka-${num}.mp4`; }
   // All 315 exist in R2 — the "catalog" is now a static full map (kept as a
   // map so the availability checks stay unchanged if a future batch is ever

@@ -249,8 +249,13 @@ When the user says anything like "build for iOS submission", "archive for App St
   #267=32s chant-over-white-text, #284=-1 sentinel: combined 283-284 video
   has NO separate full chant → always plays whole + gentle #sd-notice when
   the repeat-lines toggle is off).
-  ⚠ r2.dev is the rate-limited DEV url: before large-scale prod use,
-  connect a custom domain (or free Worker proxy) and swap SD_MEDIA_BASE.
+  Served via the media Worker
+  (workers/media-proxy.js → https://media.mysanskar.workers.dev, free plan
+  100k req/day, byte-range + immutable-cache + CORS; deployed by API —
+  PUT accounts/{id}/workers/scripts/media with R2 binding MEDIA; the
+  restToken needs "Workers Scripts:Edit"). r2.dev pub URL still exists as
+  fallback. Cache API edge-caching is a future optimization if req volume
+  ever nears the free cap.
   Note: this Mac's network TLS-blocks r2.cloudflarestorage.com (S3 API) —
   uploads must go via api.cloudflare.com REST (upload-sd-local.py does). Single-audio: `sd` entry in stopAllOtherAudio map +
   stopAllOtherAudio('sd') on video 'play'. Persistence: `drift.sdMem` mirrors
