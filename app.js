@@ -3450,6 +3450,11 @@
   // All 315 exist in R2 — the "catalog" is now a static full map (kept as a
   // map so the availability checks stay unchanged if a future batch is ever
   // partial again).
+  // #222's production fades to black for the closing chant — when skipping
+  // straight to it, show the card still (first frame, hosted beside the
+  // video) so the screen isn't just black while the audio plays.
+  const SD_STILL_POSTER = { '222': `${SD_MEDIA_BASE}/shloka-222-poster.jpg` };
+
   const _sdCatalog = (() => {
     const m = {};
     for (let n = 1; n <= SD_TOTAL; n++) m[String(n)] = true;
@@ -3775,6 +3780,12 @@
     // #284-style videos have no separate full-chant section (SD_META -1):
     // when the parent asked to skip line repeats, say why we can't — gently.
     const noFullChant = window.SD_META && window.SD_META[num] === -1;
+    const poster = $('sd-poster');
+    if (poster) {
+      const still = !_sdRepeatLines && SD_STILL_POSTER[num];
+      if (still) { poster.src = still; poster.classList.remove('hidden'); }
+      else { poster.classList.add('hidden'); poster.removeAttribute('src'); }
+    }
     const notice = $('sd-notice');
     clearTimeout(_sdNoticeT);
     if (notice) {
@@ -3847,6 +3858,7 @@
   function sdClosePlayer() {
     clearTimeout(_sdBreathT); clearTimeout(_sdWatchT); clearTimeout(_sdNoticeT);
     const notice = $('sd-notice'); if (notice) notice.classList.add('hidden');
+    const poster = $('sd-poster'); if (poster) { poster.classList.add('hidden'); poster.removeAttribute('src'); }
     const v = sdVideo();
     try { v.pause(); v.removeAttribute('src'); v.load(); } catch {}
     $('sd-player').classList.add('hidden');

@@ -6101,3 +6101,10 @@ body.impersonating .topbar { padding-top: 8px; height: var(--topbar-h); }
   transition: opacity 0.4s;
 }
 .sd-notice.hidden { display: none; }
+
+/* Mukhpath: still-card overlay for chant-over-black videos (e.g. #222) */
+.sd-poster {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: contain; background: #1e1912; z-index: 1; pointer-events: none;
+}
+.sd-poster.hidden { display: none; }
