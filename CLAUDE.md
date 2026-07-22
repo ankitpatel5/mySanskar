@@ -768,9 +768,18 @@ group for narrower questions (motion → iOS craft; copy/forms → product leade
   gradient scrim, hub bottom-padding via .sd-has-queue, Clear chip warm
   border — verified on emulator at 0-sel and 2-sel per the approved
   before/after mock (artifact 11babcf2). Veil fix (#4) still pending.
-  ANDROID PLATFORM NOTE: targetSdk 36 = enforced edge-to-edge; env(safe-
-  area-inset-*)=0 in WebView; any fixed bottom/top chrome must assume
-  overlaysWebView:false world now. Full four-group reports in session
+  ANDROID PLATFORM NOTE: targetSdk 36 = enforced edge-to-edge. CORRECTION
+  (verified live 2026-07-21): Capacitor 8 DOES populate env(safe-area-
+  inset-*) in the Android WebView (measured 24px bottom / 55px top on
+  Pixel emulator) — the app's existing env() insets work cross-platform;
+  the status-bar issue was icon APPEARANCE only (needs runtime setStyle,
+  above). Fresh 10-screen Android pass 2026-07-21: status bar + SD Start
+  bar fixes hold; SD player controls clear the gesture bar (881 vs 899);
+  the "Ekadashi last row struck by gesture bar" audit item is a FALSE
+  POSITIVE — mid-scroll content under the translucent home indicator
+  (normal; last row clears at full scroll). No Android-only defects
+  remain; the veil (#4), player-sheet "+Add" clip, and conv-chip clip are
+  cross-platform backlog items. Full four-group reports in session
   transcripts 2026-07-21.
 
 - **2026-07-19 · Satsang Diksha Mukhpath (315 shlok karaoke videos, Learn tab) ·
