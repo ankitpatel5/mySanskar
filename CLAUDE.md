@@ -754,8 +754,24 @@ group for narrower questions (motion → iOS craft; copy/forms → product leade
   spelling unification, settings off-toggle stating a schedule, status of
   "7% done"→time-left unshipped. VIDEO-ASSET notes (producer, not app):
   #315 badge typo, neon "LEARN" template register.
-  Decision: RECORDED — nothing built; owner picks the v1.12 finishing
-  batch. Full four-group reports in session transcripts 2026-07-21.
+  Decision: RECORDED — owner picks the v1.12 finishing batch.
+  **FIXED 2026-07-21 (Android-first pass):** (1) status bar — installed
+  @capacitor/status-bar, runtime `StatusBar.setStyle({style:'DARK'})` in
+  init() (config-file style is NOT auto-applied; theme flags +
+  WindowInsetsControllerCompat alone did NOT stick on targetSdk 36
+  edge-to-edge) + overlaysWebView:false + adjustMarginsForEdgeToEdge:
+  'force' in capacitor.config + dark bar colors/light icons in styles.xml
+  + MainActivity insets call — Android verified white icons + inset
+  content on emulator; iOS gets the same setStyle (device verify owed).
+  (3) SD Start bar — leak-proof hide (visibility+opacity, translate alone
+  left a 20px sliver on Android's 923px viewport), full-width docked
+  gradient scrim, hub bottom-padding via .sd-has-queue, Clear chip warm
+  border — verified on emulator at 0-sel and 2-sel per the approved
+  before/after mock (artifact 11babcf2). Veil fix (#4) still pending.
+  ANDROID PLATFORM NOTE: targetSdk 36 = enforced edge-to-edge; env(safe-
+  area-inset-*)=0 in WebView; any fixed bottom/top chrome must assume
+  overlaysWebView:false world now. Full four-group reports in session
+  transcripts 2026-07-21.
 
 - **2026-07-19 · Satsang Diksha Mukhpath (315 shlok karaoke videos, Learn tab) ·
   full committee (4 groups).** Artifact: Drive folder (3 test videos #313-315,

@@ -594,6 +594,15 @@
   }
 
   function init() {
+    // Dark theme everywhere: light status-bar icons on both platforms
+    // (audit 2026-07-21: icons were dark-on-black on every Android screen
+    // and every iOS screen except the player sheet). Config-file style is
+    // not auto-applied — the runtime call is what works.
+    try {
+      if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+        window.Capacitor.Plugins.StatusBar.setStyle({ style: 'DARK' });
+      }
+    } catch {}
     // Fast-boot: Firebase stores cached auth in localStorage. If the key exists
     // the user was signed in recently — show the app immediately without waiting
     // for onAuthStateChanged (which can take 2–5s on a cold reload).
@@ -3626,6 +3635,7 @@
       b.classList.toggle('active', parseInt(b.dataset.n, 10) === _sdRepeat));
     const n = _sdSel.size;
     $('sd-startbar').classList.toggle('sd-startbar--on', n > 0);
+    $('view-sd-hub').classList.toggle('sd-has-queue', n > 0);
     $('sd-start').textContent = `▶  Start playing · ${n} shlok${n === 1 ? '' : 's'}`;
     $('sd-clear').textContent = `Clear (${n})`;
     const lt = $('sd-lines-toggle');

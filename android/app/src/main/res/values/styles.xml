@@ -13,6 +13,12 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- Dark app: dark system bars with LIGHT icons (audit 2026-07-21:
+             status icons were dark-on-black on every Android screen) -->
+        <item name="android:statusBarColor">#0d0b07</item>
+        <item name="android:navigationBarColor">#12100c</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
     </style>
 
 
