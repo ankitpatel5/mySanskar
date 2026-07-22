@@ -86,7 +86,7 @@
 		</data>
 		<key>Frameworks/Capacitor.framework/Capacitor</key>
 		<data>
-		/rhHiQJA0lE54LQR42lUsNjUTcs=
+		bPRcNdZoO8RExPvy1MGrjGpvVVU=
 		</data>
 		<key>Frameworks/Capacitor.framework/Info.plist</key>
 		<data>
@@ -106,7 +106,7 @@
 		</data>
 		<key>Frameworks/Cordova.framework/Cordova</key>
 		<data>
-		aLQNBcisAcm6PbZpOlog49EBRKc=
+		eRItOJliaOpq/DTIHSJGc8WyUdg=
 		</data>
 		<key>Frameworks/Cordova.framework/Info.plist</key>
 		<data>
@@ -580,7 +580,7 @@
 		</data>
 		<key>Info.plist</key>
 		<data>
-		UGSR83ApooPxQD0XIDmIwBEGiSk=
+		Y7YcXqTpTmxvfPUQwJFqicpHvb4=
 		</data>
 		<key>PkgInfo</key>
 		<data>
@@ -588,15 +588,15 @@
 		</data>
 		<key>PlugIns/NityaWidget.appex/Info.plist</key>
 		<data>
-		MquLOcd40UqeyJMqz2FikR5F6og=
+		oDtIjEPK+2lHwwSKwHeuu/RHgoY=
 		</data>
 		<key>PlugIns/NityaWidget.appex/NityaWidget</key>
 		<data>
-		bSgCNtBMNc3QeuJnsYwU4ORXR40=
+		Ts/whXloNB9IFqmUtAN4C4xRccM=
 		</data>
 		<key>PlugIns/NityaWidget.appex/_CodeSignature/CodeResources</key>
 		<data>
-		QwiU+NLsKrU0txpLtftxwAyGbt8=
+		wk7QxEAcUASS53EbM3PPAv9Jo3s=
 		</data>
 		<key>PlugIns/NityaWidget.appex/embedded.mobileprovision</key>
 		<data>
@@ -632,11 +632,11 @@
 		</data>
 		<key>public/app-build.js</key>
 		<data>
-		ibOiqeXHbXwsn4TbcCQ0Bh5Lk/4=
+		Dd6ermKj+oy0cHvkbO1rlb78jOo=
 		</data>
 		<key>public/app.js</key>
 		<data>
-		b1X5cl65j7h6dGCqCyN4d2ziJY4=
+		ZvwKyy38trLYLAhJND3FAeTMlGY=
 		</data>
 		<key>public/baal.png</key>
 		<data>
@@ -5108,7 +5108,7 @@
 		</data>
 		<key>public/index.html</key>
 		<data>
-		RkZmLKuAk1v73HqXfWgSybIhm+c=
+		/PR5fz0B1lKZqFyH0i9mF09TDAM=
 		</data>
 		<key>public/lottie.min.js</key>
 		<data>
@@ -5122,13 +5122,17 @@
 		<data>
 		u44mmzcbWbe9b4z1UGZAbGrhvLo=
 		</data>
+		<key>public/sd-meta.js</key>
+		<data>
+		pTH+RR3nPzsRBC1Dn/558TX23Z0=
+		</data>
 		<key>public/stories-data.js</key>
 		<data>
 		bqM8LFyhGYq9FA9tzcrRvCp+gvA=
 		</data>
 		<key>public/styles.css</key>
 		<data>
-		SXPKrIoRxTezzbN4KE8LBIgXOxk=
+		4WVGWb8mf08wB/x4s2+q2D88WiY=
 		</data>
 		<key>public/sw.js</key>
 		<data>
@@ -5144,7 +5148,7 @@
 		</data>
 		<key>public/utils.js</key>
 		<data>
-		A6UhQ8NUWr21qyPdkbzr6qI/Y34=
+		ijxPz0P2m1b8yWynn9jKg2VTrrY=
 		</data>
 	</dict>
 	<key>files2</key>
@@ -5293,7 +5297,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			K4VYAWQ30oIAjQX+GqhITf6PuYRmHRi5Wg/y65jqbDA=
+			vkYAyNS2m2BsHARJlPydckIwQGi91pIVcsS0flnZxvw=
 			</data>
 		</dict>
 		<key>Frameworks/Capacitor.framework/Info.plist</key>
@@ -5328,7 +5332,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			eXtXfXqun7jviPKHiDSJjwZElImRi062N0PKDTFqMhs=
+			yv1j1msGbu5MCNvmNGfS6GaZg2dr9DhK7rVIiXZE7b4=
 			</data>
 		</dict>
 		<key>Frameworks/Cordova.framework/Info.plist</key>
@@ -5901,21 +5905,21 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			BY/oPN4iP20AU1se81uJJiVdgsUWYgnHicy/J3gYuZ0=
+			VU03o+M5ggNB3CfP7ZGqt49POGGnpdDian4xbsWbGK4=
 			</data>
 		</dict>
 		<key>PlugIns/NityaWidget.appex/NityaWidget</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			Zk6XX3751ZyG3NYfXg98lz6Z3qhgrlwQqoYFstCwoHI=
+			js6d15kSxU02dR0m8GSIjNSWIMeJSi9WF37quPyW3Vc=
 			</data>
 		</dict>
 		<key>PlugIns/NityaWidget.appex/_CodeSignature/CodeResources</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			Ld23BrUN/VCFF1ceLiqWW6zInmuztaya7NrSsdpt65Q=
+			R1DH3E+xUofjYieDP0G9GnD8Mc8LtxUbIx+eQuAXAEA=
 			</data>
 		</dict>
 		<key>PlugIns/NityaWidget.appex/embedded.mobileprovision</key>
@@ -5978,14 +5982,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			Wxw4K5S/vBKLamHrem1A6Xt7659AZ+B7XkgThXvxyXs=
+			1enyzhAlqoM7N/usy3W+7LjzTNTqd+BwK9h61e4tRcY=
 			</data>
 		</dict>
 		<key>public/app.js</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			+2vSD2YIY8NkoExzXYkvVRdshXoIBTM9+kXpy78kChc=
+			yqrPFba0FG47zPiUpdc/nonqH+8z9IllUVOcKQmh97E=
 			</data>
 		</dict>
 		<key>public/baal.png</key>
@@ -13811,7 +13815,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			KgcVaCieh52f0dbd+bZ4spVJaVppzj2SKljmkmxuOsQ=
+			2WLMW6Kxaps4ZHPlRrqbvkM2rl83ZGV0TaGQODYXZRg=
 			</data>
 		</dict>
 		<key>public/lottie.min.js</key>
@@ -13835,6 +13839,13 @@
 			XRCILiSAHFCJB3f+kuq1FfV+xCtQQTVzDyYzxQH1Z7g=
 			</data>
 		</dict>
+		<key>public/sd-meta.js</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			yK4gfdpL1VbApu24VwpP1lqby1ZG4HAjXTnM46J5Sk4=
+			</data>
+		</dict>
 		<key>public/stories-data.js</key>
 		<dict>
 			<key>hash2</key>
@@ -13846,7 +13857,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			+O5xlbUkErmC7jxqYLRBI/83nsNVhbBAN8HFhkJF4Tc=
+			RWYlrMnZeCZSbvCZtUA+H7D8708KDPApY62sqaK0mAQ=
 			</data>
 		</dict>
 		<key>public/sw.js</key>
@@ -13874,7 +13885,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			D/+R9DYMKbOk+SgkZS0BeZPl7VAHmQGCwcpcVuJSx8g=
+			X2pVGTRXZDbNFcKo5NyFfzaiYlnzE/vTgQ5MdGo2si8=
 			</data>
 		</dict>
 	</dict>

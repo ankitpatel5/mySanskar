@@ -383,6 +383,13 @@
                 <button data-n="0">∞</button>
               </div>
             </div>
+            <div class="sd-linesrow">
+              <div>
+                <div class="sd-linesrow-t">Repeat each line</div>
+                <div class="sd-linesrow-s" id="sd-lines-sub">Line-by-line practice, then the full shlok</div>
+              </div>
+              <button class="settings-feature-toggle" id="sd-lines-toggle" role="switch" aria-checked="false" aria-label="Repeat each line"><span class="settings-feature-toggle-dot"></span></button>
+            </div>
             <div class="sd-listhint">Tap to add to today’s practice · hold to mark memorized</div>
           </div>
           <div id="sd-sections"></div>
@@ -904,6 +911,7 @@
           <button class="admin-tab" data-atab="audiobooks">Audiobooks</button>
           <button class="admin-tab" data-atab="lyrics">Lyrics</button>
           <button class="admin-tab" data-atab="feedback">Feedback</button>
+          <button class="admin-tab" data-atab="api">API</button>
         </div>
         <div class="admin-content" id="admin-content">
           <div class="admin-loading">Loading…</div>
@@ -1639,7 +1647,9 @@
     <!-- Satsang Diksha Mukhpath: fullscreen chant player (overlay, outside the view system) -->
     <div id="sd-player" class="hidden">
       <video id="sd-video" playsinline webkit-playsinline preload="auto"></video>
+      <img class="sd-poster hidden" id="sd-poster" alt="">
       <div class="sd-counter" id="sd-counter"></div>
+      <div class="sd-notice hidden" id="sd-notice"></div>
       <div class="sd-spin hidden" id="sd-spin"></div>
       <button class="sd-amb sd-amb--x" id="sd-exit" aria-label="Exit">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -1701,6 +1711,7 @@
   <script src="title-translations.js"></script>
   <script src="conversation-starters.js"></script>
   <script src="lyrics-data.js"></script>
+  <script src="sd-meta.js"></script>
   <script src="utils.js"></script>
   <script src="app-build.js"></script>
   <script src="app.js?v=20250601u"></script>

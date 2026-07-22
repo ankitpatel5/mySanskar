@@ -275,6 +275,50 @@ function gujLocalAudioPath(url) {
   return 'guj-audio/' + parts.concat(base).join('_') + '.m4a';
 }
 
+
+// ── API usage telemetry: build chartable series from apiUsage docs ──
+// docs: [{ id: 'YYYY-MM-DD', data: { 'HH': { api: count } } }]
+// mode: '24h' (hourly buckets) | '7d' | '30d' (daily buckets)
+// now:  Date — buckets count back from here (device-local time)
+// Returns { labels, buckets: [{api:count}], apis } with apis sorted by
+// total volume (largest first) so the legend leads with what matters.
+function buildApiUsageSeries(docs, mode, now) {
+  const byDay = {};
+  (docs || []).forEach((d) => { if (d && d.id) byDay[d.id] = d.data || {}; });
+  const dayId = (dt) => {
+    const y = dt.getFullYear(), m = String(dt.getMonth() + 1).padStart(2, '0'),
+      da = String(dt.getDate()).padStart(2, '0');
+    return `${y}-${m}-${da}`;
+  };
+  const labels = [], buckets = [];
+  if (mode === '24h') {
+    for (let i = 23; i >= 0; i--) {
+      const dt = new Date(now.getTime() - i * 3600000);
+      const hours = byDay[dayId(dt)] || {};
+      const h = String(dt.getHours()).padStart(2, '0');
+      labels.push(`${h}:00`);
+      buckets.push(Object.assign({}, hours[h] || {}));
+    }
+  } else {
+    const days = mode === '30d' ? 30 : 7;
+    for (let i = days - 1; i >= 0; i--) {
+      const dt = new Date(now.getTime() - i * 86400000);
+      const hours = byDay[dayId(dt)] || {};
+      const sum = {};
+      Object.keys(hours).forEach((h) => {
+        const b = hours[h] || {};
+        Object.keys(b).forEach((api) => { sum[api] = (sum[api] || 0) + (+b[api] || 0); });
+      });
+      labels.push(`${dt.getMonth() + 1}/${dt.getDate()}`);
+      buckets.push(sum);
+    }
+  }
+  const totals = {};
+  buckets.forEach((b) => Object.keys(b).forEach((api) => { totals[api] = (totals[api] || 0) + b[api]; }));
+  const apis = Object.keys(totals).sort((a, b) => totals[b] - totals[a]);
+  return { labels, buckets, apis, totals };
+}
+
 const AppUtils = {
   enforceSingleAudio,
   parseAlbumFolderName,
@@ -298,6 +342,7 @@ const AppUtils = {
   buildChildCharacterString,
   preprocessGujaratiForTTS,
   splitTextForSarvam,
+  buildApiUsageSeries,
 };
 
 // Browser: expose as global

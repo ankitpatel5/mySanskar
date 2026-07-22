@@ -155,7 +155,7 @@
     'drift.onboardingDone',
     'drift.aiCharacters', 'drift.aiStories', 'drift.aiUsage', 'drift.imagenQuota',
     'drift.gujProgress', 'drift.completedStories',
-    'drift.sdMem', 'drift.sdRepeat',
+    'drift.sdMem', 'drift.sdRepeat', 'drift.sdRepeatLines',
     'drift.nitya', 'drift.nitya.v3',
     'drift.ekRemind', 'drift.ekRemindDays', 'drift.pushEnabled', 'drift.audiobooksEnabled',
     LS.playlists, LS.playCounts, LS.lastTrack, LS.queue, LS.library,
@@ -163,6 +163,66 @@
   function clearPerUserLocalStorage() {
     PER_USER_LS_KEYS.forEach((k) => localStorage.removeItem(k));
   }
+
+  // ── API usage telemetry (admin → API tab) ─────────────────────────
+  // Counts this client's calls to each external API in hourly buckets:
+  // apiUsage/{YYYY-MM-DD} → { 'HH': { api: n } } (device-local hours).
+  // Batched: ONE Firestore write per 30s flush (or on background), so the
+  // meter costs ~0.1% of what it measures. Guests can't write (no auth) —
+  // their pending counts are dropped at flush, so the graph shows
+  // signed-in traffic. _apiFlushing guards the flush's own Firestore call
+  // from re-tallying itself into an endless 1-write-per-30s tick.
+  const API_TALLY_FLUSH_MS = 30000;
+  let _apiTally = {}, _apiTallyT = null, _apiFlushing = false;
+  function apiTally(api) {
+    _apiTally[api] = (_apiTally[api] || 0) + 1;
+    if (!_apiTallyT) _apiTallyT = setTimeout(flushApiTally, API_TALLY_FLUSH_MS);
+  }
+  function flushApiTally() {
+    clearTimeout(_apiTallyT); _apiTallyT = null;
+    const pending = _apiTally; _apiTally = {};
+    if (!Object.keys(pending).length) return;
+    if (!state.user || isImpersonating() || state.isGuest) return;
+    try {
+      _apiFlushing = true;
+      const now = new Date();
+      const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const hour = String(now.getHours()).padStart(2, '0');
+      const bucket = {};
+      Object.keys(pending).forEach((api) => {
+        bucket[api] = firebase.firestore.FieldValue.increment(pending[api]);
+      });
+      window.fbDb.collection('apiUsage').doc(day)
+        .set({ [hour]: bucket }, { merge: true })
+        .catch(() => {});
+    } catch {} finally { _apiFlushing = false; }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushApiTally();
+  });
+
+  // Firestore self-instrumentation: wrap the compat SDK prototypes once so
+  // every read/write anywhere in the app is counted (call-count, not
+  // doc-count — a 100-doc query tallies 1 fs-read).
+  (function instrumentFirestore() {
+    try {
+      const F = firebase.firestore;
+      const wrap = (proto, name, api) => {
+        const orig = proto && proto[name];
+        if (!orig || orig.__tallied) return;
+        const w = function (...a) { if (!_apiFlushing) apiTally(api); return orig.apply(this, a); };
+        w.__tallied = true;
+        proto[name] = w;
+      };
+      wrap(F.DocumentReference.prototype, 'get', 'fs-read');
+      wrap(F.Query.prototype, 'get', 'fs-read');
+      wrap(F.DocumentReference.prototype, 'onSnapshot', 'fs-read');
+      wrap(F.DocumentReference.prototype, 'set', 'fs-write');
+      wrap(F.DocumentReference.prototype, 'update', 'fs-write');
+      wrap(F.DocumentReference.prototype, 'delete', 'fs-write');
+      wrap(F.CollectionReference.prototype, 'add', 'fs-write');
+    } catch (e) { console.warn('fs instrumentation skipped', e); }
+  })();
 
   // ── Impersonation (admin debug) + activity logging ──────────────
   // activeUid() is the uid whose DATA the app currently shows: the real
@@ -885,6 +945,7 @@
 
   // ============== GOOGLE DRIVE CLIENT ==============
   async function driveList(params) {
+    apiTally('drive-list');
     const url = new URL('https://www.googleapis.com/drive/v3/files');
     url.searchParams.set('key', API_KEY);
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
@@ -1012,6 +1073,7 @@
   // element which adds complexity for browser playback; the uc endpoint
   // works without it since we're not reading the bytes ourselves.
   function streamUrl(fileId) {
+    apiTally('drive-media');
     // Official Drive API media endpoint. Serves raw bytes (not HTML pages),
     // supports HTTP Range requests for seeking, returns proper CORS headers,
     // and bypasses the virus-scan interstitial entirely.
@@ -2764,6 +2826,7 @@
     const _ekadashiBase = (window.Capacitor && window.Capacitor.isNativePlatform?.())
       ? 'https://mysanskar.vercel.app'
       : '';
+    apiTally('ekadashi');
     const resp = await fetch(`${_ekadashiBase}/api/ekadashi`);
     if (!resp.ok) throw new Error(resp.status);
     const data = await resp.json();
@@ -3438,22 +3501,47 @@
   // practice queue, hold marks memorized (parent-asserted); fullscreen
   // portrait video player with repeat rounds, ~2s breath beats between
   // rounds/shloks, ambient exit/prev/pause/next. Karaoke text is baked into
-  // the videos (Drive folder below). Single-audio rule claimed on 'play'.
+  // the videos. Single-audio rule claimed on 'play'.
+  // Videos stream from Cloudflare R2 via the media Worker (2026-07-20):
+  // workers/media-proxy.js on the free plan (100k req/day) serves the
+  // bucket with byte ranges + immutable cache headers — no r2.dev rate
+  // limits, no Drive abuse heuristics, no catalog listing.
 
-  const SD_FOLDER_ID = '1YIqwJab0LgL17yaYFKtUzE4GlVpP7EQj';
   const SD_TOTAL = 315;
-  const SD_CATALOG_KEY = 'drift.sdCatalog.v1';
-  const SD_CATALOG_TTL_MS = 24 * 60 * 60 * 1000;
+  const SD_MEDIA_BASE = 'https://media.mysanskar.workers.dev/satsang-diksha';
+  function sdVideoUrl(num) { apiTally('r2'); return `${SD_MEDIA_BASE}/shloka-${num}.mp4`; }
+  // All 315 exist in R2 — the "catalog" is now a static full map (kept as a
+  // map so the availability checks stay unchanged if a future batch is ever
+  // partial again).
+  // #222's production fades to black for the closing chant — when skipping
+  // straight to it, show the card still (first frame, hosted beside the
+  // video) so the screen isn't just black while the audio plays.
+  const SD_STILL_POSTER = { '222': `${SD_MEDIA_BASE}/shloka-222-poster.jpg` };
 
-  let _sdCatalog = null;   // { '1': driveFileId, ... } — null until loaded
+  const _sdCatalog = (() => {
+    const m = {};
+    for (let n = 1; n <= SD_TOTAL; n++) m[String(n)] = true;
+    return m;
+  })();
+  try { localStorage.removeItem('drift.sdCatalog.v1'); } catch {} // stale Drive-era cache
   let _sdSel = new Set();  // today's practice queue (session-only, deliberate)
   let _sdMem = null;       // Set of memorized shlok numbers (persisted per user)
   let _sdRepeat = (() => {
     const v = parseInt(localStorage.getItem('drift.sdRepeat') || '3', 10);
     return Number.isFinite(v) ? v : 3; // 0 = ∞
   })();
+  // "Repeat each line" (default OFF per owner 2026-07-20: most families
+  // want the full chant on repeat). ON = play the line-by-line practice
+  // section too. OFF = start each video at the full-chant timestamp
+  // (sd-meta.js; -1/missing = whole video).
+  let _sdRepeatLines = localStorage.getItem('drift.sdRepeatLines') === '1';
+  function sdStartTime(num) {
+    if (_sdRepeatLines) return 0;
+    const t = window.SD_META && window.SD_META[num];
+    return (typeof t === 'number' && t > 0) ? t : 0;
+  }
   // player session state
-  let _sdQueue = [], _sdQi = 0, _sdRound = 1, _sdBreathT = null, _sdWakeLock = null;
+  let _sdQueue = [], _sdQi = 0, _sdRound = 1, _sdBreathT = null, _sdWakeLock = null, _sdSeekTo = 0, _sdNoticeT = null;
 
   function sdMem() {
     if (_sdMem === null) {
@@ -3498,37 +3586,6 @@
     } catch (e) { console.warn('sd mem sync failed', e); }
   }
 
-  // Catalog: one Drive listing (315 files "Shloka #N.mp4"), cached 24h.
-  // Duplicate-numbered files (e.g. "Shloka #224 (2).mp4") lose to the
-  // first-seen plain name.
-  async function sdEnsureCatalog() {
-    if (_sdCatalog) return _sdCatalog;
-    try {
-      const cached = JSON.parse(localStorage.getItem(SD_CATALOG_KEY) || 'null');
-      if (cached && cached.at && (Date.now() - cached.at) < SD_CATALOG_TTL_MS && cached.map) {
-        _sdCatalog = cached.map;
-        return _sdCatalog;
-      }
-    } catch {}
-    const url = `https://www.googleapis.com/drive/v3/files?q='${SD_FOLDER_ID}'+in+parents+and+trashed=false`
-      + `&key=${encodeURIComponent(API_KEY)}&pageSize=1000&fields=files(id,name)`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`sd catalog HTTP ${res.status}`);
-    const data = await res.json();
-    const map = {};
-    (data.files || []).forEach((f) => {
-      const m = /(\d+)/.exec(f.name || '');
-      if (!m) return;
-      const n = String(parseInt(m[1], 10));
-      const isDupe = /\(\d+\)/.test(f.name);
-      if (!map[n] || (!isDupe && map[n].dupe)) map[n] = { id: f.id, dupe: isDupe };
-    });
-    _sdCatalog = {};
-    Object.keys(map).forEach((n) => { _sdCatalog[n] = map[n].id; });
-    try { localStorage.setItem(SD_CATALOG_KEY, JSON.stringify({ at: Date.now(), map: _sdCatalog })); } catch {}
-    return _sdCatalog;
-  }
-
   function renderSdHero() {
     const el = $('sd-hero');
     if (!el) return;
@@ -3556,12 +3613,9 @@
   function openSdHub() {
     logActivity('learn', 'Satsang Diksha Mukhpath');
     sdRenderHeader();
-    sdRenderSections();       // renders instantly from cache or as "loading"
+    sdRenderSections();   // static catalog — renders complete, instantly
     switchView('view-sd-hub');
     $('content').scrollTo({ top: 0, behavior: 'instant' });
-    sdEnsureCatalog()
-      .then(() => sdRenderSections())
-      .catch(() => { const host = $('sd-sections'); if (host && !host.dataset.ready) host.innerHTML = '<div class="sd-empty">Couldn’t load the shloks — check your connection and try again.</div>'; });
   }
 
   function sdRenderHeader() {
@@ -3574,6 +3628,13 @@
     $('sd-startbar').classList.toggle('sd-startbar--on', n > 0);
     $('sd-start').textContent = `▶  Start playing · ${n} shlok${n === 1 ? '' : 's'}`;
     $('sd-clear').textContent = `Clear (${n})`;
+    const lt = $('sd-lines-toggle');
+    if (lt) {
+      lt.setAttribute('aria-checked', _sdRepeatLines ? 'true' : 'false');
+      $('sd-lines-sub').textContent = _sdRepeatLines
+        ? 'Line-by-line practice, then the full shlok'
+        : 'Full shlok only — line repeats skipped';
+    }
   }
 
   // Hold-to-memorize + tap-to-select on one element (chips grammar, rev 3).
@@ -3755,6 +3816,21 @@
     sdLoadShlok();
   }
 
+  // 12s watchdog (music-player convention): a stream that never starts must
+  // surface an error, not an eternal spinner (found via the 2026-07-20 Drive
+  // IP-block incident — music toasted, sd spun silently).
+  let _sdWatchT = null;
+  function sdArmWatchdog() {
+    clearTimeout(_sdWatchT);
+    _sdWatchT = setTimeout(() => {
+      const v = sdVideo();
+      if (!v || !v.paused || $('sd-player').classList.contains('hidden')) return;
+      $('sd-spin').classList.add('hidden');
+      toast('Couldn’t play this shlok — check your connection');
+      sdShowVeil(true); // ▶ on the veil is the retry affordance
+    }, 12000);
+  }
+
   function sdLoadShlok() {
     clearTimeout(_sdBreathT);
     _sdRound = 1;
@@ -3762,8 +3838,29 @@
     const v = sdVideo();
     const num = _sdQueue[_sdQi];
     $('sd-spin').classList.remove('hidden');
-    v.src = streamUrl(_sdCatalog[num]);
-    v.currentTime = 0;
+    sdArmWatchdog();
+    _sdSeekTo = sdStartTime(num); // applied on loadedmetadata (can't seek before)
+    // #284-style videos have no separate full-chant section (SD_META -1):
+    // when the parent asked to skip line repeats, say why we can't — gently.
+    const noFullChant = window.SD_META && window.SD_META[num] === -1;
+    const poster = $('sd-poster');
+    if (poster) {
+      const still = !_sdRepeatLines && SD_STILL_POSTER[num];
+      if (still) { poster.src = still; poster.classList.remove('hidden'); }
+      else { poster.classList.add('hidden'); poster.removeAttribute('src'); }
+    }
+    const notice = $('sd-notice');
+    clearTimeout(_sdNoticeT);
+    if (notice) {
+      if (!_sdRepeatLines && noFullChant) {
+        notice.textContent = 'This shlok is chanted line by line all the way through — enjoy it in full';
+        notice.classList.remove('hidden');
+        _sdNoticeT = setTimeout(() => notice.classList.add('hidden'), 4500);
+      } else {
+        notice.classList.add('hidden');
+      }
+    }
+    v.src = sdVideoUrl(num) + (_sdSeekTo ? `#t=${_sdSeekTo}` : '');
     const p = v.play();
     if (p && p.catch) p.catch(() => { sdShowVeil(true); }); // autoplay veto → veil offers Play
     sdUpdateCounter();
@@ -3792,7 +3889,7 @@
       sdShowBreath(`Round ${_sdRound}${_sdRepeat ? ` of ${_sdRepeat}` : ''}`, 'breathe in · here it comes again', false);
       _sdBreathT = setTimeout(() => {
         sdHideBreath();
-        const v = sdVideo(); v.currentTime = 0; v.play().catch(() => sdShowVeil(true));
+        const v = sdVideo(); v.currentTime = sdStartTime(_sdQueue[_sdQi]); v.play().catch(() => sdShowVeil(true));
         sdUpdateCounter();
       }, 2000);
       return;
@@ -3822,7 +3919,9 @@
     sdLoadShlok();
   }
   function sdClosePlayer() {
-    clearTimeout(_sdBreathT);
+    clearTimeout(_sdBreathT); clearTimeout(_sdWatchT); clearTimeout(_sdNoticeT);
+    const notice = $('sd-notice'); if (notice) notice.classList.add('hidden');
+    const poster = $('sd-poster'); if (poster) { poster.classList.add('hidden'); poster.removeAttribute('src'); }
     const v = sdVideo();
     try { v.pause(); v.removeAttribute('src'); v.load(); } catch {}
     $('sd-player').classList.add('hidden');
@@ -3839,8 +3938,13 @@
       stopAllOtherAudio('sd'); // chant never competes — music/TTS/audiobook pause
       $('sd-spin').classList.add('hidden');
     });
-    v.addEventListener('playing', () => $('sd-spin').classList.add('hidden'));
-    v.addEventListener('waiting', () => $('sd-spin').classList.remove('hidden'));
+    v.addEventListener('playing', () => { $('sd-spin').classList.add('hidden'); clearTimeout(_sdWatchT); });
+    v.addEventListener('waiting', () => { $('sd-spin').classList.remove('hidden'); sdArmWatchdog(); });
+    // Belt-and-braces for the #t= media fragment: some WebViews ignore it,
+    // so assert the seek once metadata (and thus seekability) arrives.
+    v.addEventListener('loadedmetadata', () => {
+      if (_sdSeekTo > 0 && Math.abs(v.currentTime - _sdSeekTo) > 1) v.currentTime = _sdSeekTo;
+    });
     v.addEventListener('ended', sdOnEnded);
     v.addEventListener('error', () => {
       $('sd-spin').classList.add('hidden');
@@ -3862,8 +3966,13 @@
     $('sd-veil-restart').addEventListener('click', (e) => {
       e.stopPropagation();
       _sdRound = 1;
-      const vv = sdVideo(); vv.currentTime = 0; vv.play().catch(() => {});
+      const vv = sdVideo(); vv.currentTime = sdStartTime(_sdQueue[_sdQi]); vv.play().catch(() => {});
       sdShowVeil(false); sdUpdateCounter();
+    });
+    $('sd-lines-toggle').addEventListener('click', () => {
+      _sdRepeatLines = !_sdRepeatLines;
+      try { localStorage.setItem('drift.sdRepeatLines', _sdRepeatLines ? '1' : '0'); } catch {}
+      sdRenderHeader();
     });
     // Hub statics
     $('sd-hub-back').addEventListener('click', () => switchTab('stories'));
@@ -4760,6 +4869,7 @@
     const key = (window.DRIFT_CONFIG || {}).geminiKey || '';
     if (!key || isImagenQuotaExhausted()) return null;
 
+    apiTally('gemini');
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGEN_MODEL}:predict?key=${key}`;
     const body = {
       instances: [{ prompt: buildImagenPrompt(topic, character) }],
@@ -5384,6 +5494,7 @@ Return a JSON object with exactly this structure (no markdown, no extra text):
   }
 
   async function callGemini(key, prompt) {
+    apiTally('gemini');
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
     const body = JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -6039,6 +6150,7 @@ ${numbered}`;
     const chunks = splitTextForSarvam(preprocessGujaratiForTTS(text));
 
     const fetchChunk = async (chunk) => {
+      apiTally('tts');
       const res = await fetch('https://api.sarvam.ai/text-to-speech', {
         method: 'POST',
         headers: {
@@ -7055,8 +7167,142 @@ ${numbered}`;
       await loadAdminLyrics();
     } else if (adminCurrentTab === 'feedback') {
       await loadAdminFeedback();
+    } else if (adminCurrentTab === 'api') {
+      await loadAdminApiUsage();
     } else {
       await loadAdminSongs();
+    }
+  }
+
+
+  // ── Admin: API usage graph ────────────────────────────────────────
+  // Client-instrumented call counts (apiTally) bucketed hourly in
+  // apiUsage/{day}; this view fetches the range's day-docs (≤31 reads),
+  // builds series via AppUtils.buildApiUsageSeries, and draws an
+  // interactive canvas line chart (pointer = crosshair + tooltip,
+  // legend chips toggle series).
+  const API_CHART_COLORS = {
+    'drive-media': '#6fa8ff', 'drive-list': '#3d6fd6', 'fs-read': '#4fc2b0',
+    'fs-write': '#2e8a7d', 'r2': '#e8a33d', 'gemini': '#a78bfa',
+    'tts': '#ff8fa3', 'ekadashi': '#e3c88a',
+  };
+  let _apiChart = null; // { labels, buckets, apis, hidden:Set, mode }
+
+  async function loadAdminApiUsage(mode) {
+    const content = $('admin-content');
+    mode = mode || (_apiChart && _apiChart.mode) || '24h';
+    content.innerHTML = '<div class="admin-loading">Loading…</div>';
+    try {
+      const days = mode === '30d' ? 31 : (mode === '7d' ? 8 : 2); // +1 covers midnight spans
+      const ids = [];
+      for (let i = 0; i < days; i++) {
+        const dt = new Date(Date.now() - i * 86400000);
+        ids.push(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`);
+      }
+      const snaps = await Promise.all(ids.map((id) => window.fbDb.collection('apiUsage').doc(id).get()));
+      const docs = snaps.filter((sn) => sn.exists).map((sn) => ({ id: sn.id, data: sn.data() }));
+      const series = window.AppUtils.buildApiUsageSeries(docs, mode, new Date());
+      _apiChart = Object.assign(series, { hidden: (_apiChart && _apiChart.hidden) || new Set(), mode });
+
+      const chips = ['24h', '7d', '30d'].map((m) =>
+        `<button class="api-range-chip${m === mode ? ' active' : ''}" data-range="${m}">${m}</button>`).join('');
+      const legend = series.apis.map((api) =>
+        `<button class="api-legend-chip${_apiChart.hidden.has(api) ? ' off' : ''}" data-api="${api}">
+          <i style="background:${API_CHART_COLORS[api] || '#948a78'}"></i>${api} · ${series.totals[api].toLocaleString()}
+        </button>`).join('');
+      content.innerHTML = `
+        <div class="api-usage-head">
+          <div class="api-range-chips">${chips}</div>
+          <div class="api-usage-note">calls made by the app · signed-in devices · local time</div>
+        </div>
+        <div class="api-legend">${legend || '<span class="api-usage-note">No usage recorded yet — counts appear as the app is used.</span>'}</div>
+        <div class="api-chart-wrap">
+          <canvas id="api-chart"></canvas>
+          <div class="api-tooltip hidden" id="api-tooltip"></div>
+        </div>`;
+      content.querySelectorAll('.api-range-chip').forEach((b) =>
+        b.addEventListener('click', () => loadAdminApiUsage(b.dataset.range)));
+      content.querySelectorAll('.api-legend-chip').forEach((b) =>
+        b.addEventListener('click', () => {
+          const api = b.dataset.api;
+          _apiChart.hidden.has(api) ? _apiChart.hidden.delete(api) : _apiChart.hidden.add(api);
+          b.classList.toggle('off');
+          drawApiChart();
+        }));
+      drawApiChart();
+      const canvas = $('api-chart');
+      canvas.addEventListener('pointermove', (e) => drawApiChart(e));
+      canvas.addEventListener('pointerleave', () => drawApiChart());
+    } catch (e) {
+      console.warn('api usage load failed', e);
+      content.innerHTML = '<div class="admin-loading">Couldn’t load API usage.</div>';
+    }
+  }
+
+  function drawApiChart(pointerEv) {
+    const c = _apiChart, canvas = $('api-chart');
+    if (!c || !canvas) return;
+    const wrap = canvas.parentElement;
+    const W = wrap.clientWidth, H = 240, dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    canvas.style.height = `${H}px`;
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    const padL = 40, padR = 10, padT = 10, padB = 24;
+    const iw = W - padL - padR, ih = H - padT - padB;
+    const apis = c.apis.filter((a) => !c.hidden.has(a));
+    const n = c.labels.length;
+    const maxV = Math.max(1, ...c.buckets.map((b) => Math.max(0, ...apis.map((a) => b[a] || 0))));
+    const x = (i) => padL + (n <= 1 ? 0 : (i / (n - 1)) * iw);
+    const y = (v) => padT + ih - (v / maxV) * ih;
+
+    // gridlines + y labels
+    ctx.font = '10px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+    for (let g = 0; g <= 4; g++) {
+      const gv = (maxV / 4) * g, gy = y(gv);
+      ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(W - padR, gy); ctx.stroke();
+      ctx.fillText(String(Math.round(gv)), 6, gy + 3);
+    }
+    // x labels (sparse)
+    const step = Math.ceil(n / 6);
+    for (let i = 0; i < n; i += step) ctx.fillText(c.labels[i], x(i) - 12, H - 8);
+
+    // series
+    apis.forEach((api) => {
+      ctx.strokeStyle = API_CHART_COLORS[api] || '#948a78';
+      ctx.lineWidth = 2; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      c.buckets.forEach((b, i) => {
+        const py = y(b[api] || 0);
+        i === 0 ? ctx.moveTo(x(i), py) : ctx.lineTo(x(i), py);
+      });
+      ctx.stroke();
+    });
+
+    // crosshair + tooltip
+    const tip = $('api-tooltip');
+    if (pointerEv && n) {
+      const rect = canvas.getBoundingClientRect();
+      const px = pointerEv.clientX - rect.left;
+      const i = Math.max(0, Math.min(n - 1, Math.round(((px - padL) / iw) * (n - 1))));
+      ctx.strokeStyle = 'rgba(232,163,61,0.5)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x(i), padT); ctx.lineTo(x(i), padT + ih); ctx.stroke();
+      apis.forEach((api) => {
+        ctx.fillStyle = API_CHART_COLORS[api] || '#948a78';
+        ctx.beginPath(); ctx.arc(x(i), y(c.buckets[i][api] || 0), 3, 0, 7); ctx.fill();
+      });
+      const rows = apis.map((api) =>
+        `<div><i style="background:${API_CHART_COLORS[api] || '#948a78'}"></i>${api}: <b>${(c.buckets[i][api] || 0).toLocaleString()}</b></div>`).join('');
+      tip.innerHTML = `<div class="api-tooltip-t">${c.labels[i]}</div>${rows || 'no calls'}`;
+      tip.classList.remove('hidden');
+      const tw = tip.offsetWidth;
+      tip.style.left = `${Math.min(Math.max(0, x(i) - tw / 2), W - tw)}px`;
+    } else if (tip) {
+      tip.classList.add('hidden');
     }
   }
 
@@ -10422,7 +10668,8 @@ ${numbered}`;
 
 Respond in this exact JSON format with no extra text:
 {"author": "Author Name", "description": "Description here."}`;
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
+          apiTally('gemini');
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
           const body = JSON.stringify({
             contents: [{ role: 'user', parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: 'application/json', temperature: 0.3, maxOutputTokens: 300 },
